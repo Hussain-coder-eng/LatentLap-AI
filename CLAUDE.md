@@ -6,43 +6,79 @@
 - Invoke the relevant superpowers skill BEFORE every task, step, or decision.
 - If there is even a 1% chance a skill applies, invoke it.
 
-### Always use agent teams — never code solo
-- NEVER write code directly as the main agent.
+### Always use agent teams (the Gang) — never act solo
+- NEVER write, edit, or modify any file directly as the main agent — all file changes
+  must go through a dispatched subagent on a feature branch.
 - Always dispatch specialized subagents (via the `Agent` tool) to do implementation work.
+- The agent team is called **"the Gang"** — these are the subagents dispatched to do real work:
+  - `Explore` — codebase search and file discovery (read-only)
+  - `Plan` — architecture and implementation planning
+  - `superpowers:code-reviewer` — mandatory code review before every merge (Agent subagent_type)
+  - `coderabbit:code-reviewer` — deep code review for complex changes (Agent subagent_type)
+  - `general-purpose` — read-only research and multi-step investigation
+  - `claude` — write-path implementation (creating/editing files, running builds)
+  - `gstack` — browser-based QA, UI verification, and scraping (invoke via `gstack` skill)
 - Use parallel dispatch (`superpowers:dispatching-parallel-agents`) whenever 2+ tasks are independent.
 - Use `superpowers:subagent-driven-development` for all multi-step implementation plans.
-- Use `claude-session-driver:driving-claude-code-sessions` to manage larger agent teams.
+- Use `claude-session-driver:driving-claude-code-sessions` to coordinate the Gang on larger tasks.
 
-### Use gstack and pre-existing agent teams
-- Use the `gstack` / `open-gstack-browser` skill for any browser-based QA or UI verification.
-- Leverage pre-existing agent types: `Explore`, `Plan`, `coderabbit:code-reviewer`, `superpowers:code-reviewer`.
-- Always prefer a purpose-built agent over writing the equivalent code inline.
+### Branch-based development (MANDATORY — never code on main)
+- NEVER commit new code or file changes directly to `main`.
+- Always create a feature branch before starting any new work:
+  ```
+  git checkout -b phase-4-xgboost-model   # example
+  ```
+- Branch naming convention: `phase-N-short-description`, `fix-short-description`, or `feat-short-description`.
+- After code review passes (no Critical/Important issues), merge the branch into local `main`:
+  ```
+  git checkout main && git merge --no-ff <branch> && git push origin main && git branch -d <branch>
+  ```
+- Delete the feature branch after merging.
+- One branch per logical unit of work (one phase, one feature, one fix).
+- **Orphaned branches:** If a session ends before a branch is merged, the next session must
+  re-run code review on that branch before merging — do NOT merge without a fresh review pass.
 
-### Code review before every push (MANDATORY)
-- Every code change MUST be reviewed by the `superpowers:code-reviewer` subagent before being pushed.
+### Code review before every merge (MANDATORY)
+- Every branch MUST pass `superpowers:code-reviewer` review before merging to `main`.
+- The correct subagent type name is `superpowers:code-reviewer` (verified working in this project).
 - Workflow:
-  1. Commit changes locally.
-  2. Get `BASE_SHA` and `HEAD_SHA` via `git rev-parse`.
-  3. Dispatch `superpowers:code-reviewer` with the SHAs and full context.
-  4. Fix ALL Critical and Important issues found.
-  5. Re-run the review after fixes.
-  6. Only push once the reviewer reports no Critical/Important issues.
+  1. Commit all changes on the feature branch.
+  1.5. Run the affected script with `--dry-run` (or equivalent) and confirm zero runtime errors.
+  2. `BASE_SHA=$(git merge-base main HEAD)` — get the divergence point.
+  3. `HEAD_SHA=$(git rev-parse HEAD)` — get current HEAD.
+  4. Dispatch `superpowers:code-reviewer` subagent with the SHAs and full context.
+  5. Fix ALL Critical and Important issues found (on the same branch), then re-review.
+  6. Merge + push only once the reviewer reports no Critical/Important issues.
 - Never skip or abbreviate the review step.
 
-### Push all code to GitHub
-- All commits must be pushed to the GitHub remote after passing code review.
-- Use `gh` CLI to create the repo if it does not exist yet.
+### Push all code to GitHub after merging
+- GitHub remote: `https://github.com/Hussain-coder-eng/LatentLap-AI`
+- Push is included in the merge command above (`git push origin main`).
+- Feature branches are local-only unless explicitly sharing work.
+- **Branch protection:** Enable "Require pull request reviews" on the GitHub `main` branch
+  at Settings → Branches to enforce reviews at the remote level as well.
+
+### Engineering best practices
+- Functions do one thing; keep them short and testable.
+- No magic numbers — define named constants at the top of each file.
+- No silent failures — explicitly handle and log errors at system boundaries.
+- Type hints on all function signatures.
+- Validate inputs at script entry points; trust internal data within a pipeline stage.
+- Keep data transformation and I/O separated — pure transform functions, thin I/O wrappers.
+- Prefer explicit loops over `groupby.apply()` for multi-column assignments (pandas 2.x bug).
+- Document every heuristic threshold with a comment explaining the empirical basis.
 
 ---
 
 ## Project Context
 
-**Goal:** McLaren F1 tire degradation intelligence system — infers hidden tire state  
+**Goal:** McLaren F1 tire degradation intelligence system — infers hidden tire state
 (graining, blistering, thermal, wear) lap-by-lap from public FastF1 telemetry.
 
-**Scope:** McLaren, Silverstone, 2021–2025 (18-inch Pirelli era).  
-**Python env:** `~/.venv/bin/python`  
+**Scope:** McLaren, Silverstone, 2021–2025 (18-inch Pirelli era).
+**Python env:** `~/.venv/bin/python`
 **Design doc:** `~/.gstack/projects/LatentLap-AI-main/hussianaltufayli-unknown-design-20260514-085827.md`
+**GitHub:** `https://github.com/Hussain-coder-eng/LatentLap-AI`
 
 ### Phase Status
 | Phase | Status | Script |
