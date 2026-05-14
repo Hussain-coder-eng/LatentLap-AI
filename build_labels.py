@@ -32,30 +32,27 @@ OUTPUT_PARQUET = "data/labeled_table.parquet"
 DELTA_GRADE0          = 0.20   # < 0.20s  → Grade 0  (nominal pace)
 DELTA_GRADE1          = 0.60   # < 0.60s  → Grade 1  (mild)
 DELTA_GRADE2          = 1.10   # < 1.10s  → Grade 2  (moderate); above → Grade 3
-# ⚠ STALE: calibrated on unmasked RollingDelta3 — recalibrate after feature_table.csv is
-# regenerated with the outlier-masked RollingDelta3 (5A fix in build_feature_table.py).
-ROLLING_GRADE2_THRESH = 0.50   # RollingDelta3 > 0.50 upgrades to at least Grade 2
+# Above p75 of RollingDelta3 in Grade-0/1 laps — sustained rolling pace-loss (2022 corrected; re-evaluate for multi-year).
+ROLLING_GRADE2_THRESH = 0.60   # RollingDelta3 > 0.60 upgrades to at least Grade 2
 DEGRATEACCEL_GRADE3   = 1.50   # DegRateAccel  > 1.50 upgrades to Grade 3
 OUTLIER_DELTA_CAP     = 8.0    # LapDelta > 8s → flag as -1 (unreliable)
 PRE_PIT_LAPS          = 3      # last N laps of a stint get +1 severity boost
 
 # ── Failure mode thresholds ──────────────────────────────────────────────────
-# ⚠ STALE: calibrated on BUGGY integration (dt_sec passed as x-axis, not cumsum).
-# feature_table.csv must be regenerated with the C-1 fix before this threshold
-# is meaningful. Recalibrate to p90 of the corrected SLEI distribution.
-SLEI_BLISTER          = 3.50
+# p90 of SLEI distribution on 2022 corrected feature_table.csv (C-1 fix applied); re-evaluate for multi-year.
+SLEI_BLISTER          = 30.479
 THERMAL_ACCUM_BLISTER = 0.010  # ThermalAccumProxy above this in combo
 DEGRATEACCEL_BLISTER  = 1.00   # DegRateAccel threshold for late-stint combo
 TYRELIFE_LATE         = 15     # "late stint" for blistering combo rule
 
 # Graining (concave-up early stint, erratic pace)
-# ⚠ STALE: calibrated on unfiltered EarlyStintConcavity polyfit — recalibrate after
-# feature_table.csv is regenerated with the outlier-excluded polyfit (A fix in build_feature_table.py).
-CONCAVITY_GRAIN       = 0.30   # EarlyStintConcavity > this → concave-up pattern
+# Natural gap in 2022 data: max non-RIC EarlyStintConcavity ≈ 0.03; RIC concave-up
+# stint coefficient = 0.325. Threshold 0.32 sits inside this gap (2022 only; re-evaluate
+# when 2021/2023-2025 data is added).
+CONCAVITY_GRAIN       = 0.32   # EarlyStintConcavity > this → concave-up pattern
 TYRELIFE_EARLY        = 10     # graining occurs early in stint
-# ⚠ STALE: calibrated on LapTimeSec basis — recalibrate after feature_table.csv is
-# regenerated with the FuelCorrLapTime-based LapVariance (C-1 fix in build_feature_table.py).
-LAPVAR_GRAIN          = 0.50   # LapVariance > this → erratic pace symptom
+# Flags 7 genuinely erratic laps on FuelCorrLapTime-based LapVariance (2022 corrected; re-evaluate for multi-year).
+LAPVAR_GRAIN          = 0.80   # LapVariance > this → erratic pace symptom
 
 # Thermal (rapid early degradation then partial recovery)
 PUSH_RECOVERY_THERMAL = -0.30  # PushRecoveryDelta < this → initial rapid decay
