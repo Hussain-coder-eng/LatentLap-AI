@@ -38,6 +38,9 @@ MODE_DECODING = {i: c for c, i in MODE_ENCODING.items()}
 
 _EXCLUDE_IDENTIFIERS = {
     "DriverNumber", "Year",
+    # Stint = FastF1 race-stint counter; excluded to prevent race-order memorisation
+    # (derived StintId is also excluded under _EXCLUDE_TARGETS)
+    "Stint",
 }
 _EXCLUDE_ADMIN_FLAGS = {
     # Constant after the pipeline's IsAccurate + OutLap filters
@@ -123,7 +126,6 @@ def run_loo_cv(
     features: list[str],
     target_col: str,
     num_class: int,
-    **kwargs,
 ) -> dict:
     """
     Driver leave-one-out CV. Returns per-fold metrics and averages.

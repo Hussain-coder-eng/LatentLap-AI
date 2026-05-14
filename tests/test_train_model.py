@@ -34,6 +34,7 @@ def _make_df(n: int = 20, seed: int = 0) -> pd.DataFrame:
         # Numeric identifiers — must be excluded
         "DriverNumber":  [4] * half + [3] * (n - half),
         "Year":          [2022] * n,
+        "Stint":         [2.0] * half + [3.0] * (n - half),
         # Admin flags stored as int — must be excluded
         "TrackStatus":   [1] * n,
         "IsAccurate":    [1] * n,
@@ -82,6 +83,7 @@ MUST_EXCLUDE = {
     "DeltaRate", "S2Delta", "S3_S1_Decay", "S3_S1_DecayZ",
     "ThermalAccumProxy", "PushRecoveryDelta",
     "DegSeverity", "StintId",
+    "Stint",   # FastF1 race-stint counter — race-order identifier, not tire signal
 }
 
 MUST_KEEP = {
