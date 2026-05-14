@@ -32,6 +32,8 @@ OUTPUT_PARQUET = "data/labeled_table.parquet"
 DELTA_GRADE0          = 0.20   # < 0.20s  → Grade 0  (nominal pace)
 DELTA_GRADE1          = 0.60   # < 0.60s  → Grade 1  (mild)
 DELTA_GRADE2          = 1.10   # < 1.10s  → Grade 2  (moderate); above → Grade 3
+# ⚠ STALE: calibrated on unmasked RollingDelta3 — recalibrate after feature_table.csv is
+# regenerated with the outlier-masked RollingDelta3 (5A fix in build_feature_table.py).
 ROLLING_GRADE2_THRESH = 0.50   # RollingDelta3 > 0.50 upgrades to at least Grade 2
 DEGRATEACCEL_GRADE3   = 1.50   # DegRateAccel  > 1.50 upgrades to Grade 3
 OUTLIER_DELTA_CAP     = 8.0    # LapDelta > 8s → flag as -1 (unreliable)
@@ -47,8 +49,12 @@ DEGRATEACCEL_BLISTER  = 1.00   # DegRateAccel threshold for late-stint combo
 TYRELIFE_LATE         = 15     # "late stint" for blistering combo rule
 
 # Graining (concave-up early stint, erratic pace)
+# ⚠ STALE: calibrated on unfiltered EarlyStintConcavity polyfit — recalibrate after
+# feature_table.csv is regenerated with the outlier-excluded polyfit (A fix in build_feature_table.py).
 CONCAVITY_GRAIN       = 0.30   # EarlyStintConcavity > this → concave-up pattern
 TYRELIFE_EARLY        = 10     # graining occurs early in stint
+# ⚠ STALE: calibrated on LapTimeSec basis — recalibrate after feature_table.csv is
+# regenerated with the FuelCorrLapTime-based LapVariance (C-1 fix in build_feature_table.py).
 LAPVAR_GRAIN          = 0.50   # LapVariance > this → erratic pace symptom
 
 # Thermal (rapid early degradation then partial recovery)
@@ -150,7 +156,8 @@ def assign_failure_mode(df: pd.DataFrame) -> pd.DataFrame:
     graining = (
         (df['EarlyStintConcavity'] > CONCAVITY_GRAIN) &
         (df['TyreLife'] <= TYRELIFE_EARLY) &
-        (df['LapVariance'] > LAPVAR_GRAIN)
+        (df['LapVariance'] > LAPVAR_GRAIN) &
+        (df['LapDelta'] > DELTA_GRADE0)   # require observable pace loss; guards against contamination
     )
     # SLEI spike requires observable pace impact to confirm blistering is active
     # (high SLEI on fresh tires = high load, not yet blistering)
@@ -176,6 +183,14 @@ def assign_failure_mode(df: pd.DataFrame) -> pd.DataFrame:
     df.loc[blistering, 'FailureMode'] = 'blistering'
     df.loc[thermal,    'FailureMode'] = 'thermal'
     df.loc[graining,   'FailureMode'] = 'graining'
+    # Fallback: pre-pit boost can push DegSeverity to 3 when LapDelta is just below DELTA_WEAR.
+    # A severe lap with no assigned mode is incoherent — treat as wear.
+    sev3_no_mode = (
+        (df['DegSeverity'] >= 3) &
+        (df['FailureMode'] == 'none') &
+        (df['LapDelta'] > DELTA_GRADE0)
+    )
+    df.loc[sev3_no_mode, 'FailureMode'] = 'wear'
     df.loc[df['DegSeverity'] == -1, 'FailureMode'] = 'unreliable'
 
     return df
