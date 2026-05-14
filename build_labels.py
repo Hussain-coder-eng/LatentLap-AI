@@ -38,7 +38,8 @@ OUTLIER_DELTA_CAP     = 8.0    # LapDelta > 8s → flag as -1 (unreliable)
 PRE_PIT_LAPS          = 3      # last N laps of a stint get +1 severity boost
 
 # ── Failure mode thresholds ──────────────────────────────────────────────────
-# Blistering (Pirelli SLEI p90 at Silverstone 2022 ≈ 3.55)
+# p90 of SLEI at Silverstone 2022 — calibrated on corrected np.trapezoid integration
+# RECALIBRATE this value after any change to build_feature_table.py energy integrals
 SLEI_BLISTER          = 3.50
 THERMAL_ACCUM_BLISTER = 0.010  # ThermalAccumProxy above this in combo
 DEGRATEACCEL_BLISTER  = 1.00   # DegRateAccel threshold for late-stint combo
@@ -64,7 +65,7 @@ def assign_stints(df: pd.DataFrame) -> pd.DataFrame:
     """Add StintId per driver based on TyreLife resets."""
     df = df.copy()
     df['StintId'] = 0
-    for driver, sub in df.groupby('Driver'):
+    for (year, driver), sub in df.groupby(['Year', 'Driver']):
         sub = sub.sort_values('LapNumber')
         stint = 0
         prev_tl = None
@@ -89,9 +90,10 @@ def assign_deg_severity(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df['DegSeverity'] = 0
 
-    for (driver, stint), grp in df.groupby(['Driver', 'StintId']):
+    for (year, driver, stint), grp in df.groupby(['Year', 'Driver', 'StintId']):
         laps_sorted = grp.sort_values('LapNumber')
         pre_pit_idx = set(laps_sorted.index[-PRE_PIT_LAPS:])
+        stint_ends_with_pit = laps_sorted["InLap"].iloc[-1] == 1
 
         for idx, row in grp.iterrows():
             if row['LapDelta'] > OUTLIER_DELTA_CAP:
@@ -117,7 +119,7 @@ def assign_deg_severity(df: pd.DataFrame) -> pd.DataFrame:
             # contamination from rolling windows that span outlier laps.
             if deg_accel > DEGRATEACCEL_GRADE3 and delta > DELTA_GRADE1:
                 sev = max(sev, 3)
-            if idx in pre_pit_idx:
+            if idx in pre_pit_idx and stint_ends_with_pit:
                 sev = min(sev + 1, 3)
 
             df.at[idx, 'DegSeverity'] = sev
@@ -143,7 +145,7 @@ def assign_failure_mode(df: pd.DataFrame) -> pd.DataFrame:
     # SLEI spike requires observable pace impact to confirm blistering is active
     # (high SLEI on fresh tires = high load, not yet blistering)
     blistering = (
-        (df['SLEI'] > SLEI_BLISTER) & (df['LapDelta'] > DELTA_GRADE0) |
+        ((df['SLEI'] > SLEI_BLISTER) & (df['LapDelta'] > DELTA_GRADE0)) |
         (
             (df['TyreLife'] > TYRELIFE_LATE) &
             (df['DegRateAccel'] > DEGRATEACCEL_BLISTER) &
@@ -151,7 +153,6 @@ def assign_failure_mode(df: pd.DataFrame) -> pd.DataFrame:
         )
     )
     thermal = (
-        prd.notna() &
         (prd < PUSH_RECOVERY_THERMAL) &
         (df['TyreLife'] <= TYRELIFE_THERMAL_MAX)
     )
