@@ -84,8 +84,20 @@ def select_features(df: pd.DataFrame) -> list[str]:
 
 # ── Stubs — implemented in Tasks 9–11 ─────────────────────────────────────────
 
-def driver_loo_splits(df: pd.DataFrame) -> list[tuple]:
-    raise NotImplementedError("Task 9")
+def driver_loo_splits(df: pd.DataFrame) -> list[tuple[list[int], list[int], str]]:
+    """
+    Return one (train_indices, test_indices, test_driver) tuple per driver.
+    Train = all rows from other drivers; test = all rows from this driver.
+    """
+    folds = []
+    for driver in sorted(df["Driver"].unique()):
+        is_test = df["Driver"] == driver
+        folds.append((
+            df.index[~is_test].tolist(),
+            df.index[is_test].tolist(),
+            driver,
+        ))
+    return folds
 
 
 def run_loo_cv(df: pd.DataFrame, *, features: list[str], target_col: str, num_class: int, **kwargs) -> dict:
