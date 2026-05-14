@@ -227,3 +227,81 @@ def load_mode_model() -> tuple[xgb.XGBClassifier, list[str]]:
     model = xgb.XGBClassifier()
     model.load_model(str(MODE_MODEL_PATH))
     return model, json.loads(FEATURE_LIST_PATH.read_text())
+
+
+def main() -> None:
+    df_all = pd.read_csv(DATA_PATH)
+    features = select_features(df_all)
+    print(f"\nFeatures selected: {len(features)}")
+    print(f"Feature list (first 10): {features[:10]}")
+
+    # ── Severity classifier ────────────────────────────────────────────────────
+    print("\n" + "=" * 60)
+    print("SEVERITY CLASSIFIER  (DegSeverity 0–3)")
+    print("=" * 60)
+    df_sev = df_all[df_all["DegSeverity"] != -1].copy().reset_index(drop=True)
+    print(f"Training rows: {len(df_sev)}")
+    print(f"Class dist: {df_sev['DegSeverity'].value_counts().sort_index().to_dict()}")
+
+    sev_cv = run_loo_cv(df_sev, features=features, target_col="DegSeverity", num_class=4)
+    for fold in sev_cv["folds"]:
+        print(f"\n  Fold — test={fold['test_driver']}  "
+              f"best_iter={fold['best_iteration']}  "
+              f"weighted_F1={fold['weighted_f1']:.3f}")
+        print(fold["report"])
+        print("  Confusion matrix:\n", np.array(fold["confusion_matrix"]))
+    print(f"\nSeverity avg weighted-F1 : {sev_cv['avg_weighted_f1']:.3f}")
+    print(f"Severity avg best_iter   : {sev_cv['avg_best_iteration']:.1f}")
+
+    sev_model = train_final(
+        df_sev, features=features, target_col="DegSeverity",
+        num_class=4, avg_best_iteration=sev_cv["avg_best_iteration"],
+    )
+
+    # ── Mode classifier ────────────────────────────────────────────────────────
+    print("\n" + "=" * 60)
+    print("MODE CLASSIFIER  (FailureMode: none / thermal / wear)")
+    print("=" * 60)
+    df_mode = df_all[
+        (df_all["DegSeverity"] != -1) &
+        (~df_all["FailureMode"].isin(["graining", "blistering", "unreliable"]))
+    ].copy().reset_index(drop=True)
+    df_mode["ModeLabel"] = df_mode["FailureMode"].map(MODE_ENCODING)
+    print(f"Training rows: {len(df_mode)}")
+    print(f"Class dist: {df_mode['FailureMode'].value_counts().to_dict()}")
+    print(f"Encoding: {MODE_ENCODING}")
+
+    mode_cv = run_loo_cv(df_mode, features=features, target_col="ModeLabel", num_class=3)
+    for fold in mode_cv["folds"]:
+        print(f"\n  Fold — test={fold['test_driver']}  "
+              f"best_iter={fold['best_iteration']}  "
+              f"weighted_F1={fold['weighted_f1']:.3f}")
+        print(fold["report"])
+        print("  Confusion matrix (rows/cols: none=0, thermal=1, wear=2):\n",
+              np.array(fold["confusion_matrix"]))
+    print(f"\nMode avg weighted-F1 : {mode_cv['avg_weighted_f1']:.3f}")
+    print(f"Mode avg best_iter   : {mode_cv['avg_best_iteration']:.1f}")
+
+    mode_model = train_final(
+        df_mode, features=features, target_col="ModeLabel",
+        num_class=3, avg_best_iteration=mode_cv["avg_best_iteration"],
+    )
+
+    # ── Save artifacts ─────────────────────────────────────────────────────────
+    cv_results = {
+        "severity": {k: v for k, v in sev_cv.items()  if k != "folds"},
+        "mode":     {k: v for k, v in mode_cv.items() if k != "folds"},
+        "mode_encoding": MODE_ENCODING,
+        "severity_folds": [
+            {k: v for k, v in f.items() if k != "test_probs"} for f in sev_cv["folds"]
+        ],
+        "mode_folds": [
+            {k: v for k, v in f.items() if k != "test_probs"} for f in mode_cv["folds"]
+        ],
+    }
+    save_artifacts(sev_model, mode_model, features, cv_results)
+    print("\nPhase 4 complete.")
+
+
+if __name__ == "__main__":
+    main()
