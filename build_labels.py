@@ -150,7 +150,8 @@ def assign_failure_mode(df: pd.DataFrame) -> pd.DataFrame:
     graining = (
         (df['EarlyStintConcavity'] > CONCAVITY_GRAIN) &
         (df['TyreLife'] <= TYRELIFE_EARLY) &
-        (df['LapVariance'] > LAPVAR_GRAIN)
+        (df['LapVariance'] > LAPVAR_GRAIN) &
+        (df['LapDelta'] > DELTA_GRADE0)   # require observable pace loss; guards against contamination
     )
     # SLEI spike requires observable pace impact to confirm blistering is active
     # (high SLEI on fresh tires = high load, not yet blistering)

@@ -48,7 +48,8 @@ TEAM          = "McLaren"
 CACHE_DIR     = Path("cache")
 DATA_DIR      = Path("data")
 RACING_STATUS = {"1", "2"}
-MAX_LAP_SEC   = 130
+MAX_LAP_SEC       = 130
+OUTLIER_DELTA_CAP = 8.0   # LapDelta > 8s → exclude from rolling stats and polyfit
 FUEL_START_KG = 110.0
 FUEL_CORR_SEC_PER_KG = 0.035   # industry standard 0.03–0.04 s/kg
 
@@ -157,9 +158,15 @@ def pace_features(laps: pd.DataFrame, total_laps: int) -> pd.DataFrame:
     df["RollingDelta3"]  = df.groupby(grp)["LapDelta"].transform(
         lambda x: x.rolling(3, min_periods=1).mean()
     )
-    df["LapVariance"]    = df.groupby(grp)["LapTimeSec"].transform(
-        lambda x: x.rolling(5, min_periods=1).std().fillna(0)
-    )
+    # LapVariance: rolling std on fuel-corrected times, outlier laps masked to NaN
+    # so contamination from SC/safety-car laps doesn't inflate subsequent windows.
+    _lap_var: dict = {}
+    for _key, _grp in df.groupby(grp):
+        _clean = _grp["FuelCorrLapTime"].where(_grp["LapDelta"] <= OUTLIER_DELTA_CAP)
+        _rolling_std = _clean.rolling(5, min_periods=1).std().fillna(0)
+        for _idx, _val in _rolling_std.items():
+            _lap_var[_idx] = _val
+    df["LapVariance"] = pd.Series(_lap_var)
     df["DeltaRate"]      = df.groupby(grp)["LapDelta"].transform(
         lambda x: x.diff().fillna(0)
     )
@@ -190,7 +197,7 @@ def pace_features(laps: pd.DataFrame, total_laps: int) -> pd.DataFrame:
     # Concave-up (positive) = graining recovering; concave-down = thermal/wear
     _concavity = {}
     for _key, _grp in df.groupby(grp):
-        _early = _grp[_grp["TyreLife"] <= 8]
+        _early = _grp[(_grp["TyreLife"] <= 8) & (_grp["LapDelta"] <= OUTLIER_DELTA_CAP)]
         if len(_early) < 4:
             _val = 0.0
         else:
