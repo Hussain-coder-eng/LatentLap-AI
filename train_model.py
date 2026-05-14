@@ -100,8 +100,81 @@ def driver_loo_splits(df: pd.DataFrame) -> list[tuple[list[int], list[int], str]
     return folds
 
 
-def run_loo_cv(df: pd.DataFrame, *, features: list[str], target_col: str, num_class: int, **kwargs) -> dict:
-    raise NotImplementedError("Task 10")
+def _xgb_params(num_class: int) -> dict:
+    """Fixed hyperparameters. No tuning — signal is too noisy on ~41-row LOO folds."""
+    return dict(
+        objective="multi:softprob",
+        num_class=num_class,
+        n_estimators=500,
+        early_stopping_rounds=30,
+        eval_metric="mlogloss",
+        max_depth=4,
+        learning_rate=0.05,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        random_state=42,
+        verbosity=0,
+    )
+
+
+def run_loo_cv(
+    df: pd.DataFrame,
+    *,
+    features: list[str],
+    target_col: str,
+    num_class: int,
+    **kwargs,
+) -> dict:
+    """
+    Driver leave-one-out CV. Returns per-fold metrics and averages.
+
+    Return shape
+    ------------
+    {
+      "folds": [
+        {
+          "test_driver":      str,
+          "best_iteration":   int,
+          "weighted_f1":      float,
+          "report":           str,
+          "confusion_matrix": list[list[int]],
+          "test_probs":       list[list[float]],
+          "test_true":        list[int],
+        },
+        ...
+      ],
+      "avg_weighted_f1":    float,
+      "avg_best_iteration": float,
+    }
+    """
+    folds_out = []
+    for train_idx, test_idx, test_driver in driver_loo_splits(df):
+        X_train = df.loc[train_idx, features].values
+        y_train = df.loc[train_idx, target_col].values
+        X_test  = df.loc[test_idx,  features].values
+        y_test  = df.loc[test_idx,  target_col].values
+
+        model = xgb.XGBClassifier(**_xgb_params(num_class))
+        model.fit(X_train, y_train, eval_set=[(X_test, y_test)], verbose=False)
+
+        probs = model.predict_proba(X_test)
+        preds = probs.argmax(axis=1)
+
+        folds_out.append({
+            "test_driver":      test_driver,
+            "best_iteration":   int(model.best_iteration),
+            "weighted_f1":      float(f1_score(y_test, preds, average="weighted", zero_division=0)),
+            "report":           classification_report(y_test, preds, zero_division=0),
+            "confusion_matrix": confusion_matrix(y_test, preds).tolist(),
+            "test_probs":       probs.tolist(),
+            "test_true":        y_test.tolist(),
+        })
+
+    return {
+        "folds":              folds_out,
+        "avg_weighted_f1":    float(np.mean([f["weighted_f1"]    for f in folds_out])),
+        "avg_best_iteration": float(np.mean([f["best_iteration"] for f in folds_out])),
+    }
 
 
 def train_final(df: pd.DataFrame, *, features: list[str], target_col: str, num_class: int, avg_best_iteration: float) -> xgb.Booster:
