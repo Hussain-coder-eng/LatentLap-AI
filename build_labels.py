@@ -84,16 +84,25 @@ def assign_deg_severity(df: pd.DataFrame) -> pd.DataFrame:
 
     Base score from LapDelta (already = FuelCorrLapTime − stint best).
     Upgrades applied for sustained rolling trend or accelerating degradation.
-    Last PRE_PIT_LAPS laps of each stint get +1 (backward-label from pit stop).
+    Last PRE_PIT_LAPS laps of a non-final stint get +1 (backward-label from pit stop).
+    Final stint (highest StintId per driver/year) is excluded — it ends at the flag.
     Laps with LapDelta > OUTLIER_DELTA_CAP are flagged as -1.
+
+    Note: InLap is always 0 in the feature table because the actual pit-in lap is
+    filtered out by FastF1 (IsAccurate=False). Final-stint detection uses StintId
+    relative to max StintId per driver/year instead.
     """
     df = df.copy()
     df['DegSeverity'] = 0
 
+    # Pre-compute max stint per (year, driver) to detect the final stint
+    max_stint = df.groupby(['Year', 'Driver'])['StintId'].transform('max')
+
     for (year, driver, stint), grp in df.groupby(['Year', 'Driver', 'StintId']):
         laps_sorted = grp.sort_values('LapNumber')
         pre_pit_idx = set(laps_sorted.index[-PRE_PIT_LAPS:])
-        stint_ends_with_pit = laps_sorted["InLap"].iloc[-1] == 1
+        # Boost only fires for stints that ended with a pit stop, not the final stint
+        is_final_stint = (stint == max_stint.loc[grp.index].iloc[0])
 
         for idx, row in grp.iterrows():
             if row['LapDelta'] > OUTLIER_DELTA_CAP:
@@ -119,7 +128,7 @@ def assign_deg_severity(df: pd.DataFrame) -> pd.DataFrame:
             # contamination from rolling windows that span outlier laps.
             if deg_accel > DEGRATEACCEL_GRADE3 and delta > DELTA_GRADE1:
                 sev = max(sev, 3)
-            if idx in pre_pit_idx and stint_ends_with_pit:
+            if idx in pre_pit_idx and not is_final_stint:
                 sev = min(sev + 1, 3)
 
             df.at[idx, 'DegSeverity'] = sev
