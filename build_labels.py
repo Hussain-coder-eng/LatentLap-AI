@@ -179,6 +179,14 @@ def assign_failure_mode(df: pd.DataFrame) -> pd.DataFrame:
     df.loc[blistering, 'FailureMode'] = 'blistering'
     df.loc[thermal,    'FailureMode'] = 'thermal'
     df.loc[graining,   'FailureMode'] = 'graining'
+    # Fallback: pre-pit boost can push DegSeverity to 3 when LapDelta is just below DELTA_WEAR.
+    # A severe lap with no assigned mode is incoherent — treat as wear.
+    sev3_no_mode = (
+        (df['DegSeverity'] >= 3) &
+        (df['FailureMode'] == 'none') &
+        (df['LapDelta'] > DELTA_GRADE0)
+    )
+    df.loc[sev3_no_mode, 'FailureMode'] = 'wear'
     df.loc[df['DegSeverity'] == -1, 'FailureMode'] = 'unreliable'
 
     return df

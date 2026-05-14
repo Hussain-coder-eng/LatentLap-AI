@@ -155,9 +155,15 @@ def pace_features(laps: pd.DataFrame, total_laps: int) -> pd.DataFrame:
     # Pace deltas (on fuel-corrected times for accuracy)
     df["StintBest"]      = df.groupby(grp)["FuelCorrLapTime"].transform("min")
     df["LapDelta"]       = df["FuelCorrLapTime"] - df["StintBest"]
-    df["RollingDelta3"]  = df.groupby(grp)["LapDelta"].transform(
-        lambda x: x.rolling(3, min_periods=1).mean()
-    )
+    # RollingDelta3: rolling 3-lap mean of LapDelta, outlier laps masked to NaN
+    # so SC/incident laps don't inflate the average for subsequent normal laps.
+    _rolling_d3: dict = {}
+    for _key, _grp in df.groupby(grp):
+        _clean = _grp["LapDelta"].where(_grp["LapDelta"] <= OUTLIER_DELTA_CAP)
+        _roll = _clean.rolling(3, min_periods=1).mean().fillna(0)
+        for _idx, _val in _roll.items():
+            _rolling_d3[_idx] = _val
+    df["RollingDelta3"] = pd.Series(_rolling_d3)
     # LapVariance: rolling std on fuel-corrected times, outlier laps masked to NaN
     # so contamination from SC/safety-car laps doesn't inflate subsequent windows.
     _lap_var: dict = {}
