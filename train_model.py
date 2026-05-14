@@ -177,17 +177,53 @@ def run_loo_cv(
     }
 
 
-def train_final(df: pd.DataFrame, *, features: list[str], target_col: str, num_class: int, avg_best_iteration: float) -> xgb.Booster:
-    raise NotImplementedError("Task 11")
+def train_final(
+    df: pd.DataFrame,
+    *,
+    features: list[str],
+    target_col: str,
+    num_class: int,
+    avg_best_iteration: float,
+) -> xgb.XGBClassifier:
+    """
+    Refit on the full dataset using n_estimators = ceil(avg_best_iteration).
+    No eval_set — this is the production artifact.
+    """
+    n_trees = max(math.ceil(avg_best_iteration), 10)
+    params = _xgb_params(num_class)
+    params.pop("early_stopping_rounds")
+    params["n_estimators"] = n_trees
+
+    model = xgb.XGBClassifier(**params)
+    model.fit(df[features].values, df[target_col].values, verbose=False)
+    return model
 
 
-def save_artifacts(severity_model: xgb.Booster, mode_model: xgb.Booster, features: list[str], cv_results: dict) -> None:
-    raise NotImplementedError("Task 11")
+def save_artifacts(
+    severity_model: xgb.XGBClassifier,
+    mode_model: xgb.XGBClassifier,
+    features: list[str],
+    cv_results: dict,
+) -> None:
+    """Persist all four model artifacts to models/."""
+    MODELS_DIR.mkdir(exist_ok=True)
+    severity_model.save_model(str(SEVERITY_MODEL_PATH))
+    mode_model.save_model(str(MODE_MODEL_PATH))
+    FEATURE_LIST_PATH.write_text(json.dumps(features, indent=2))
+    CV_RESULTS_PATH.write_text(json.dumps(cv_results, indent=2))
+    print(f"Saved: {SEVERITY_MODEL_PATH}, {MODE_MODEL_PATH}, "
+          f"{FEATURE_LIST_PATH}, {CV_RESULTS_PATH}")
 
 
-def load_severity_model() -> tuple:
-    raise NotImplementedError("Task 11")
+def load_severity_model() -> tuple[xgb.XGBClassifier, list[str]]:
+    """Return (severity_model, feature_list) for evaluate.py and app.py."""
+    model = xgb.XGBClassifier()
+    model.load_model(str(SEVERITY_MODEL_PATH))
+    return model, json.loads(FEATURE_LIST_PATH.read_text())
 
 
-def load_mode_model() -> tuple:
-    raise NotImplementedError("Task 11")
+def load_mode_model() -> tuple[xgb.XGBClassifier, list[str]]:
+    """Return (mode_model, feature_list) for evaluate.py and app.py."""
+    model = xgb.XGBClassifier()
+    model.load_model(str(MODE_MODEL_PATH))
+    return model, json.loads(FEATURE_LIST_PATH.read_text())
