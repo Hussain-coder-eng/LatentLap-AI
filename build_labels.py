@@ -210,7 +210,7 @@ def print_validation_report(df: pd.DataFrame) -> None:
 
     print("\n=== VALIDATION — blistering laps (should include NOR long-stint end) ===")
     blister = df[df['FailureMode'] == 'blistering']
-    print(blister[['Driver', 'LapNumber', 'TyreLife', 'CompoundCode',
+    print(blister[['Year', 'Driver', 'LapNumber', 'TyreLife', 'CompoundCode',
                    'SLEI', 'LapDelta', 'DegSeverity']].sort_values('SLEI', ascending=False).to_string(index=False))
 
 
