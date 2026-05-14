@@ -38,8 +38,9 @@ OUTLIER_DELTA_CAP     = 8.0    # LapDelta > 8s → flag as -1 (unreliable)
 PRE_PIT_LAPS          = 3      # last N laps of a stint get +1 severity boost
 
 # ── Failure mode thresholds ──────────────────────────────────────────────────
-# p90 of SLEI at Silverstone 2022 — calibrated on corrected np.trapezoid integration
-# RECALIBRATE this value after any change to build_feature_table.py energy integrals
+# ⚠ STALE: calibrated on BUGGY integration (dt_sec passed as x-axis, not cumsum).
+# feature_table.csv must be regenerated with the C-1 fix before this threshold
+# is meaningful. Recalibrate to p90 of the corrected SLEI distribution.
 SLEI_BLISTER          = 3.50
 THERMAL_ACCUM_BLISTER = 0.010  # ThermalAccumProxy above this in combo
 DEGRATEACCEL_BLISTER  = 1.00   # DegRateAccel threshold for late-stint combo
@@ -187,8 +188,9 @@ def print_validation_report(df: pd.DataFrame) -> None:
     print("\nFailureMode:")
     print(df['FailureMode'].value_counts().to_string())
 
-    print("\n=== VALIDATION — NOR Medium stint (expected blistering near end) ===")
+    print("\n=== VALIDATION — NOR 2022 Medium stint (expected blistering near end) ===")
     nor_med = df[
+        (df['Year'] == 2022) &
         (df['Driver'] == 'NOR') &
         (df['CompoundCode'] == 1) &
         (df['TyreLife'] >= 20)
@@ -196,10 +198,10 @@ def print_validation_report(df: pd.DataFrame) -> None:
     print(nor_med[['LapNumber', 'TyreLife', 'LapDelta', 'SLEI',
                    'DegSeverity', 'FailureMode']].to_string(index=False))
 
-    print("\n=== VALIDATION — severity by driver / stint / compound ===")
+    print("\n=== VALIDATION — severity by year / driver / stint / compound ===")
     clean = df[df['DegSeverity'] >= 0]
     pivot = (
-        clean.groupby(['Driver', 'StintId', 'CompoundCode'])['DegSeverity']
+        clean.groupby(['Year', 'Driver', 'StintId', 'CompoundCode'])['DegSeverity']
         .value_counts()
         .unstack(fill_value=0)
         .rename(columns={0: 'Gr0', 1: 'Gr1', 2: 'Gr2', 3: 'Gr3'})
