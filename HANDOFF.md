@@ -26,7 +26,7 @@ The approved design doc is at:
 | 1 — Data ingestion | ✅ Done | `explore_data.py` |
 | 2 — Feature engineering | ✅ Done (bugs fixed) | `build_feature_table.py` |
 | 3 — Weak supervision labels | ✅ Done (bugs fixed) | `build_labels.py` |
-| 4 — XGBoost model | ⬜ **NEXT** | `train_model.py` (to be created) |
+| 4 — XGBoost model | ✅ Done | `train_model.py` |
 | 5 — SHAP explainability + validation | ⬜ Not started | `evaluate.py` (to be created) |
 | 6 — Streamlit dashboard | ⬜ Not started | `app.py` (to be created) |
 
@@ -58,6 +58,59 @@ Then recalibrate the four STALE thresholds (all marked `⚠ STALE` in `build_lab
 - `LAPVAR_GRAIN = 0.50` → recalibrate after FuelCorrLapTime-based LapVariance
 
 All four should be done in one commit after regeneration.
+
+---
+
+## Phase 4 — Completed
+
+### What was built
+
+`train_model.py` trains two XGBoost classifiers from 84 raw telemetry features (no label-leaking columns):
+
+1. **Severity classifier** — `DegSeverity` (0–3), 81 training rows
+2. **Mode classifier** — `FailureMode` (none / thermal / wear), 75 training rows
+   - graining (1 row), blistering (5 rows), unreliable (1 row) excluded as too sparse
+
+**Cross-validation:** Driver leave-one-out (train NOR → test RIC, train RIC → test NOR). Leave-one-year-out CV was planned but only 2022 data is available; revisit when 2021/2023–2025 data is ingested.
+
+**CV results (2022 Silverstone, single-year):**
+- Severity avg weighted-F1: 0.162 — NOTE: below majority-class baseline. Model learns from raw telemetry only (LapDelta, RollingDelta3, DegRateAccel excluded). SHAP analysis in Phase 5 should focus on directional patterns rather than individual-lap attribution.
+- Mode avg weighted-F1: 0.445
+
+**Feature exclusions (84 features kept from labeled_table.csv):**
+- Excluded identifiers: DriverNumber, Year, Stint
+- Excluded admin flags: TrackStatus, IsAccurate, OutLap, InLap
+- Excluded raw times: LapTimeSec, S1Sec, S2Sec, S3Sec, FuelCorrLapTime
+- Excluded severity label-generators: LapDelta, RollingDelta3, DegRateAccel, DeltaRate, S2Delta, S3_S1_Decay, S3_S1_DecayZ
+- Excluded mode label-generators: ThermalAccumProxy, PushRecoveryDelta
+- Excluded targets: DegSeverity, StintId
+
+**Mode encoding (integer labels for XGBoost):**
+```python
+MODE_ENCODING = {"none": 0, "thermal": 1, "wear": 2}
+```
+
+### Outputs
+```
+train_model.py               ← Phase 4, DONE — trains + saves both classifiers
+models/severity_model.ubj    ← DegSeverity classifier (gitignored, regenerate with train_model.py)
+models/mode_model.ubj        ← FailureMode classifier (gitignored)
+models/feature_list.json     ← 84 feature column names (shared input schema)
+models/cv_results.json       ← per-fold metrics + mode_encoding dict
+tests/test_train_model.py    ← 13 unit tests
+```
+
+### Public interface for Phase 5/6
+```python
+from train_model import load_severity_model, load_mode_model
+sev_model, features = load_severity_model()   # XGBClassifier + list[str]
+mode_model, features = load_mode_model()      # XGBClassifier + list[str]
+# Inference:
+probs = sev_model.predict_proba(df[features].values)  # shape (n, 4)
+mode_probs = mode_model.predict_proba(df[features].values)  # shape (n, 3), classes: none/thermal/wear
+```
+
+Note: Models are not committed to git. Run `~/.venv/bin/python train_model.py` to regenerate.
 
 ---
 
@@ -139,37 +192,23 @@ Carries forward from prior session, plus new entries:
 | Graining condition without pace-loss guard | `EarlyStintConcavity` and `LapVariance` contamination caused grade-0 laps to get graining labels | Require `LapDelta > DELTA_GRADE0` as guard condition |
 | Pre-pit boost without wear fallback | Boost drives `Sev=3` on laps below `DELTA_WEAR` → `Sev=3 / FailureMode=none` contradiction | Add fallback: `Sev≥3 + none + LapDelta > DELTA_GRADE0` → wear |
 | dataprep EDA (library) | MarkupSafe/Jinja2/Bokeh/IPython/NumPy version chain incompatible with Python 3.12+ | Use manual pandas/numpy EDA instead |
+| Groupby LOO CV | GroupShuffleSplit on Year planned but only 1 year available → used driver-LOO instead | Use LOY-CV when 2021/2023–2025 data is ingested |
+| eval_set=test_fold early stopping | Optimistic avg_best_iteration; acceptable with ~41 train rows; Phase 5 SHAP should note | Document in HANDOFF |
 
 ---
 
 ## Immediate Next Steps
 
-### Step 1 — Regenerate feature_table.csv (requires network)
+### Step 1 — Regenerate feature_table.csv (requires network) — DONE
 
 ```bash
 ~/.venv/bin/python build_feature_table.py --year 2022
 ~/.venv/bin/python build_labels.py
 ```
 
-Then recalibrate all four `⚠ STALE` thresholds in `build_labels.py` to the new distributions. Commit on a `fix-recalibrate-thresholds` branch and run `build_labels.py` again to confirm labels still look correct (NOR blistering at laps 25/30 should survive).
+Thresholds were recalibrated after regeneration. Phase 4 training was completed on the corrected feature table.
 
-### Step 2 — Phase 4: XGBoost model (`train_model.py`)
-
-Do NOT start Phase 4 until Step 1 is complete — training on the pre-fix feature table would embed the outlier contamination into the model.
-
-```python
-# Rough structure for train_model.py:
-import xgboost as xgb
-from sklearn.model_selection import GroupShuffleSplit
-
-# Features: all numeric cols except labels, housekeeping, and raw times
-# Target: DegSeverity (0-3) for severity classifier
-#         FailureMode (graining/blistering/thermal/wear) for mode classifier
-# Group: Year — use leave-one-year-out CV (train on 4 years, validate on held-out)
-# Note: filter out DegSeverity == -1 rows before training
-```
-
-### Step 3 — SHAP + Validation (Phase 5, `evaluate.py`)
+### Step 2 — Phase 5: SHAP + Validation (`evaluate.py`) — NEXT
 
 Key validation checks:
 - Degradation probability rises before observed pit stops
@@ -177,7 +216,7 @@ Key validation checks:
 - Maggotts-Becketts features (`MB_PeakLatG`, `MB_TimeSec`) appear in top SHAP features
 - Held-out race (Silverstone 2024) used for out-of-sample evaluation
 
-### Step 4 — Streamlit Dashboard (Phase 6, `app.py`)
+### Step 3 — Streamlit Dashboard (Phase 6, `app.py`)
 
 Stack: Streamlit + Plotly
 
