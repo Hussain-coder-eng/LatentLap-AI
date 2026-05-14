@@ -49,6 +49,8 @@ TYRELIFE_LATE         = 15     # "late stint" for blistering combo rule
 # Graining (concave-up early stint, erratic pace)
 CONCAVITY_GRAIN       = 0.30   # EarlyStintConcavity > this → concave-up pattern
 TYRELIFE_EARLY        = 10     # graining occurs early in stint
+# ⚠ STALE: calibrated on LapTimeSec basis — recalibrate after feature_table.csv is
+# regenerated with the FuelCorrLapTime-based LapVariance (C-1 fix in build_feature_table.py).
 LAPVAR_GRAIN          = 0.50   # LapVariance > this → erratic pace symptom
 
 # Thermal (rapid early degradation then partial recovery)
