@@ -93,6 +93,20 @@ def load_session(year: int):
 
 def filter_laps(laps: pd.DataFrame) -> pd.DataFrame:
     """Keep only clean racing laps; add quality flag columns."""
+
+    # Post-SC detection must run on the UNFILTERED laps BEFORE the mask is applied.
+    # If we ran it after filtering, every row would already have TrackStatus in
+    # {"1","2"} and the condition `ts[i-1] in {"4","6","7"}` could never be True.
+    sc_flags: dict = {}
+    for drv, grp in laps.sort_values("LapNumber").groupby("Driver"):
+        ts  = grp["TrackStatus"].tolist()
+        idx = grp.index.tolist()
+        for i in range(1, len(ts)):
+            if ts[i] in {"1", "2"} and ts[i - 1] in {"4", "6", "7"}:
+                # Mark this lap and the next as post-SC
+                for j in range(i, min(i + 2, len(idx))):
+                    sc_flags[idx[j]] = 1
+
     mask = (
         laps["IsAccurate"]
         & laps["TrackStatus"].isin(RACING_STATUS)
@@ -108,18 +122,8 @@ def filter_laps(laps: pd.DataFrame) -> pd.DataFrame:
     # In-lap: lap ending with a pit stop
     df["InLap"] = df["PitInTime"].notna().astype(int)
 
-    # Post-SC lap: first 2 laps where TrackStatus just returned to green
-    # Mark laps following any SC/VSC period (status 4 or 6)
-    df_sorted = df.sort_values(["Driver", "LapNumber"])
-    df["PostSC_Lap"] = 0
-    for drv, grp in df_sorted.groupby("Driver"):
-        ts = grp["TrackStatus"].tolist()
-        idx = grp.index.tolist()
-        for i in range(1, len(ts)):
-            if ts[i] in {"1", "2"} and ts[i - 1] in {"4", "6", "7"}:
-                # Mark this lap and the next as post-SC
-                for j in range(i, min(i + 2, len(idx))):
-                    df.loc[idx[j], "PostSC_Lap"] = 1
+    # Propagate pre-computed SC flags into the filtered DataFrame via index
+    df["PostSC_Lap"] = df.index.map(sc_flags).fillna(0).astype(int)
 
     return df
 
@@ -250,6 +254,7 @@ def context_features(laps: pd.DataFrame, weather: pd.DataFrame) -> pd.DataFrame:
             df[col] = np.nan
 
     # Compound out-of-operating-window flag
+    # Pirelli published soft-compound upper limit ~40°C track temp; hard lower limit ~25°C
     df["CompoundOOW"] = (
         ((df["Compound"] == "SOFT")   & (df["TrackTemp"].fillna(30) > 40)) |
         ((df["Compound"] == "HARD")   & (df["TrackTemp"].fillna(30) < 25))
@@ -399,18 +404,24 @@ def compute_telemetry_features(lap) -> dict:
     window_samples = max(1, int(2.0 / np.mean(dt_sec)))
     lat_g_sq_v     = lat_g_abs**2 * v_ms
     slei_windows   = [
-        np.trapezoid(lat_g_sq_v[i:i+window_samples], dt_sec[i:i+window_samples])
+        # np.cumsum(dt_sec) gives proper x-coordinates for trapezoid integration;
+        # passing dt_sec directly would treat per-sample durations as x-coords and
+        # then diff(dt_sec) ≈ 0, making integrals orders of magnitude too small.
+        np.trapezoid(lat_g_sq_v[i:i+window_samples],
+                     np.cumsum(dt_sec[i:i+window_samples]))
         for i in range(0, max(1, len(lat_g_sq_v) - window_samples), window_samples)
     ]
     slei = float(np.max(slei_windows)) if slei_windows else 0.0
 
     # Cumulative lateral energy (tire work integral) — targets wear
-    lat_energy_total = float(np.trapezoid(lat_g_abs * v_ms, dt_sec))
+    # np.cumsum(dt_sec) gives proper x-coordinates (see SLEI comment above)
+    lat_energy_total = float(np.trapezoid(lat_g_abs * v_ms, np.cumsum(dt_sec)))
 
     # ── Tire energy — longitudinal ────────────────────────────────────────────
     # Total longitudinal energy: |a_long × v| integrated
     a_long = np.gradient(v_ms) / np.maximum(dt_sec, 0.01)   # m/s²
-    long_energy = float(np.trapezoid(np.abs(a_long) * v_ms, dt_sec))
+    # np.cumsum(dt_sec) gives proper x-coordinates (see SLEI comment above)
+    long_energy = float(np.trapezoid(np.abs(a_long) * v_ms, np.cumsum(dt_sec)))
 
     # Power traction proxy — throttle × RPM (normalised)
     long_proxy = float(np.mean(throttle * rpm / 1e6))

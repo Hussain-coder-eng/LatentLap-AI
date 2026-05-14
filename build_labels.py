@@ -38,7 +38,9 @@ OUTLIER_DELTA_CAP     = 8.0    # LapDelta > 8s → flag as -1 (unreliable)
 PRE_PIT_LAPS          = 3      # last N laps of a stint get +1 severity boost
 
 # ── Failure mode thresholds ──────────────────────────────────────────────────
-# Blistering (Pirelli SLEI p90 at Silverstone 2022 ≈ 3.55)
+# ⚠ STALE: calibrated on BUGGY integration (dt_sec passed as x-axis, not cumsum).
+# feature_table.csv must be regenerated with the C-1 fix before this threshold
+# is meaningful. Recalibrate to p90 of the corrected SLEI distribution.
 SLEI_BLISTER          = 3.50
 THERMAL_ACCUM_BLISTER = 0.010  # ThermalAccumProxy above this in combo
 DEGRATEACCEL_BLISTER  = 1.00   # DegRateAccel threshold for late-stint combo
@@ -64,7 +66,7 @@ def assign_stints(df: pd.DataFrame) -> pd.DataFrame:
     """Add StintId per driver based on TyreLife resets."""
     df = df.copy()
     df['StintId'] = 0
-    for driver, sub in df.groupby('Driver'):
+    for (year, driver), sub in df.groupby(['Year', 'Driver']):
         sub = sub.sort_values('LapNumber')
         stint = 0
         prev_tl = None
@@ -83,15 +85,25 @@ def assign_deg_severity(df: pd.DataFrame) -> pd.DataFrame:
 
     Base score from LapDelta (already = FuelCorrLapTime − stint best).
     Upgrades applied for sustained rolling trend or accelerating degradation.
-    Last PRE_PIT_LAPS laps of each stint get +1 (backward-label from pit stop).
+    Last PRE_PIT_LAPS laps of a non-final stint get +1 (backward-label from pit stop).
+    Final stint (highest StintId per driver/year) is excluded — it ends at the flag.
     Laps with LapDelta > OUTLIER_DELTA_CAP are flagged as -1.
+
+    Note: InLap is always 0 in the feature table because the actual pit-in lap is
+    filtered out by FastF1 (IsAccurate=False). Final-stint detection uses StintId
+    relative to max StintId per driver/year instead.
     """
     df = df.copy()
     df['DegSeverity'] = 0
 
-    for (driver, stint), grp in df.groupby(['Driver', 'StintId']):
+    # Pre-compute max stint per (year, driver) to detect the final stint
+    max_stint = df.groupby(['Year', 'Driver'])['StintId'].transform('max')
+
+    for (year, driver, stint), grp in df.groupby(['Year', 'Driver', 'StintId']):
         laps_sorted = grp.sort_values('LapNumber')
         pre_pit_idx = set(laps_sorted.index[-PRE_PIT_LAPS:])
+        # Boost only fires for stints that ended with a pit stop, not the final stint
+        is_final_stint = (stint == max_stint.loc[grp.index].iloc[0])
 
         for idx, row in grp.iterrows():
             if row['LapDelta'] > OUTLIER_DELTA_CAP:
@@ -117,7 +129,7 @@ def assign_deg_severity(df: pd.DataFrame) -> pd.DataFrame:
             # contamination from rolling windows that span outlier laps.
             if deg_accel > DEGRATEACCEL_GRADE3 and delta > DELTA_GRADE1:
                 sev = max(sev, 3)
-            if idx in pre_pit_idx:
+            if idx in pre_pit_idx and not is_final_stint:
                 sev = min(sev + 1, 3)
 
             df.at[idx, 'DegSeverity'] = sev
@@ -143,7 +155,7 @@ def assign_failure_mode(df: pd.DataFrame) -> pd.DataFrame:
     # SLEI spike requires observable pace impact to confirm blistering is active
     # (high SLEI on fresh tires = high load, not yet blistering)
     blistering = (
-        (df['SLEI'] > SLEI_BLISTER) & (df['LapDelta'] > DELTA_GRADE0) |
+        ((df['SLEI'] > SLEI_BLISTER) & (df['LapDelta'] > DELTA_GRADE0)) |
         (
             (df['TyreLife'] > TYRELIFE_LATE) &
             (df['DegRateAccel'] > DEGRATEACCEL_BLISTER) &
@@ -151,7 +163,6 @@ def assign_failure_mode(df: pd.DataFrame) -> pd.DataFrame:
         )
     )
     thermal = (
-        prd.notna() &
         (prd < PUSH_RECOVERY_THERMAL) &
         (df['TyreLife'] <= TYRELIFE_THERMAL_MAX)
     )
@@ -177,8 +188,9 @@ def print_validation_report(df: pd.DataFrame) -> None:
     print("\nFailureMode:")
     print(df['FailureMode'].value_counts().to_string())
 
-    print("\n=== VALIDATION — NOR Medium stint (expected blistering near end) ===")
+    print("\n=== VALIDATION — NOR 2022 Medium stint (expected blistering near end) ===")
     nor_med = df[
+        (df['Year'] == 2022) &
         (df['Driver'] == 'NOR') &
         (df['CompoundCode'] == 1) &
         (df['TyreLife'] >= 20)
@@ -186,10 +198,10 @@ def print_validation_report(df: pd.DataFrame) -> None:
     print(nor_med[['LapNumber', 'TyreLife', 'LapDelta', 'SLEI',
                    'DegSeverity', 'FailureMode']].to_string(index=False))
 
-    print("\n=== VALIDATION — severity by driver / stint / compound ===")
+    print("\n=== VALIDATION — severity by year / driver / stint / compound ===")
     clean = df[df['DegSeverity'] >= 0]
     pivot = (
-        clean.groupby(['Driver', 'StintId', 'CompoundCode'])['DegSeverity']
+        clean.groupby(['Year', 'Driver', 'StintId', 'CompoundCode'])['DegSeverity']
         .value_counts()
         .unstack(fill_value=0)
         .rename(columns={0: 'Gr0', 1: 'Gr1', 2: 'Gr2', 3: 'Gr3'})
@@ -198,7 +210,7 @@ def print_validation_report(df: pd.DataFrame) -> None:
 
     print("\n=== VALIDATION — blistering laps (should include NOR long-stint end) ===")
     blister = df[df['FailureMode'] == 'blistering']
-    print(blister[['Driver', 'LapNumber', 'TyreLife', 'CompoundCode',
+    print(blister[['Year', 'Driver', 'LapNumber', 'TyreLife', 'CompoundCode',
                    'SLEI', 'LapDelta', 'DegSeverity']].sort_values('SLEI', ascending=False).to_string(index=False))
 
 
