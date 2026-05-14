@@ -6,54 +6,57 @@
 - Invoke the relevant superpowers skill BEFORE every task, step, or decision.
 - If there is even a 1% chance a skill applies, invoke it.
 
-### Always use agent teams (the Gang) — never code solo
-- NEVER write code directly as the main agent.
+### Always use agent teams (the Gang) — never act solo
+- NEVER write, edit, or modify any file directly as the main agent — all file changes
+  must go through a dispatched subagent on a feature branch.
 - Always dispatch specialized subagents (via the `Agent` tool) to do implementation work.
 - The agent team is called **"the Gang"** — these are the subagents dispatched to do real work:
-  - `Explore` — codebase search and file discovery
+  - `Explore` — codebase search and file discovery (read-only)
   - `Plan` — architecture and implementation planning
-  - `superpowers:code-reviewer` — mandatory code review before every push
-  - `coderabbit:code-reviewer` — deep code review for complex changes
-  - `general-purpose` — research, multi-step investigation
-  - `claude` — catch-all implementation agent
+  - `superpowers:code-reviewer` — mandatory code review before every merge (Agent subagent_type)
+  - `coderabbit:code-reviewer` — deep code review for complex changes (Agent subagent_type)
+  - `general-purpose` — read-only research and multi-step investigation
+  - `claude` — write-path implementation (creating/editing files, running builds)
+  - `gstack` — browser-based QA, UI verification, and scraping (invoke via `gstack` skill)
 - Use parallel dispatch (`superpowers:dispatching-parallel-agents`) whenever 2+ tasks are independent.
 - Use `superpowers:subagent-driven-development` for all multi-step implementation plans.
 - Use `claude-session-driver:driving-claude-code-sessions` to coordinate the Gang on larger tasks.
 
-### Use gstack for browser/UI work
-- Use the `gstack` / `open-gstack-browser` skill for any browser-based QA, UI verification, or scraping.
-- gstack is part of the Gang — dispatch it as a subagent alongside others for parallel UI testing.
-
 ### Branch-based development (MANDATORY — never code on main)
-- NEVER commit new code directly to `main`.
-- Always create a feature branch before starting any new code:
+- NEVER commit new code or file changes directly to `main`.
+- Always create a feature branch before starting any new work:
   ```
-  git checkout -b phase-4-xgboost-model   # example naming
+  git checkout -b phase-4-xgboost-model   # example
   ```
-- Branch naming convention: `phase-N-short-description` or `fix-short-description`.
+- Branch naming convention: `phase-N-short-description`, `fix-short-description`, or `feat-short-description`.
 - After code review passes (no Critical/Important issues), merge the branch into local `main`:
   ```
-  git checkout main && git merge --no-ff <branch> && git push origin main
+  git checkout main && git merge --no-ff <branch> && git push origin main && git branch -d <branch>
   ```
 - Delete the feature branch after merging.
 - One branch per logical unit of work (one phase, one feature, one fix).
+- **Orphaned branches:** If a session ends before a branch is merged, the next session must
+  re-run code review on that branch before merging — do NOT merge without a fresh review pass.
 
 ### Code review before every merge (MANDATORY)
-- Every branch MUST be reviewed by `superpowers:code-reviewer` before merging to `main`.
+- Every branch MUST pass `superpowers:code-reviewer` review before merging to `main`.
+- The correct subagent type name is `superpowers:code-reviewer` (verified working in this project).
 - Workflow:
   1. Commit all changes on the feature branch.
+  1.5. Run the affected script with `--dry-run` (or equivalent) and confirm zero runtime errors.
   2. `BASE_SHA=$(git merge-base main HEAD)` — get the divergence point.
   3. `HEAD_SHA=$(git rev-parse HEAD)` — get current HEAD.
-  4. Dispatch `superpowers:code-reviewer` with the SHAs and full context.
-  5. Fix ALL Critical and Important issues found (on the same branch).
-  6. Re-run the review after fixes.
-  7. Only merge + push once the reviewer reports no Critical/Important issues.
+  4. Dispatch `superpowers:code-reviewer` subagent with the SHAs and full context.
+  5. Fix ALL Critical and Important issues found (on the same branch), then re-review.
+  6. Merge + push only once the reviewer reports no Critical/Important issues.
 - Never skip or abbreviate the review step.
 
 ### Push all code to GitHub after merging
-- After merging to `main`, push: `git push origin main`.
 - GitHub remote: `https://github.com/Hussain-coder-eng/LatentLap-AI`
-- Feature branches do NOT need to be pushed (local-only is fine unless sharing).
+- Push is included in the merge command above (`git push origin main`).
+- Feature branches are local-only unless explicitly sharing work.
+- **Branch protection:** Enable "Require pull request reviews" on the GitHub `main` branch
+  at Settings → Branches to enforce reviews at the remote level as well.
 
 ### Engineering best practices
 - Functions do one thing; keep them short and testable.
