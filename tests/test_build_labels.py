@@ -51,7 +51,7 @@ def test_assign_stints_nan_stint_no_crash():
 
 def test_blistering_fires_at_slei_above_threshold():
     df = pd.DataFrame({
-        "SLEI": [35.0],
+        "SLEI": [45.0],
         "LapDelta": [0.5],
         "TyreLife": [5],
         "PushRecoveryDelta": [0.0],
