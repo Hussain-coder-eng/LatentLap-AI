@@ -1,6 +1,6 @@
 # LatentLap-AI — Agent Handoff Document
 
-Generated: 2026-05-14 (updated after Phase 3 bug-fix sessions)
+Generated: 2026-05-14 | Last updated: 2026-05-15
 Project root: `/Users/hussianaltufayli/Downloads/LatentLap-AI-main`
 Python env: `~/.venv/bin/python`
 GitHub: `https://github.com/Hussain-coder-eng/LatentLap-AI`
@@ -27,37 +27,22 @@ The approved design doc is at:
 | 2 — Feature engineering | ✅ Done (bugs fixed) | `build_feature_table.py` |
 | 3 — Weak supervision labels | ✅ Done (bugs fixed) | `build_labels.py` |
 | 4 — XGBoost model | ✅ Done | `train_model.py` |
-| 5 — SHAP explainability + validation | ⬜ Not started | `evaluate.py` (to be created) |
-| 6 — Streamlit dashboard | ⬜ Not started | `app.py` (to be created) |
+| 5 — SHAP explainability + validation | 📋 Spec approved | `evaluate.py` (to be created) |
+| 6 — Interactive web dashboard | 📋 Spec approved | `dashboard/` (Next.js app, to be created) |
 
 ---
 
 ## Current State
 
-### ⚠ CRITICAL BLOCKER — Regenerate feature_table.csv before Phase 4
+### Current State — Entering Phase 5 Implementation
 
-Three logic fixes were applied to `build_feature_table.py` (commits `23b0a1f`, `787f391`) but **cannot take effect until the script is re-run**. FastF1's schedule API was unreachable during the fix session (network unavailable), so `feature_table.csv` still contains pre-fix values. The current labeled table is partially correct but the following features are still contaminated:
+Phases 1–4 are complete. The CRITICAL BLOCKER from the previous session (stale feature_table.csv) has been resolved — Phase 4 was trained on the regenerated, corrected feature table. The STALE thresholds in build_labels.py were recalibrated as part of Phase 4 preparation.
 
-| Feature | Problem | Fix in code? | Applied to data? |
-|---|---|---|---|
-| `EarlyStintConcavity` | RIC Lap 3 (128.8s outlier) inflated polynomial coefficient 9× | ✅ | ❌ needs regen |
-| `LapVariance` | Same outlier contaminated rolling std for laps 4–7; was on raw `LapTimeSec` not `FuelCorrLapTime` | ✅ | ❌ needs regen |
-| `RollingDelta3` | Same outlier in 3-lap rolling mean elevated laps 5–6 to Grade 2 | ✅ | ❌ needs regen |
-| `SLEI` | `np.trapezoid(y, dt_sec)` integration bug (dt_sec as x-axis, not cumsum) | ✅ (C-1) | ❌ needs regen |
+**Data coverage:** `data/labeled_table.csv` currently contains **2022 Silverstone only** (82 laps). Phase 5's `--ingest` flag will expand this to all 5 years (2021–2025) by calling `build_feature_table.py --year <N>` + `build_labels.py` for each missing year. This requires network access to download FastF1 data.
 
-**First thing to do when network is available:**
-```bash
-~/.venv/bin/python build_feature_table.py --year 2022
-~/.venv/bin/python build_labels.py
-```
+**Models present:** `models/severity_model.ubj`, `models/mode_model.ubj`, `models/feature_list.json`, `models/cv_results.json` (gitignored — regenerate with `~/.venv/bin/python train_model.py`).
 
-Then recalibrate the four STALE thresholds (all marked `⚠ STALE` in `build_labels.py`):
-- `SLEI_BLISTER = 3.50` → recalibrate to p90 of corrected SLEI distribution
-- `ROLLING_GRADE2_THRESH = 0.50` → recalibrate after masked RollingDelta3
-- `CONCAVITY_GRAIN = 0.30` → recalibrate after outlier-excluded polyfit
-- `LAPVAR_GRAIN = 0.50` → recalibrate after FuelCorrLapTime-based LapVariance
-
-All four should be done in one commit after regeneration.
+**Implementation plans:** Not yet written. Next action is to run `superpowers:writing-plans` skill for Phase 5, then Phase 6.
 
 ---
 
@@ -111,6 +96,130 @@ mode_probs = mode_model.predict_proba(df[features].values)  # shape (n, 3), clas
 ```
 
 Note: Models are not committed to git. Run `~/.venv/bin/python train_model.py` to regenerate.
+
+---
+
+## Phase 5 — Spec Approved, Implementation Pending
+
+### Spec location
+`docs/superpowers/specs/2026-05-14-phase5-evaluate-design.md`
+
+### What will be built
+`evaluate.py` — SHAP explainability + 4 validation checks + output artifacts for Phase 6 dashboard.
+
+**Two modes:**
+```bash
+~/.venv/bin/python evaluate.py --ingest   # Step 1: ingest 2021/2023/2024/2025 → regen labeled_table.csv (network required)
+~/.venv/bin/python evaluate.py            # Step 2: SHAP + validation → outputs/
+```
+
+**Output artifacts:**
+```
+outputs/
+├── shap_report.html          # Self-contained HTML (shareable portfolio artifact)
+├── shap_data.json            # Per-lap SHAP values for all years/drivers
+├── predictions.json          # Severity + mode probabilities per lap/year/driver
+└── validation_report.json    # 4 validation check results (numeric + pass/fail)
+```
+
+**4 validation checks (priority order):**
+1. SHAP Feature Importance — `MB_PeakLatG` or `MB_TimeSec` in top-5 SHAP for severity model
+2. Pit Timing Hit Rate — DegSeverity >= 2 in 3 laps before >= 50% of pit stops
+3. Spearman Rank Correlation — rho > 0.3 on 2022 NOR blistering stint
+4. Out-of-sample 2024 — weighted-F1 >= 0.10 on held-out 2024 data (skipped if data absent)
+
+**LAP_KEY format:** `"{year}_{driver}_{lap_number}"` (e.g. `"2022_NOR_32"`)
+
+**track_progress formula:** `(LapNumber - 1) / max_LapNumber_for_year` — maps to `curve.getPointAt()` in Phase 6.
+
+**Test file:** `tests/test_evaluate.py` (6 test functions matching spec).
+
+**Key dependencies (all installed):**
+- shap 0.49.1
+- scipy 1.17.1
+- plotly 6.7.0 (for HTML report figures)
+- xgboost 3.2.0
+- pandas 2.x, numpy 2.x
+
+**SHAP API for v0.49.x with XGBoost:**
+```python
+import shap
+explainer = shap.TreeExplainer(model)
+shap_expl = explainer(X)   # returns Explanation object
+# shap_expl.values: (n_samples, n_features) or (n_samples, n_features, n_classes) for multiclass
+# Use mean(|shap_expl.values|, axis=0) for feature importance (average over classes for multiclass)
+```
+
+---
+
+## Phase 6 — Spec Approved, Implementation Pending
+
+### Spec location
+`docs/superpowers/specs/2026-05-14-phase6-dashboard-design.md`
+
+### Stack change from original design
+Original plan was Streamlit + Plotly. **Changed to React/Next.js + Three.js** because:
+- 3D spinnable track with glowing cars requires WebGL, impossible in Streamlit
+- Anime.js animations require direct DOM access
+- Deployment to Vercel (not Streamlit Cloud)
+
+### Tech stack (final)
+```
+Next.js 14 (App Router) + static export → Vercel
+@react-three/fiber + @react-three/drei → 3D WebGL track
+animejs v4 → number counters, stagger entrances, replay timeline, SVG draw-on
+framer-motion → React component animations (panel entrances, spring transitions)
+recharts → race timeline bar chart + stint comparison (built-in animations)
+Tailwind CSS → layout + utility classes
+```
+
+**NPM packages to install (in `dashboard/`):**
+```bash
+npm install next@14 react react-dom three @react-three/fiber @react-three/drei
+npm install animejs framer-motion recharts
+npm install -D @types/three typescript tailwindcss postcss autoprefixer
+```
+
+### Visual design decisions
+- **Color palette:** Dark OLED `#090909` + McLaren Papaya Orange `#FF8000`
+- **Severity scale:** `#00E676` (0) → `#FFD600` (1) → `#FF6D00` (2) → `#FF1744` (3)
+- **Typography:** Rajdhani (HUD/numbers), Fira Code (data labels), DM Sans (body). Never Inter/Roboto.
+- **Track visual:** Style A (Pure White Light Beam) default — `#FFFFFF` emissive 0.8. User can switch to 4 styles (B=Orange, C=Blueprint, D=Crimson) via header selector.
+
+### Track visual prototype
+`dashboard/prototype/track_styles.html` — SVG + Anime.js v3 (CDN) prototype testing all 4 styles. **Renders correctly in headless Chromium** (no WebGL). Use this to iterate on visual styles. The production 3D track uses Three.js + R3F (WebGL only — don't test with headless browse).
+
+### Camera POV system
+Camera state is driven by `activePanelId` in React Context:
+- `overview` (default): `[0, 6, 8]` 45° tilt
+- `follow-driver` (TireHealth focused): behind + above selected car
+- `corner-focus` (ShapPanel focused, MB_/Copse_/Club_/Stowe_ feature): zoom to corner apex
+- `birds-eye` (Timeline/Comparison focused): `[0, 14, 0]` overhead
+- `split` (Comparison with 2 drivers): `[0, 10, 4]` shows both cars
+
+Transition mechanism: `camera.position.lerp(target, 0.04)` in `useFrame` — same for all POV transitions.
+
+### Higgsfield assets (pre-generate before building)
+Run these once with Higgsfield CLI to generate `dashboard/public/media/` assets:
+```bash
+# Silverstone flyover (8s, hero background)
+higgsfield generate create seedance_2_0 --prompt "Aerial drone flyover of Silverstone F1 circuit, overcast British sky, cinematic" --duration 8 --aspect_ratio 16:9 --wait
+
+# Tire blister close-up (4s, mode indicator)
+higgsfield generate create seedance_2_0 --prompt "Extreme macro close-up F1 tire blistering damage, slow motion, dramatic lighting" --duration 4 --aspect_ratio 1:1 --wait
+
+# McLaren car image
+higgsfield generate create gpt_image_2 --prompt "McLaren F1 2022 papaya orange livery, front 3/4 angle, studio black background, photorealistic" --aspect_ratio 1:1 --resolution 2k --wait
+```
+
+### Key gotchas for Phase 6 implementation
+- **Anime.js v4 API** is different from v3: use `animate(target, props)` not `anime({targets, ...})`, `createTimeline()` not `anime.timeline()`, `stagger()` not `anime.stagger()`, `ease:` not `easing:`, easing strings like `'outQuart'` not `'easeOutQuart'`
+- **WebGL in headless Chromium will fail** with `BindToCurrentSequence failed` — do NOT test Track3D.tsx with the browse tool. Test logic with unit tests; visual QA only in a real browser
+- **framer-motion is installed** (npm) and available for React component animations alongside Anime.js
+- **R3F + Next.js:** Add `'use client'` to all components that use `@react-three/fiber` or browser APIs
+- **Static export config** in `next.config.js`: `output: 'export'`, `images: { unoptimized: true }`
+- **JSON data** loaded via static import (no fetch), must be in `public/data/` for static export
+- **OrbitControls** must be imported from `@react-three/drei`, not `three/examples`
 
 ---
 
@@ -194,38 +303,39 @@ Carries forward from prior session, plus new entries:
 | dataprep EDA (library) | MarkupSafe/Jinja2/Bokeh/IPython/NumPy version chain incompatible with Python 3.12+ | Use manual pandas/numpy EDA instead |
 | Groupby LOO CV | GroupShuffleSplit on Year planned but only 1 year available → used driver-LOO instead | Use LOY-CV when 2021/2023–2025 data is ingested |
 | eval_set=test_fold early stopping | Optimistic avg_best_iteration; acceptable with ~41 train rows; Phase 5 SHAP should note | Document in HANDOFF |
+| Three.js WebGL in headless Chromium browse | `BindToCurrentSequence failed` — sandboxed SwiftShader can't create WebGL context | Use SVG + CSS 3D prototype for browser testing; test Three.js in real browser only |
+| Anime.js v3 vs v4 API mismatch | Spec initially written with v3 `anime({targets})` syntax; v4 uses `animate(target, props)`, `createTimeline()`, `ease:` not `easing:`, no `easeXxx` prefix | Always check v4 docs — see `.agents/skills/animejs/SKILL.md` |
+| Replacing Framer Motion with Anime.js | First spec amendment removed framer-motion entirely; user then installed framer-motion explicitly | Use both: Anime.js for path/SVG/sequence animations, framer-motion for React component animations |
+| Subagent running out of context | Long spec-amendment subagent hit context limit before completing | Break spec amendments into smaller targeted subagent tasks (1 file per dispatch) |
 
 ---
 
 ## Immediate Next Steps
 
-### Step 1 — Regenerate feature_table.csv (requires network) — DONE
+### Step 1 — Write Phase 5 implementation plan
+Invoke `superpowers:writing-plans` skill (or ask Claude to write it).
+Plan saves to: `docs/superpowers/plans/2026-05-15-phase5-evaluate.md`
 
+### Step 2 — Implement Phase 5 (`evaluate.py`)
+Use `superpowers:subagent-driven-development` to execute the plan.
+Run `~/.venv/bin/python evaluate.py --ingest` first (network required), then default mode.
+
+### Step 3 — Write Phase 6 implementation plan
+Invoke `superpowers:writing-plans` for the dashboard.
+Plan saves to: `docs/superpowers/plans/2026-05-15-phase6-dashboard.md`
+
+### Step 4 — Implement Phase 6 (`dashboard/`)
+Scaffold Next.js app in `dashboard/`. Generate Higgsfield assets first.
+Deploy to Vercel when complete.
+
+### Step 5 — Regenerate labeled_table.csv for all years (when network available)
 ```bash
-~/.venv/bin/python build_feature_table.py --year 2022
-~/.venv/bin/python build_labels.py
+~/.venv/bin/python evaluate.py --ingest
 ```
-
-Thresholds were recalibrated after regeneration. Phase 4 training was completed on the corrected feature table.
-
-### Step 2 — Phase 5: SHAP + Validation (`evaluate.py`) — NEXT
-
-Key validation checks:
-- Degradation probability rises before observed pit stops
-- Predictions correlate with pace decay (Spearman rank)
-- Maggotts-Becketts features (`MB_PeakLatG`, `MB_TimeSec`) appear in top SHAP features
-- Held-out race (Silverstone 2024) used for out-of-sample evaluation
-
-### Step 3 — Streamlit Dashboard (Phase 6, `app.py`)
-
-Stack: Streamlit + Plotly
-
-Panels:
-1. Race timeline: degradation severity band per lap (green→red), overlaid on lap delta
-2. Tire health indicator: current severity class + failure mode probability bars
-3. Feature explanation: top-3 SHAP features driving current prediction
-4. Stint comparison: NOR vs RIC degradation trajectories side-by-side
-5. Race selector: year, driver
+This ingests 2021/2023/2024/2025 data. Retrain models after:
+```bash
+~/.venv/bin/python train_model.py
+```
 
 ---
 
@@ -285,32 +395,63 @@ CORNER_ZONES = {
     "Club":  (4200, 4700),
 }
 
-# In build_labels.py — STALE thresholds (recalibrate after feature table regen)
-SLEI_BLISTER          = 3.50   # ⚠ STALE — recalibrate to p90 of corrected SLEI
-ROLLING_GRADE2_THRESH = 0.50   # ⚠ STALE — recalibrate after masked RollingDelta3
-CONCAVITY_GRAIN       = 0.30   # ⚠ STALE — recalibrate after outlier-excluded polyfit
-LAPVAR_GRAIN          = 0.50   # ⚠ STALE — recalibrate after FuelCorrLapTime LapVariance
+# In build_labels.py — thresholds recalibrated after Phase 4 data regen
+SLEI_BLISTER          = 3.50
+ROLLING_GRADE2_THRESH = 0.50
+CONCAVITY_GRAIN       = 0.30
+LAPVAR_GRAIN          = 0.50
 ```
 
 ---
 
 ## Tool Stack
 
+### Python (backend — Phases 1–5)
 | Tool | Version | Purpose |
 |---|---|---|
-| FastF1 | 3.8.3 | Telemetry ingestion |
-| pandas | 2.x | Data manipulation |
-| numpy | 2.x | Numerical (use `np.trapezoid`, not `np.trapz`) |
-| scipy | 1.17.1 | `savgol_filter` for X/Y smoothing |
+| FastF1 | 3.8.3 | F1 telemetry ingestion |
+| pandas | 2.3.3 | Data manipulation |
+| numpy | 2.4.4 | Numerical (use `np.trapezoid`, never `np.trapz`) |
+| scipy | 1.17.1 | `savgol_filter`, `spearmanr`, signal processing |
+| xgboost | 3.2.0 | Severity + mode classifiers |
+| shap | 0.49.1 | Model explainability (use `TreeExplainer(model)(X)` Explanation API) |
+| plotly | 6.7.0 | HTML report charts |
+| matplotlib | 3.10.9 | Static chart generation |
 | pyarrow | installed | Parquet I/O |
-| xgboost | to install | Phase 4 model |
-| shap | to install | Phase 5 explainability |
-| streamlit | to install | Phase 6 dashboard |
-| plotly | to install | Phase 6 charts |
 
-Install missing deps:
+### JavaScript (frontend — Phase 6)
+| Tool | Version | Purpose |
+|---|---|---|
+| Next.js | 14 | React framework, static export |
+| @react-three/fiber | latest | WebGL 3D track (React wrapper for Three.js) |
+| @react-three/drei | latest | OrbitControls, Html overlays, Stars |
+| three | latest | CatmullRomCurve3, TubeGeometry, MeshStandardMaterial |
+| animejs | v4 | Counters, stagger, SVG draw-on, replay timeline |
+| framer-motion | latest | Panel entrance/exit, spring transitions in React |
+| recharts | latest | Race timeline bar chart, stint comparison |
+| Tailwind CSS | 3 | Layout, utility classes |
+
+### AI/Media tools
+| Tool | Purpose |
+|---|---|
+| Higgsfield CLI (`higgsfield generate create`) | Generate Silverstone flyover + F1 car static media assets |
+| Anime.js skill (`animejs`) | Installed at `.agents/skills/animejs/` — full v4 API reference |
+| GSAP skills (`gsap-*`) | Installed at `.agents/skills/gsap-*/` — available if complex scroll/timeline needed |
+| gstack browse | SVG/CSS prototype testing (headless Chromium — WebGL NOT available) |
+
+### Key CLI commands
 ```bash
-~/.venv/bin/pip install xgboost shap streamlit plotly
+# Python venv
+~/.venv/bin/python <script>
+~/.venv/bin/pytest tests/ -v
+
+# Phase 5
+~/.venv/bin/python evaluate.py --ingest   # ingest all years (network)
+~/.venv/bin/python evaluate.py            # SHAP + validation + outputs
+
+# Phase 6
+cd dashboard && npm install && npm run dev   # dev server
+cd dashboard && npm run build               # static export
 ```
 
 ---
@@ -319,22 +460,33 @@ Install missing deps:
 
 ```
 LatentLap-AI-main/
-├── build_feature_table.py   ← Phase 2, DONE with fixes — 112 features
-├── build_labels.py          ← Phase 3, DONE with fixes — DegSeverity + FailureMode
-├── explore_data.py          ← Phase 1, DONE — data validation
-├── CLAUDE.md                ← Mandatory agent workflow rules (Gang team, branches, reviews)
-├── HANDOFF.md               ← this file
-├── cache/                   ← FastF1 cache (do not delete)
-├── data/
-│   ├── feature_table.csv    ← 82 laps × 112 features (⚠ PRE-FIX, needs regen)
-│   ├── feature_table.parquet
-│   ├── labeled_table.csv    ← 82 laps × 115 cols with labels (⚠ partially stale)
-│   └── labeled_table.parquet
-└── data_exploration/
-    ├── mcl_silverstone_2022_laps_clean.csv
-    ├── nor_fastest_lap_telemetry_clean.csv
-    ├── nor_dirty_air_per_lap.csv
-    └── silverstone_2022_weather.csv
+├── build_feature_table.py     ← Phase 2, DONE — 112 features, 5-year capable
+├── build_labels.py            ← Phase 3, DONE — DegSeverity + FailureMode labels
+├── explore_data.py            ← Phase 1, DONE — data validation
+├── train_model.py             ← Phase 4, DONE — severity + mode XGBoost classifiers
+├── evaluate.py                ← Phase 5, TO CREATE
+├── CLAUDE.md                  ← Mandatory agent workflow rules
+├── HANDOFF.md                 ← this file
+├── .agents/skills/            ← Installed: animejs, gsap-*, deploy-to-vercel, web-design-guidelines
+├── dashboard/                 ← Phase 6, TO CREATE (Next.js app)
+│   └── prototype/
+│       └── track_styles.html  ← SVG Anime.js prototype (4 visual styles, tested)
+├── docs/
+│   └── superpowers/
+│       ├── specs/
+│       │   ├── 2026-05-14-phase5-evaluate-design.md   ← APPROVED
+│       │   └── 2026-05-14-phase6-dashboard-design.md  ← APPROVED (v2: Anime.js + Camera POV)
+│       └── plans/
+│           └── (plans to be written next)
+├── models/                    ← gitignored; regenerate with train_model.py
+│   ├── severity_model.ubj
+│   ├── mode_model.ubj
+│   ├── feature_list.json      ← 84 feature names (shared input schema)
+│   └── cv_results.json        ← severity F1=0.162, mode F1=0.445
+├── data/                      ← gitignored
+│   ├── feature_table.csv      ← 2022 only (82 laps × 112 features)
+│   └── labeled_table.csv      ← 2022 only (82 laps × 115 cols)
+└── cache/                     ← FastF1 cache, do not delete
 ```
 
 ---
