@@ -109,6 +109,10 @@ def compute_predictions(df: pd.DataFrame, sev_model, mode_model, features: list)
         max_lap_by_year[int(year)] = float(df[df["Year"] == year]["LapNumber"].max())
 
     df_valid = df[df["DegSeverity"] != -1].copy()
+    dupes = df_valid[["Year", "Driver", "LapNumber"]].duplicated().sum()
+    if dupes > 0:
+        raise ValueError(f"labeled_table.csv has {dupes} duplicate (Year, Driver, LapNumber) rows — cannot build unique lap keys.")
+
     sev_probs  = sev_model.predict_proba(df_valid[features].values)   # (n, 4)
     mode_probs = mode_model.predict_proba(df_valid[features].values)  # (n, 3)
 
@@ -126,9 +130,9 @@ def compute_predictions(df: pd.DataFrame, sev_model, mode_model, features: list)
             "year":           year,
             "driver":         row["Driver"],
             "lap_number":     int(row["LapNumber"]),
-            "stint_id":       int(row["StintId"]),
+            "stint_id":       int(row["StintId"]) if pd.notna(row["StintId"]) else -1,
             "compound":       str(row["Compound"]),
-            "tyre_life":      int(row["TyreLife"]),
+            "tyre_life":      int(row["TyreLife"]) if pd.notna(row["TyreLife"]) else -1,
             "lap_delta":      round(float(row["LapDelta"]), 4),
             "severity_true":  int(row["DegSeverity"]),
             "severity_pred":  int(np.argmax(sp)),
@@ -237,9 +241,16 @@ def validate_pit_timing(df: pd.DataFrame, predictions: dict) -> dict:
         for stint_id in range(1, max_stint + 1):
             prev_stint_laps = grp[grp["StintId"] == stint_id - 1].sort_values("LapNumber")
             pre_pit = prev_stint_laps.tail(PRE_PIT_LAP_WINDOW)
+            # Only count pits where at least one pre-pit lap has a valid prediction
+            warnable_pre_pit = pre_pit[pre_pit.apply(
+                lambda r: f"{int(year)}_{driver}_{int(r['LapNumber'])}" in sev_pred_by_key,
+                axis=1
+            )]
+            if warnable_pre_pit.empty:
+                continue
             pits_total += 1
             warned = False
-            for _, row in pre_pit.iterrows():
+            for _, row in warnable_pre_pit.iterrows():
                 key = f"{int(year)}_{driver}_{int(row['LapNumber'])}"
                 pred = sev_pred_by_key.get(key)
                 if pred is not None and pred >= SEV_THRESHOLD_PIT:
@@ -331,7 +342,20 @@ def validate_oos_2024(df: pd.DataFrame, sev_model, features: list) -> dict:
     if len(df_test) == 0:
         return {"skipped": True, "reason": f"No valid {OOS_YEAR} rows"}
 
-    preds = sev_model.predict_proba(df_test[features].values).argmax(axis=1)
+    if len(df_train) == 0:
+        return {"skipped": True, "reason": "No non-OOS training data available"}
+
+    # Retrain on non-2024 data for true holdout evaluation (production model trained on all years)
+    X_train = df_train[features].values
+    y_train = df_train["DegSeverity"].values
+    oos_model = xgb.XGBClassifier(
+        n_estimators=100, max_depth=4, learning_rate=0.1,
+        objective="multi:softprob", eval_metric="mlogloss",
+        num_class=len(SEVERITY_CLASSES), use_label_encoder=False, verbosity=0,
+    )
+    oos_model.fit(X_train, y_train)
+
+    preds = oos_model.predict_proba(df_test[features].values).argmax(axis=1)
     y_test = df_test["DegSeverity"].values
 
     wf1 = float(f1_score(y_test, preds, average="weighted", zero_division=0))
@@ -345,6 +369,7 @@ def validate_oos_2024(df: pd.DataFrame, sev_model, features: list) -> dict:
         "weighted_f1":      round(wf1, 4),
         "confusion_matrix": cm,
         "pass":             wf1 >= OOS_F1_MIN,
+        "note":             f"Model retrained on {len(df_train)} rows (excluding {OOS_YEAR}) for true OOS evaluation",
     }
 
 
@@ -399,7 +424,7 @@ def build_html_report(
 <table border="1" cellpadding="6" style="border-collapse:collapse">
 <tr><th>Check</th><th>Result</th><th>Detail</th></tr>
 <tr><td>[P1] SHAP Feature Importance</td><td>{_badge(val_shap["pass"])}</td>
-    <td>Top feat: {val_shap["top_features"][0][0]} | found: {val_shap["found"]}</td></tr>
+    <td>Top feat: {val_shap["top_features"][0][0] if val_shap["top_features"] else "N/A"} | found: {val_shap["found"]}</td></tr>
 <tr><td>[P2] Pit Timing Hit Rate</td><td>{_badge(val_pit["pass"])}</td>
     <td>hit_rate={val_pit["hit_rate"]:.2f} ({val_pit["pits_warned"]}/{val_pit["pits_total"]} pits)</td></tr>
 <tr><td>[P3] Spearman NOR 2022</td><td>{_badge(val_spear["pass"])}</td>
@@ -528,6 +553,11 @@ def main() -> None:
     print("Computing predictions...")
     predictions = compute_predictions(df, sev_model, mode_model, features)
     print(f"  {len(predictions['laps'])} laps.")
+    if not predictions["laps"]:
+        raise RuntimeError(
+            "No valid laps (DegSeverity != -1) found in labeled_table.csv. "
+            "Run: python evaluate.py --ingest"
+        )
 
     print("Computing SHAP values...")
     shap_data = compute_shap(df, sev_model, mode_model, features, predictions)
