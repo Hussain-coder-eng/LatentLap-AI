@@ -436,7 +436,7 @@ CORNER_ZONES = {
 }
 
 # In build_labels.py — thresholds recalibrated after Phase 4 data regen
-SLEI_BLISTER          = 3.50
+SLEI_BLISTER          = 33.338  # p90 of rolling-window SLEI (2022), excl. 6 SLEI>100 telemetry-spike outliers
 ROLLING_GRADE2_THRESH = 0.50
 CONCAVITY_GRAIN       = 0.30
 LAPVAR_GRAIN          = 0.50
