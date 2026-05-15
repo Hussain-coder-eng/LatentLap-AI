@@ -49,9 +49,25 @@ def test_assign_stints_nan_stint_no_crash():
     assert out["StintId"].dtype in [int, "int64", "int32"]
 
 
+def test_blistering_does_not_fire_at_slei_below_threshold():
+    df = pd.DataFrame({
+        "SLEI": [SLEI_BLISTER - 0.001],
+        "LapDelta": [0.5],
+        "TyreLife": [5],
+        "PushRecoveryDelta": [0.0],
+        "EarlyStintConcavity": [0.0],
+        "LapVariance": [0.0],
+        "DegRateAccel": [0.0],
+        "ThermalAccumProxy": [0.0],
+        "DegSeverity": [2],
+    })
+    out = assign_failure_mode(df)
+    assert out.loc[0, "FailureMode"] != "blistering"
+
+
 def test_blistering_fires_at_slei_above_threshold():
     df = pd.DataFrame({
-        "SLEI": [35.0],
+        "SLEI": [45.0],
         "LapDelta": [0.5],
         "TyreLife": [5],
         "PushRecoveryDelta": [0.0],

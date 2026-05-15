@@ -32,26 +32,26 @@ OUTPUT_PARQUET = "data/labeled_table.parquet"
 DELTA_GRADE0          = 0.20   # < 0.20s  → Grade 0  (nominal pace)
 DELTA_GRADE1          = 0.60   # < 0.60s  → Grade 1  (mild)
 DELTA_GRADE2          = 1.10   # < 1.10s  → Grade 2  (moderate); above → Grade 3
-# Above p75 of RollingDelta3 in Grade-0/1 laps — sustained rolling pace-loss (2022 corrected; re-evaluate for multi-year).
+# Above p75 of RollingDelta3 in Grade-0/1 laps — sustained rolling pace-loss. Calibrated on 2022; deferred recalibration for 2021-2025 dataset.
 ROLLING_GRADE2_THRESH = 0.60   # RollingDelta3 > 0.60 upgrades to at least Grade 2
 DEGRATEACCEL_GRADE3   = 1.50   # DegRateAccel  > 1.50 upgrades to Grade 3
 OUTLIER_DELTA_CAP     = 8.0    # LapDelta > 8s → flag as -1 (unreliable)
 PRE_PIT_LAPS          = 3      # last N laps of a stint get +1 severity boost
 
 # ── Failure mode thresholds ──────────────────────────────────────────────────
-# p90 of SLEI on rolling-window (step=1) 2022 feature_table.csv, excluding 6 telemetry-spike outliers (SLEI > 100). Recalibrate when adding years.
-SLEI_BLISTER          = 33.338
+# p90 of rolling-window SLEI (2021-2025), excl. 40 SLEI>100 telemetry-spike outliers. Recalibrate when adding years.
+SLEI_BLISTER          = 40.537
 THERMAL_ACCUM_BLISTER = 0.010  # ThermalAccumProxy above this in combo
 DEGRATEACCEL_BLISTER  = 1.00   # DegRateAccel threshold for late-stint combo
 TYRELIFE_LATE         = 15     # "late stint" for blistering combo rule
 
 # Graining (concave-up early stint, erratic pace)
 # Natural gap in 2022 data: max non-RIC EarlyStintConcavity ≈ 0.03; RIC concave-up
-# stint coefficient = 0.325. Threshold 0.32 sits inside this gap (2022 only; re-evaluate
-# when 2021/2023-2025 data is added).
+# stint coefficient = 0.325. Threshold 0.32 sits inside this gap. Deferred recalibration
+# for 2021-2025 dataset.
 CONCAVITY_GRAIN       = 0.32   # EarlyStintConcavity > this → concave-up pattern
 TYRELIFE_EARLY        = 10     # graining occurs early in stint
-# Flags 7 genuinely erratic laps on FuelCorrLapTime-based LapVariance (2022 corrected; re-evaluate for multi-year).
+# Flags genuinely erratic laps on FuelCorrLapTime-based LapVariance. Calibrated on 2022; deferred recalibration for 2021-2025 dataset.
 LAPVAR_GRAIN          = 0.80   # LapVariance > this → erratic pace symptom
 
 # Thermal (rapid early degradation then partial recovery)
