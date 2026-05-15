@@ -39,8 +39,8 @@ OUTLIER_DELTA_CAP     = 8.0    # LapDelta > 8s → flag as -1 (unreliable)
 PRE_PIT_LAPS          = 3      # last N laps of a stint get +1 severity boost
 
 # ── Failure mode thresholds ──────────────────────────────────────────────────
-# p90 of SLEI on chunked-window 2022 feature_table.csv (C-1 fix applied); recalibrate after regenerating with rolling-window code.
-SLEI_BLISTER          = 30.479
+# p90 of SLEI on rolling-window (step=1) 2022 feature_table.csv, excluding 6 telemetry-spike outliers (SLEI > 100). Recalibrate when adding years.
+SLEI_BLISTER          = 33.338
 THERMAL_ACCUM_BLISTER = 0.010  # ThermalAccumProxy above this in combo
 DEGRATEACCEL_BLISTER  = 1.00   # DegRateAccel threshold for late-stint combo
 TYRELIFE_LATE         = 15     # "late stint" for blistering combo rule

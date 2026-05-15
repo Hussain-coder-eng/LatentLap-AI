@@ -4,7 +4,7 @@ from build_labels import SLEI_BLISTER, assign_failure_mode, assign_stints
 
 
 def test_slei_blister_threshold():
-    assert 20.0 <= SLEI_BLISTER <= 100.0
+    assert 30.0 <= SLEI_BLISTER <= 100.0
 
 
 def test_assign_stints_uses_fastf1_stint():
