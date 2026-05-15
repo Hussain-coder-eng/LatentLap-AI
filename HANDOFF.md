@@ -27,22 +27,26 @@ The approved design doc is at:
 | 2 — Feature engineering | ✅ Done (bugs fixed) | `build_feature_table.py` |
 | 3 — Weak supervision labels | ✅ Done (bugs fixed) | `build_labels.py` |
 | 4 — XGBoost model | ✅ Done | `train_model.py` |
-| 5 — SHAP explainability + validation | 📋 Spec approved | `evaluate.py` (to be created) |
-| 6 — Interactive web dashboard | 📋 Spec approved | `dashboard/` (Next.js app, to be created) |
+| 5 — SHAP explainability + validation | 📋 Plan written | `evaluate.py` (to be created) |
+| 6 — Interactive web dashboard | 📋 Plan written | `dashboard/` (Next.js app, to be created) |
 
 ---
 
-## Current State
+## Current State — Entering Implementation (Phase 5 + 6 Plans Written)
 
-### Current State — Entering Phase 5 Implementation
+Phases 1–4 are complete. Phase 5 and Phase 6 implementation plans were written this session and are approved.
 
-Phases 1–4 are complete. The CRITICAL BLOCKER from the previous session (stale feature_table.csv) has been resolved — Phase 4 was trained on the regenerated, corrected feature table. The STALE thresholds in build_labels.py were recalibrated as part of Phase 4 preparation.
+**Plans:**
+- Phase 5 plan: `docs/superpowers/plans/2026-05-15-phase5-evaluate.md` (15 tasks)
+- Phase 6 plan: `docs/superpowers/plans/2026-05-15-phase6-dashboard.md` (22 tasks)
 
-**Data coverage:** `data/labeled_table.csv` currently contains **2022 Silverstone only** (82 laps). Phase 5's `--ingest` flag will expand this to all 5 years (2021–2025) by calling `build_feature_table.py --year <N>` + `build_labels.py` for each missing year. This requires network access to download FastF1 data.
+**Gang expanded:** 7 specialist agents added to CLAUDE.md (commit `6da54f2`):
+- `frontend-developer`, `ui-ux-designer`, `ai-engineer`, `react-performance-optimization`, `nextjs-architecture-expert`, `mcp-expert`, `code-reviewer` (template)
+- Selection rule: specialists before generalists. `ai-engineer` for Phase 5; `frontend-developer` + `nextjs-architecture-expert` for Phase 6.
 
-**Models present:** `models/severity_model.ubj`, `models/mode_model.ubj`, `models/feature_list.json`, `models/cv_results.json` (gitignored — regenerate with `~/.venv/bin/python train_model.py`).
+**Communication:** `caveman` skill installed at `.agents/skills/caveman/` — active by default.
 
-**Implementation plans:** Not yet written. Next action is to run `superpowers:writing-plans` skill for Phase 5, then Phase 6.
+**Data coverage:** `data/labeled_table.csv` still contains **2022 Silverstone only** (82 laps). Run `~/.venv/bin/python evaluate.py --ingest` to expand to all 5 years (network required). Retrain models after: `~/.venv/bin/python train_model.py`.
 
 ---
 
@@ -249,6 +253,40 @@ data/labeled_table.parquet
 
 ---
 
+## What Happened This Session — Plan Writing (2026-05-15)
+
+### Phase 5 plan (`docs/superpowers/plans/2026-05-15-phase5-evaluate.md`)
+
+Written by Plan subagent. Key decisions captured:
+
+| Decision | Detail |
+|---|---|
+| SHAP API | `shap.TreeExplainer` BROKEN on XGBoost 3.2.0 multiclass — use `booster.predict(dm, pred_contribs=True)` instead |
+| Feature count | 85 not 84 — `Stint` present in `feature_list.json` despite exclusion list; load from file, never hardcode |
+| Beeswarm charts | `shap.summary_plot` not used (requires broken TreeExplainer); render as Plotly jittered scatter instead |
+| Spearman API | Use `result.statistic` not `result.correlation` (scipy 1.17.1 changed field name) |
+| JSON size | class-averaged SHAP stored (not per-class) to keep `shap_data.json` < 10 MB |
+
+### Phase 6 plan (`docs/superpowers/plans/2026-05-15-phase6-dashboard.md`)
+
+Written by Plan subagent. Key decisions captured:
+
+| Decision | Detail |
+|---|---|
+| Anime.js v4 API | All code uses `animate()`, `createTimeline()`, `stagger()`, `ease:` — never `anime({targets})`, `easing:`, or `easeXxx` prefix |
+| WebGL testing | Never test `Track3D.tsx` with headless browser — `BindToCurrentSequence failed`; use real Chrome only |
+| Static export | `output: 'export'` in next.config.js; all JSON loaded via static import (no fetch); must be in `public/data/` |
+| `OrbitControls` | From `@react-three/drei` only — never `three/examples/jsm/controls/OrbitControls` |
+| `'use client'` | Required on all R3F components and any component using browser APIs |
+| prefers-reduced-motion | `useReducedMotion` hook called in every component; gates all `animate()` calls |
+
+### Gang expansion
+7 specialist agents added to CLAUDE.md (commit `6da54f2`). Agent selection rule: specialists before generalists.
+
+### Gotchas added to "What Didn't Work" table
+
+---
+
 ## What Happened This Session — Bug Fixes
 
 Two fix branches were created, reviewed, and merged.
@@ -307,35 +345,37 @@ Carries forward from prior session, plus new entries:
 | Anime.js v3 vs v4 API mismatch | Spec initially written with v3 `anime({targets})` syntax; v4 uses `animate(target, props)`, `createTimeline()`, `ease:` not `easing:`, no `easeXxx` prefix | Always check v4 docs — see `.agents/skills/animejs/SKILL.md` |
 | Replacing Framer Motion with Anime.js | First spec amendment removed framer-motion entirely; user then installed framer-motion explicitly | Use both: Anime.js for path/SVG/sequence animations, framer-motion for React component animations |
 | Subagent running out of context | Long spec-amendment subagent hit context limit before completing | Break spec amendments into smaller targeted subagent tasks (1 file per dispatch) |
+| `shap.TreeExplainer` on XGBoost 3.2.0 multiclass | `base_score` serialized as string array → `ValueError: could not convert string to float` | Use `model.get_booster().predict(dm, pred_contribs=True)` — native XGBoost SHAP path |
+| Planning subagent returning file content as text | Plan subagent wrote plan as assistant message instead of saving to file | Parent agent must save the returned text using Write tool |
 
 ---
 
 ## Immediate Next Steps
 
-### Step 1 — Write Phase 5 implementation plan
-Invoke `superpowers:writing-plans` skill (or ask Claude to write it).
-Plan saves to: `docs/superpowers/plans/2026-05-15-phase5-evaluate.md`
+### Step 1 — Implement Phase 5 (`evaluate.py`)
+Use `superpowers:subagent-driven-development` + `ai-engineer` agent.
+Plan: `docs/superpowers/plans/2026-05-15-phase5-evaluate.md`
+Branch: `phase-5-evaluate`
 
-### Step 2 — Implement Phase 5 (`evaluate.py`)
-Use `superpowers:subagent-driven-development` to execute the plan.
-Run `~/.venv/bin/python evaluate.py --ingest` first (network required), then default mode.
-
-### Step 3 — Write Phase 6 implementation plan
-Invoke `superpowers:writing-plans` for the dashboard.
-Plan saves to: `docs/superpowers/plans/2026-05-15-phase6-dashboard.md`
-
-### Step 4 — Implement Phase 6 (`dashboard/`)
-Scaffold Next.js app in `dashboard/`. Generate Higgsfield assets first.
-Deploy to Vercel when complete.
-
-### Step 5 — Regenerate labeled_table.csv for all years (when network available)
+Run order:
 ```bash
-~/.venv/bin/python evaluate.py --ingest
+~/.venv/bin/python evaluate.py --ingest   # expand to all 5 years (network required)
+~/.venv/bin/python evaluate.py            # SHAP + validation → outputs/
 ```
-This ingests 2021/2023/2024/2025 data. Retrain models after:
+
+### Step 2 — Retrain models on multi-year data (after --ingest)
 ```bash
 ~/.venv/bin/python train_model.py
 ```
+
+### Step 3 — Implement Phase 6 (`dashboard/`)
+Use `superpowers:subagent-driven-development` + `frontend-developer` + `nextjs-architecture-expert` agents.
+Plan: `docs/superpowers/plans/2026-05-15-phase6-dashboard.md`
+Branch: `phase-6-dashboard`
+
+Pre-requisite: Phase 5 outputs must exist in `outputs/` before starting Phase 6.
+Generate Higgsfield assets first (see plan Task 19).
+Deploy to Vercel when complete.
 
 ---
 
