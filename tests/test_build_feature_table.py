@@ -33,3 +33,12 @@ def test_slei_rolling_beats_chunked():
     chunked = rolling_slei_max(lat_g_sq_v, dt_sec, window_samples, step=window_samples)
 
     assert rolling > chunked
+
+
+def test_slei_rolling_includes_final_window():
+    # Peak is in the LAST window - off-by-one would miss it
+    lat_g_sq_v = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 5, 5, 5], dtype=float)
+    dt_sec = np.full(15, 0.1)
+    window_samples = 5
+    slei = rolling_slei_max(lat_g_sq_v, dt_sec, window_samples, step=1)
+    assert slei > 0.0, "Final window missed - off-by-one bug present"

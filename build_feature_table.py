@@ -327,7 +327,7 @@ def rolling_slei_max(
             lat_g_sq_v[i:i + window_samples],
             np.cumsum(dt_sec[i:i + window_samples]),
         )
-        for i in range(0, max(1, len(lat_g_sq_v) - window_samples), step)
+        for i in range(0, max(1, len(lat_g_sq_v) - window_samples + 1), step)
     ]
     return float(np.max(slei_windows)) if slei_windows else 0.0
 
