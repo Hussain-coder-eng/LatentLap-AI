@@ -28,8 +28,7 @@ The primary audience is F1 engineering internship recruiters — the dashboard m
 | `@react-three/fiber` | React wrapper for Three.js WebGL |
 | `@react-three/drei` | OrbitControls, Html overlays, Stars, environment |
 | `three` | WebGL renderer, CatmullRomCurve3 for track spline |
-| `framer-motion` | Panel entrances, number counters, probability bars |
-| `gsap` | Replay mode sequencing, severity color cross-fades |
+| `animejs` (v4) | ALL UI animations: panel entrances, number counters, path-following cars, replay sequencing, stagger, cross-fades |
 | `recharts` | Race timeline + stint comparison (animated on mount) |
 | Tailwind CSS + CSS custom properties | Layout, motion tokens |
 | Higgsfield CLI (Seedance 2.0) | Generate cinematic Silverstone/F1 video assets (offline, pre-generated) |
@@ -151,6 +150,19 @@ These are generated once using `higgsfield generate create seedance_2_0` and com
 - **Background:** `<video>` element playing `silverstone_flyover.mp4` as a `THREE.VideoTexture` mapped to a large background plane behind the track
 - **Stars:** `<Stars>` from drei with `radius=80, count=200, fade` for atmosphere
 
+**Track visual style (user-selectable, default: Style A):**
+
+Four styles tested at `dashboard/prototype/track_styles.html`. Default is Style A per user preference. A style selector in the header lets users switch at runtime.
+
+| Style | Track material color | Emissive | Glow effect |
+|---|---|---|---|
+| A — Pure White Light Beam | `#FFFFFF` | `#FFFFFF` intensity 0.8 | `0 0 8px #fff, 0 0 20px #fff8` |
+| B — McLaren Neon Orange | `#FF8000` | `#FF6000` intensity 0.6 | `0 0 8px #FF8000, 0 0 20px #FF800066` |
+| C — Holographic Blueprint | `#00E5FF` | `#00B8D9` intensity 0.5 | `0 0 8px #00E5FF, 0 0 16px #00E5FF55` |
+| D — Crimson Void | `#FF1744` | `#CC0033` intensity 0.5 | `0 0 8px #FF1744, 0 0 20px #FF174466` |
+
+In R3F: `MeshStandardMaterial` `emissive` + `emissiveIntensity` controls the track tube. A `PointLight` at the track centroid provides ambient bloom. Selected style stored in context (`trackStyle` state, persisted to `localStorage`).
+
 **Animation spec (motion-design tokens):**
 - Camera transition on lap change: spring (interruptible), stiffness=80, damping=20
 - Car position lerp between laps: `THREE.Vector3.lerp()` over 400ms `--ease-in-out-cubic`
@@ -164,16 +176,16 @@ These are generated once using `higgsfield generate create seedance_2_0` and com
 
 **Implementation:**
 - Large Rajdhani Bold number showing severity (e.g. `2/3`) — color matches `--sev-{n}`
-- On lap change: number animates via Framer Motion `useMotionValue` → `useTransform` spring, 600ms
-- Mode bars (none / thermal / wear): `<motion.div>` width animates from previous value → new value, `--ease-in-out-cubic` `--dur-3`
+- On lap change: number animates via `animate(counterEl, { value: newVal, round: 1, easing: 'easeOutExpo', duration: 600 })`
+- Mode bars (none / thermal / wear): `animate(barEl, { width: newWidth, easing: 'easeInOutCubic', duration: 240 })` (`--dur-3`)
 - Failure mode label (e.g. "Blistering") fades in with `opacity: 0→1` `--dur-2`
 - Higgsfield `mclaren_car_front.webp` as car silhouette icon, colored via CSS `filter: hue-rotate()` tinted to severity color
 - When severity = 3: entire panel border pulses red glow via `@keyframes` CSS animation (`box-shadow: var(--sev-3-glow)`)
 
 **Motion spec:**
-- Number counter: spring (interruptible — user may scrub rapidly)
-- Bar width: `--ease-in-out-cubic` `--dur-3` (already visible on screen, morphing)
-- Panel border glow: `animation: glow-pulse 1.2s ease infinite` (time-based, decorative — only fires at severity 3)
+- Number counter: `animate(targets, { value, round: 1, easing: 'easeOutExpo', duration: 600 })` — interruptible; call `.pause()` on old instance before starting new one if user scrubs rapidly
+- Bar width: `animate(targets, { width, easing: 'easeInOutCubic', duration: 240 })` (`--dur-3`, on-screen morph)
+- Panel border glow: `animation: glow-pulse 1.2s ease infinite` (CSS `@keyframes` — time-based, decorative; only fires at severity 3)
 
 ---
 
@@ -186,13 +198,13 @@ These are generated once using `higgsfield generate create seedance_2_0` and com
 - Feature name in Fira Code, SHAP value in Rajdhani
 - Bar width = `|shap_value| / maxShapValue * 100%`
 - Positive SHAP → McLaren orange bar; negative SHAP → cool blue `#2979FF`
-- On lap change: bars slide from `width: 0` to final width with stagger: items 1, 2, 3 stagger by 40ms
+- On lap change: bars slide from `width: 0` to final width with `stagger(40)`: items 1, 2, 3 stagger by 40ms
 - Feature name translates from `MB_PeakLatG` → "Maggotts-Becketts Peak G" via a human-readable lookup map
 
 **Motion spec (stagger entrance):**
-- Each bar: `initial={{ scaleX: 0 }} animate={{ scaleX: 1 }}` with `transformOrigin: left`
-- Easing: `--ease-out-quart` (entering the viewport effectively)
-- Duration: `--dur-3` (240ms) per bar; stagger delay: 40ms
+- Each bar: `animate(barEls, { scaleX: [0, 1], transformOrigin: ['left center', 'left center'], easing: 'easeOutQuart', duration: 240, delay: stagger(40) })`
+- Easing: `easeOutQuart` (`--ease-out-quart`) — entering the viewport
+- Duration: `--dur-3` (240ms) per bar; stagger: `stagger(40)` across 3 bars
 
 ---
 
@@ -203,13 +215,13 @@ These are generated once using `higgsfield generate create seedance_2_0` and com
 **Implementation:**
 - Recharts `BarChart` with custom cell colors matching severity (`--sev-0` to `--sev-3`)
 - Second series: `LapDelta` as an `AreaChart` overlay (right Y-axis), semi-transparent McLaren orange fill
-- Pit stop markers: vertical `ReferenceLine` with a downward triangle icon, animate in with Framer Motion `bounce` spring after chart draws
+- Pit stop markers: vertical `ReferenceLine` with a downward triangle icon, animate in with `animate(pitMarkerEls, { translateY: [-12, 0], opacity: [0, 1], easing: 'easeOutElastic(1, .6)', duration: 500 })` after chart draws
 - On page load: bars animate from height 0 via Recharts `isAnimationActive + animationDuration: 800`
 - Current lap: highlighted bar with white border, scrolls into view when scrubber moves
 
 **Motion spec:**
 - Bar entrance: Recharts built-in `animationEasing: "ease-out"` `animationDuration: 800ms`
-- Pit marker bounce: spring `stiffness: 400, damping: 10` (intentional delight — low-frequency element)
+- Pit marker bounce: `animate(pitMarkerEls, { translateY: [-12, 0], opacity: [0, 1], easing: 'easeOutElastic(1, .6)', duration: 500 })` (intentional delight — low-frequency element)
 - Current lap highlight shift: `--ease-in-out-cubic` `--dur-2` (on-screen morph)
 
 ---
@@ -235,7 +247,7 @@ These are generated once using `higgsfield generate create seedance_2_0` and com
 - `<input type="range">` styled as a racing-themed horizontal slider, McLaren orange thumb
 - `onChange` dispatches to a React Context holding `currentLap`, `currentYear`, `currentDriver`
 - All components subscribe to context — track cars move, panels update, timeline highlights shift
-- Replay mode: `useReplay` hook (GSAP timeline) auto-increments `currentLap` every 800ms with `--ease-out-quart` position lerp between values
+- Replay mode: `useReplay` hook (Anime.js timeline) auto-increments `currentLap` every 800ms — implemented via `createTimeline({ easing: 'easeOutQuart' }).add(lapRef, { value: nextLap, duration: 400 })` with an 800ms interval
 - Keyboard: arrow keys advance lap by 1 (no animation — keyboard high-frequency rule)
 
 ---
@@ -246,9 +258,61 @@ These are generated once using `higgsfield generate create seedance_2_0` and com
 
 **Implementation:**
 - Custom `<select>` dropdowns styled with Tailwind, McLaren orange focus ring
-- On year/driver change: GSAP timeline cross-fades all panel content simultaneously (300ms `--ease-in-out-cubic`)
-- Logo: "LatentLap-AI" in Rajdhani, animated character-by-character on page load (stagger 30ms per character) using Framer Motion `variants`
+- On year/driver change: `createTimeline({ easing: 'easeInOutCubic', duration: 300 }).add(panelEls, { opacity: [1, 0] }).add(panelEls, { opacity: [0, 1] })` cross-fades all panel content simultaneously
+- Logo: "LatentLap-AI" in Rajdhani, animated character-by-character on page load using `animate(charEls, { translateY: [20, 0], opacity: [0, 1], easing: 'easeOutQuart', duration: 240, delay: stagger(30) })`
 - Loading state (while JSON initialises): Higgsfield `loading_loop.mp4` fills the track panel as a full-bleed video
+
+---
+
+## Camera POV System
+
+The 3D track camera reacts to which panel the user is focused on. Five camera states, each triggered by panel focus events dispatched through the shared React Context (`activePanelId`).
+
+### States
+
+| State | Trigger | Camera Position | Look-at |
+|---|---|---|---|
+| `overview` | Default / no panel focused | `[0, 6, 8]` (45° tilt) | track center `[0, 0, 0]` |
+| `follow-driver` | TireHealth panel focused | car position + `[0, 1.5, 2]` offset | car position |
+| `corner-focus` | ShapPanel focused AND top SHAP feature is `MB_*`, `Copse_*`, or `Club_*` | corner apex + `[0, 2, 3]` | corner apex |
+| `birds-eye` | Timeline or Comparison panel focused | `[0, 14, 0]` (overhead) | track center `[0, 0, 0]` |
+| `split` | Comparison with 2 drivers visible | `[0, 10, 4]` | midpoint between two car positions |
+
+### Implementation in `Track3D.tsx`
+
+```typescript
+const { activePanelId, topSHAPFeature, carPositions } = useRaceContext()
+
+const cameraTarget = useMemo(() => {
+  if (activePanelId === 'tire-health') return { state: 'follow-driver' }
+  if (activePanelId === 'shap' && (topSHAPFeature?.startsWith('MB_') || topSHAPFeature?.startsWith('Copse_')))
+    return { state: 'corner-focus', corner: topSHAPFeature.split('_')[0] }
+  if (activePanelId === 'timeline' || activePanelId === 'comparison') return { state: 'birds-eye' }
+  return { state: 'overview' }
+}, [activePanelId, topSHAPFeature])
+
+useFrame(({ camera }) => {
+  const target = getCameraPosition(cameraTarget, carPositions)
+  camera.position.lerp(target.position, 0.04)
+  orbitRef.current?.target.lerp(target.lookAt, 0.04)
+  orbitRef.current?.update()
+})
+```
+
+OrbitControls remain enabled — the user can still drag to any angle at any time. A "Reset Camera" button sets `activePanelId = null` to snap back to `overview`.
+
+### Corner Position Map (in `lib/trackPath.ts`)
+
+```typescript
+export const CORNER_POSITIONS: Record<string, THREE.Vector3> = {
+  MB:    new THREE.Vector3(-1.2, 0, 0.8),
+  Copse: new THREE.Vector3(2.1, 0, -1.4),
+  Club:  new THREE.Vector3(-0.3, 0, 2.8),
+  Stowe: new THREE.Vector3(-2.0, 0, 1.2),
+}
+```
+
+The `topSHAPFeature` prefix (`MB_PeakLatG` → `MB`) maps directly to these positions, so the camera automatically zooms to whichever corner drove the current prediction.
 
 ---
 
@@ -288,7 +352,7 @@ dashboard/
 ├── lib/
 │   ├── data.ts                     # typed JSON loaders + selectors
 │   ├── trackPath.ts                # Silverstone GPS → Three.js curve
-│   ├── useReplay.ts                # GSAP replay hook
+│   ├── useReplay.ts                # Anime.js createTimeline replay hook
 │   └── severityColors.ts           # severity → CSS var mapping
 ├── public/
 │   ├── data/
@@ -343,7 +407,7 @@ higgsfield generate create gpt_image_2 \
 ## Accessibility
 
 - All interactive elements keyboard-navigable (tab + arrow key on scrubber)
-- `prefers-reduced-motion`: all Framer Motion animations use `useReducedMotion()` hook; if true, skip entrances and disable replay auto-advance
+- `prefers-reduced-motion`: all `animate()` and `createTimeline()` calls are gated on `window.matchMedia('(prefers-reduced-motion: reduce)').matches`; if true, skip entrance animations and disable replay auto-advance
 - Color severity scale supplemented by text labels (not color-only)
 - 3D track: `aria-label="Silverstone circuit 3D visualization"` on canvas
 - SHAP bars: each bar has `aria-valuenow` + `aria-label="Feature: MB_PeakLatG, contribution: +0.34"`
