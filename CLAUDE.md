@@ -18,9 +18,21 @@
   - `general-purpose` — read-only research and multi-step investigation
   - `claude` — write-path implementation (creating/editing files, running builds)
   - `gstack` — browser-based QA, UI verification, and scraping (invoke via `gstack` skill)
+  - `frontend-developer` — specialist for React/Next.js/TypeScript frontend implementation (installed at `.claude/agents/development-team/frontend-developer`)
+  - `ui-ux-designer` — specialist for UI/UX design decisions and component design (installed at `.claude/agents/development-team/ui-ux-designer`)
+  - `ai-engineer` — specialist for ML/AI/data pipeline tasks (installed at `.claude/agents/data-ai/ai-engineer`)
+  - `code-reviewer` (.claude template) — secondary code review option for quick checks (installed at `.claude/agents/development-tools/code-reviewer`). NOTE: the PRIMARY mandatory code reviewer remains `superpowers:code-reviewer`
+  - `react-performance-optimization` — specialist for React/Next.js performance optimization (installed at `.claude/agents/performance-testing/react-performance-optimization`)
+  - `nextjs-architecture-expert` — specialist for Next.js App Router architecture decisions (installed at `.claude/agents/web-tools/nextjs-architecture-expert`)
+  - `mcp-expert` — specialist for MCP server setup and configuration (installed at `.claude/agents/development-tools/mcp-expert`)
+
+**Agent selection rule:** When dispatching work, first check if an installed specialist agent matches the task domain. Specialists > generalists. Multiple specialist agents may collaborate on one task via parallel dispatch.
+
 - Use parallel dispatch (`superpowers:dispatching-parallel-agents`) whenever 2+ tasks are independent.
 - Use `superpowers:subagent-driven-development` for all multi-step implementation plans.
 - Use `claude-session-driver:driving-claude-code-sessions` to coordinate the Gang on larger tasks.
+
+**Communication style:** Use `caveman` skill (installed at `.agents/skills/caveman/`) for all responses — terse, no filler, technical accuracy maintained. Active by default; disable only with "stop caveman".
 
 ### Branch-based development (MANDATORY — never code on main)
 - NEVER commit new code or file changes directly to `main`.
