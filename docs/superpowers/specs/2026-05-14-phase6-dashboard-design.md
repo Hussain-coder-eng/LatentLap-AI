@@ -140,7 +140,7 @@ These are generated once using `higgsfield generate create seedance_2_0` and com
 
 **Implementation:**
 - Silverstone circuit extracted as `[x, y]` GPS waypoints normalised to `[-5, 5]` range → `THREE.CatmullRomCurve3`
-- Track rendered as `THREE.TubeGeometry` (radius 0.08) with `MeshStandardMaterial` color `#1A1A1A`
+- Track rendered as `THREE.TubeGeometry` (radius 0.08) with `MeshStandardMaterial`; base color is driven by the active `trackStyle` (default Style A: `#FFFFFF`). See Track visual style table below.
 - McLaren orange kerb stripes: secondary tube geometry, `#FF8000`, offset by 0.1
 - **Camera:** default position `[0, 6, 8]` = 45° tilt looking down at track centre. `fov=50`
 - **Controls:** `<OrbitControls>` from drei — drag rotates, scroll zooms, right-click pans. `minPolarAngle=0`, `maxPolarAngle=Math.PI/2` (no flipping under the track)
@@ -154,17 +154,19 @@ These are generated once using `higgsfield generate create seedance_2_0` and com
 
 Four styles tested at `dashboard/prototype/track_styles.html`. Default is Style A per user preference. A style selector in the header lets users switch at runtime.
 
-| Style | Track material color | Emissive | Glow effect |
+| Style | Track material color | Emissive | CSS prototype glow (HTML only) |
 |---|---|---|---|
 | A — Pure White Light Beam | `#FFFFFF` | `#FFFFFF` intensity 0.8 | `0 0 8px #fff, 0 0 20px #fff8` |
 | B — McLaren Neon Orange | `#FF8000` | `#FF6000` intensity 0.6 | `0 0 8px #FF8000, 0 0 20px #FF800066` |
 | C — Holographic Blueprint | `#00E5FF` | `#00B8D9` intensity 0.5 | `0 0 8px #00E5FF, 0 0 16px #00E5FF55` |
 | D — Crimson Void | `#FF1744` | `#CC0033` intensity 0.5 | `0 0 8px #FF1744, 0 0 20px #FF174466` |
 
+> **Note:** The "CSS prototype glow" values apply only to `dashboard/prototype/track_styles.html` (the SVG/CSS prototype). Inside the R3F WebGL canvas, glow is achieved via `emissive` + `emissiveIntensity` + `PointLight` at track centroid (described in the table's Emissive column). A Three.js post-processing bloom pass (`@react-three/postprocessing`) may be added in a later iteration.
+
 In R3F: `MeshStandardMaterial` `emissive` + `emissiveIntensity` controls the track tube. A `PointLight` at the track centroid provides ambient bloom. Selected style stored in context (`trackStyle` state, persisted to `localStorage`).
 
 **Animation spec (motion-design tokens):**
-- Camera transition on lap change: spring (interruptible), stiffness=80, damping=20
+- Camera transition on lap change: constant-ratio lerp via `useFrame` (factor 0.04 per frame, ~60fps). This is the same mechanism as the panel-focus POV transitions. Spring physics for camera are deferred post-MVP.
 - Car position lerp between laps: `THREE.Vector3.lerp()` over 400ms `--ease-in-out-cubic`
 - Glow intensity ramp on severity change: `--dur-3` (240ms) `--ease-out-quart`
 
@@ -176,15 +178,15 @@ In R3F: `MeshStandardMaterial` `emissive` + `emissiveIntensity` controls the tra
 
 **Implementation:**
 - Large Rajdhani Bold number showing severity (e.g. `2/3`) — color matches `--sev-{n}`
-- On lap change: number animates via `animate(counterEl, { value: newVal, round: 1, easing: 'easeOutExpo', duration: 600 })`
-- Mode bars (none / thermal / wear): `animate(barEl, { width: newWidth, easing: 'easeInOutCubic', duration: 240 })` (`--dur-3`)
+- On lap change: number animates via `animate(counterEl, { value: newVal, modifier: utils.round(0), ease: 'outExpo', duration: 600 })` // requires: import { utils } from 'animejs'
+- Mode bars (none / thermal / wear): `animate(barEl, { width: newWidth, ease: 'inOutCubic', duration: 240 })` (`--dur-3`)
 - Failure mode label (e.g. "Blistering") fades in with `opacity: 0→1` `--dur-2`
 - Higgsfield `mclaren_car_front.webp` as car silhouette icon, colored via CSS `filter: hue-rotate()` tinted to severity color
 - When severity = 3: entire panel border pulses red glow via `@keyframes` CSS animation (`box-shadow: var(--sev-3-glow)`)
 
 **Motion spec:**
-- Number counter: `animate(targets, { value, round: 1, easing: 'easeOutExpo', duration: 600 })` — interruptible; call `.pause()` on old instance before starting new one if user scrubs rapidly
-- Bar width: `animate(targets, { width, easing: 'easeInOutCubic', duration: 240 })` (`--dur-3`, on-screen morph)
+- Number counter: `animate(targets, { value, modifier: utils.round(0), ease: 'outExpo', duration: 600 })` // requires: import { utils } from 'animejs' — interruptible; call `.pause()` on old instance before starting new one if user scrubs rapidly
+- Bar width: `animate(targets, { width, ease: 'inOutCubic', duration: 240 })` (`--dur-3`, on-screen morph)
 - Panel border glow: `animation: glow-pulse 1.2s ease infinite` (CSS `@keyframes` — time-based, decorative; only fires at severity 3)
 
 ---
@@ -202,8 +204,8 @@ In R3F: `MeshStandardMaterial` `emissive` + `emissiveIntensity` controls the tra
 - Feature name translates from `MB_PeakLatG` → "Maggotts-Becketts Peak G" via a human-readable lookup map
 
 **Motion spec (stagger entrance):**
-- Each bar: `animate(barEls, { scaleX: [0, 1], transformOrigin: ['left center', 'left center'], easing: 'easeOutQuart', duration: 240, delay: stagger(40) })`
-- Easing: `easeOutQuart` (`--ease-out-quart`) — entering the viewport
+- Each bar: `animate(barEls, { scaleX: [0, 1], transformOrigin: ['left center', 'left center'], ease: 'outQuart', duration: 240, delay: stagger(40) })`
+- Easing: `outQuart` (`--ease-out-quart`) — entering the viewport
 - Duration: `--dur-3` (240ms) per bar; stagger: `stagger(40)` across 3 bars
 
 ---
@@ -215,13 +217,13 @@ In R3F: `MeshStandardMaterial` `emissive` + `emissiveIntensity` controls the tra
 **Implementation:**
 - Recharts `BarChart` with custom cell colors matching severity (`--sev-0` to `--sev-3`)
 - Second series: `LapDelta` as an `AreaChart` overlay (right Y-axis), semi-transparent McLaren orange fill
-- Pit stop markers: vertical `ReferenceLine` with a downward triangle icon, animate in with `animate(pitMarkerEls, { translateY: [-12, 0], opacity: [0, 1], easing: 'easeOutElastic(1, .6)', duration: 500 })` after chart draws
+- Pit stop markers: vertical `ReferenceLine` with a downward triangle icon, animate in with `animate(pitMarkerEls, { translateY: [-12, 0], opacity: [0, 1], ease: 'outElastic(1, .6)', duration: 500 })` after chart draws
 - On page load: bars animate from height 0 via Recharts `isAnimationActive + animationDuration: 800`
 - Current lap: highlighted bar with white border, scrolls into view when scrubber moves
 
 **Motion spec:**
 - Bar entrance: Recharts built-in `animationEasing: "ease-out"` `animationDuration: 800ms`
-- Pit marker bounce: `animate(pitMarkerEls, { translateY: [-12, 0], opacity: [0, 1], easing: 'easeOutElastic(1, .6)', duration: 500 })` (intentional delight — low-frequency element)
+- Pit marker bounce: `animate(pitMarkerEls, { translateY: [-12, 0], opacity: [0, 1], ease: 'outElastic(1, .6)', duration: 500 })` (intentional delight — low-frequency element)
 - Current lap highlight shift: `--ease-in-out-cubic` `--dur-2` (on-screen morph)
 
 ---
@@ -247,7 +249,16 @@ In R3F: `MeshStandardMaterial` `emissive` + `emissiveIntensity` controls the tra
 - `<input type="range">` styled as a racing-themed horizontal slider, McLaren orange thumb
 - `onChange` dispatches to a React Context holding `currentLap`, `currentYear`, `currentDriver`
 - All components subscribe to context — track cars move, panels update, timeline highlights shift
-- Replay mode: `useReplay` hook (Anime.js timeline) auto-increments `currentLap` every 800ms — implemented via `createTimeline({ easing: 'easeOutQuart' }).add(lapRef, { value: nextLap, duration: 400 })` with an 800ms interval
+- Replay mode: `useReplay` hook creates a single long Anime.js timeline at session start — one `.add()` per lap, each spaced 800ms apart, animating `lapRef.value` to the next lap number. The timeline is paused/resumed by the play/stop button and seeked by the scrubber. Using a single pre-built timeline (not a new `animate()` per tick) allows the user to seek to any point.
+
+```typescript
+// lib/useReplay.ts
+const tl = createTimeline({ defaults: { ease: 'outQuart', duration: 400 } })
+lapRange.forEach((lap, i) => {
+  tl.add(lapRef, { value: lap }, i * 800)
+})
+```
+
 - Keyboard: arrow keys advance lap by 1 (no animation — keyboard high-frequency rule)
 
 ---
@@ -258,8 +269,8 @@ In R3F: `MeshStandardMaterial` `emissive` + `emissiveIntensity` controls the tra
 
 **Implementation:**
 - Custom `<select>` dropdowns styled with Tailwind, McLaren orange focus ring
-- On year/driver change: `createTimeline({ easing: 'easeInOutCubic', duration: 300 }).add(panelEls, { opacity: [1, 0] }).add(panelEls, { opacity: [0, 1] })` cross-fades all panel content simultaneously
-- Logo: "LatentLap-AI" in Rajdhani, animated character-by-character on page load using `animate(charEls, { translateY: [20, 0], opacity: [0, 1], easing: 'easeOutQuart', duration: 240, delay: stagger(30) })`
+- On year/driver change: `createTimeline({ defaults: { ease: 'inOutCubic', duration: 150 } }).add(panelEls, { opacity: [1, 0] }).add(panelEls, { opacity: [0, 1] })` cross-fades all panel content simultaneously (150ms per leg × 2 = 300ms total)
+- Logo: "LatentLap-AI" in Rajdhani, animated character-by-character on page load using `animate(charEls, { translateY: [20, 0], opacity: [0, 1], ease: 'outQuart', duration: 240, delay: stagger(30) })`
 - Loading state (while JSON initialises): Higgsfield `loading_loop.mp4` fills the track panel as a full-bleed video
 
 ---
@@ -274,7 +285,7 @@ The 3D track camera reacts to which panel the user is focused on. Five camera st
 |---|---|---|---|
 | `overview` | Default / no panel focused | `[0, 6, 8]` (45° tilt) | track center `[0, 0, 0]` |
 | `follow-driver` | TireHealth panel focused | car position + `[0, 1.5, 2]` offset | car position |
-| `corner-focus` | ShapPanel focused AND top SHAP feature is `MB_*`, `Copse_*`, or `Club_*` | corner apex + `[0, 2, 3]` | corner apex |
+| `corner-focus` | ShapPanel focused AND top SHAP feature prefix is `MB_`, `Copse_`, `Club_`, or `Stowe_` | corner apex + `[0, 2, 3]` | corner apex |
 | `birds-eye` | Timeline or Comparison panel focused | `[0, 14, 0]` (overhead) | track center `[0, 0, 0]` |
 | `split` | Comparison with 2 drivers visible | `[0, 10, 4]` | midpoint between two car positions |
 
@@ -285,8 +296,9 @@ const { activePanelId, topSHAPFeature, carPositions } = useRaceContext()
 
 const cameraTarget = useMemo(() => {
   if (activePanelId === 'tire-health') return { state: 'follow-driver' }
-  if (activePanelId === 'shap' && (topSHAPFeature?.startsWith('MB_') || topSHAPFeature?.startsWith('Copse_')))
-    return { state: 'corner-focus', corner: topSHAPFeature.split('_')[0] }
+  if (activePanelId === 'shap' &&
+      ['MB_', 'Copse_', 'Club_', 'Stowe_'].some(p => topSHAPFeature?.startsWith(p)))
+    return { state: 'corner-focus', corner: topSHAPFeature!.split('_')[0] }
   if (activePanelId === 'timeline' || activePanelId === 'comparison') return { state: 'birds-eye' }
   return { state: 'overview' }
 }, [activePanelId, topSHAPFeature])
@@ -299,7 +311,24 @@ useFrame(({ camera }) => {
 })
 ```
 
-OrbitControls remain enabled — the user can still drag to any angle at any time. A "Reset Camera" button sets `activePanelId = null` to snap back to `overview`.
+OrbitControls remain enabled — the user can still drag to any angle at any time. A "Reset Camera" button calls `setActivePanelId(null)` to snap back to `overview`.
+
+**`getCameraPosition()` (in `lib/trackPath.ts`):**
+
+```typescript
+type CameraTarget = { state: 'overview' | 'follow-driver' | 'corner-focus' | 'birds-eye' | 'split', corner?: string }
+type CameraFrame = { position: THREE.Vector3, lookAt: THREE.Vector3 }
+
+export function getCameraPosition(target: CameraTarget, carPositions: Map<string, THREE.Vector3>): CameraFrame {
+  switch (target.state) {
+    case 'follow-driver': { const pos = carPositions.get(activeDriver) ?? TRACK_CENTER; return { position: pos.clone().add(new THREE.Vector3(0, 1.5, 2)), lookAt: pos } }
+    case 'corner-focus':  { const apex = CORNER_POSITIONS[target.corner ?? 'MB']; return { position: apex.clone().add(new THREE.Vector3(0, 2, 3)), lookAt: apex } }
+    case 'birds-eye':     return { position: new THREE.Vector3(0, 14, 0), lookAt: TRACK_CENTER }
+    case 'split':         { const mid = averagePositions([...carPositions.values()]); return { position: mid.clone().add(new THREE.Vector3(0, 10, 4)), lookAt: mid } }
+    default:              return { position: new THREE.Vector3(0, 6, 8), lookAt: TRACK_CENTER }
+  }
+}
+```
 
 ### Corner Position Map (in `lib/trackPath.ts`)
 
@@ -331,6 +360,14 @@ export function getLapRange(year: number, driver: string): [number, number]
 ```
 
 No API calls. All data is in the static JSON bundle.
+
+---
+
+## React Context
+
+Context state: `currentLap`, `currentYear`, `currentDriver`, `activePanelId: string | null`
+
+`activePanelId` is set by each panel's `onFocus` handler (panel receives `data-panel-id` attribute and calls `setActivePanelId(panelId)` on focus). The "Reset Camera" button calls `setActivePanelId(null)` to return to `overview` state.
 
 ---
 
