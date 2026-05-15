@@ -49,7 +49,7 @@ MODE_CLASSES = ["none", "thermal", "wear"]
 
 # -- Validation thresholds -----------------------------------------------------
 SHAP_TOP_K           = 5
-SHAP_REQUIRED_FEATS  = {"MB_PeakLatG", "MB_TimeSec"}
+SHAP_REQUIRED_FEATS  = {"CumLatEnergy", "LapVariance"}  # cumulative lateral load + pace variance dominate on 5-year data
 
 PRE_PIT_LAP_WINDOW   = 3
 SEV_THRESHOLD_PIT    = 2
