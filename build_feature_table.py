@@ -312,6 +312,40 @@ def count_events(mask: np.ndarray) -> int:
     return int(np.sum(transitions == 1)) + (1 if mask[0] else 0)
 
 
+def rolling_slei_max(
+    lat_g_sq_v: np.ndarray,
+    dt_sec: np.ndarray,
+    window_samples: int,
+    step: int = 1,
+) -> float:
+    """Max sustained lateral energy over rolling telemetry windows."""
+    slei_windows = [
+        # np.cumsum(dt_sec) gives proper x-coordinates for trapezoid integration;
+        # passing dt_sec directly would treat per-sample durations as x-coords and
+        # then diff(dt_sec) ≈ 0, making integrals orders of magnitude too small.
+        np.trapezoid(
+            lat_g_sq_v[i:i + window_samples],
+            np.cumsum(dt_sec[i:i + window_samples]),
+        )
+        for i in range(0, max(1, len(lat_g_sq_v) - window_samples), step)
+    ]
+    return float(np.max(slei_windows)) if slei_windows else 0.0
+
+
+def club_exit_throttle(
+    dist: np.ndarray,
+    throttle: np.ndarray,
+    d_start: float,
+    d_end: float,
+) -> float:
+    """Mean throttle above 50% in Club exit zone."""
+    club_mask = (dist >= d_start) & (dist <= d_end)
+    club_exit_mask = club_mask & (throttle > 50)
+    if np.any(club_exit_mask):
+        return float(np.mean(throttle[club_exit_mask]))
+    return np.nan
+
+
 def corner_zone_features(tel: pd.DataFrame, kappa: np.ndarray,
                          lat_g: np.ndarray, dt: np.ndarray,
                          name: str, d_start: float, d_end: float) -> dict:
@@ -416,15 +450,7 @@ def compute_telemetry_features(lap) -> dict:
     # Targets blistering: localized sustained core heating, not average
     window_samples = max(1, int(2.0 / np.mean(dt_sec)))
     lat_g_sq_v     = lat_g_abs**2 * v_ms
-    slei_windows   = [
-        # np.cumsum(dt_sec) gives proper x-coordinates for trapezoid integration;
-        # passing dt_sec directly would treat per-sample durations as x-coords and
-        # then diff(dt_sec) ≈ 0, making integrals orders of magnitude too small.
-        np.trapezoid(lat_g_sq_v[i:i+window_samples],
-                     np.cumsum(dt_sec[i:i+window_samples]))
-        for i in range(0, max(1, len(lat_g_sq_v) - window_samples), window_samples)
-    ]
-    slei = float(np.max(slei_windows)) if slei_windows else 0.0
+    slei           = rolling_slei_max(lat_g_sq_v, dt_sec, window_samples, step=1)
 
     # Cumulative lateral energy (tire work integral) — targets wear
     # np.cumsum(dt_sec) gives proper x-coordinates (see SLEI comment above)
@@ -451,12 +477,12 @@ def compute_telemetry_features(lap) -> dict:
         (lat_g_abs > 1.0)
     )
     if np.any(ss_mask):
-        slip_proxy = float(np.mean(-np.gradient(speed)[ss_mask]))
+        slip_proxy = float(np.mean((-np.gradient(speed) / np.maximum(dt_sec, 0.01))[ss_mask]))
     else:
         slip_proxy = 0.0
 
     # Yaw acceleration spikes beyond curvature changes (transient slide events)
-    yaw_accel_residual = np.abs(yaw_accel) - np.abs(np.gradient(kappa) * v_ms)
+    yaw_accel_residual = np.abs(yaw_accel) - np.abs(np.gradient(kappa) / np.maximum(dt_sec, 0.01) * v_ms)
     yaw_spike_count    = count_events(
         yaw_accel_residual > np.percentile(np.abs(yaw_accel_residual), 90)
     )
@@ -474,11 +500,12 @@ def compute_telemetry_features(lap) -> dict:
     feats["MB_PreBrakeTime"]  = float(np.sum(dt_sec[pb_mask]))
 
     # Club exit traction load (long right-hander onto main straight)
-    club_mask = (dist >= CORNER_ZONES["Club"][0]) & (dist <= CORNER_ZONES["Club"][1])
-    if np.any(club_mask):
-        feats["Club_ExitThrottle"] = float(np.mean(throttle[club_mask & (throttle > 50)]))
-    else:
-        feats["Club_ExitThrottle"] = np.nan
+    feats["Club_ExitThrottle"] = club_exit_throttle(
+        dist,
+        throttle,
+        CORNER_ZONES["Club"][0],
+        CORNER_ZONES["Club"][1],
+    )
 
     # FL load asymmetry (Silverstone-specific: right-handers dominate)
     feats.update({

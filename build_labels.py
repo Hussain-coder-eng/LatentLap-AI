@@ -40,7 +40,7 @@ PRE_PIT_LAPS          = 3      # last N laps of a stint get +1 severity boost
 
 # ── Failure mode thresholds ──────────────────────────────────────────────────
 # p90 of SLEI distribution on 2022 corrected feature_table.csv (C-1 fix applied); re-evaluate for multi-year.
-SLEI_BLISTER          = 30.479
+SLEI_BLISTER          = 3.50
 THERMAL_ACCUM_BLISTER = 0.010  # ThermalAccumProxy above this in combo
 DEGRATEACCEL_BLISTER  = 1.00   # DegRateAccel threshold for late-stint combo
 TYRELIFE_LATE         = 15     # "late stint" for blistering combo rule
@@ -66,19 +66,13 @@ DELTA_WEAR            = 0.60   # minimum LapDelta to call wear
 
 
 def assign_stints(df: pd.DataFrame) -> pd.DataFrame:
-    """Add StintId per driver based on TyreLife resets."""
+    """Add StintId per driver using FastF1 Stint column (dense rank, 0-indexed)."""
     df = df.copy()
-    df['StintId'] = 0
-    for (year, driver), sub in df.groupby(['Year', 'Driver']):
-        sub = sub.sort_values('LapNumber')
-        stint = 0
-        prev_tl = None
-        for idx, row in sub.iterrows():
-            tl = row['TyreLife']
-            if prev_tl is not None and tl < prev_tl:
-                stint += 1
-            df.at[idx, 'StintId'] = stint
-            prev_tl = tl
+    df['StintId'] = (
+        df.groupby(['Year', 'Driver'])['Stint']
+        .rank(method='dense')
+        .astype(int) - 1
+    )
     return df
 
 
