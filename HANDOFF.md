@@ -1,6 +1,6 @@
 # LatentLap-AI — Agent Handoff Document
 
-Generated: 2026-05-14 | Last updated: 2026-05-15
+Generated: 2026-05-14 | Last updated: 2026-05-15 (Phase 5 complete)
 Project root: `/Users/hussianaltufayli/Downloads/LatentLap-AI-main`
 Python env: `~/.venv/bin/python`
 GitHub: `https://github.com/Hussain-coder-eng/LatentLap-AI`
@@ -27,14 +27,14 @@ The approved design doc is at:
 | 2 — Feature engineering | ✅ Done (bugs fixed) | `build_feature_table.py` |
 | 3 — Weak supervision labels | ✅ Done (bugs fixed) | `build_labels.py` |
 | 4 — XGBoost model | ✅ Done | `train_model.py` |
-| 5 — SHAP explainability + validation | 📋 Plan written | `evaluate.py` (to be created) |
+| 5 — SHAP explainability + validation | ✅ Done | `evaluate.py` |
 | 6 — Interactive web dashboard | 📋 Plan written | `dashboard/` (Next.js app, to be created) |
 
 ---
 
-## Current State — Entering Implementation (Phase 5 + 6 Plans Written)
+## Current State — Phase 5 Complete, Phase 6 Next
 
-Phases 1–4 are complete. Phase 5 and Phase 6 implementation plans were written this session and are approved.
+Phases 1–5 are complete. Phase 6 (interactive web dashboard) is the next step.
 
 **Plans:**
 - Phase 5 plan: `docs/superpowers/plans/2026-05-15-phase5-evaluate.md` (15 tasks)
@@ -103,55 +103,73 @@ Note: Models are not committed to git. Run `~/.venv/bin/python train_model.py` t
 
 ---
 
-## Phase 5 — Spec Approved, Implementation Pending
+## Phase 5 — Completed
 
-### Spec location
-`docs/superpowers/specs/2026-05-14-phase5-evaluate-design.md`
+### What was built
 
-### What will be built
-`evaluate.py` — SHAP explainability + 4 validation checks + output artifacts for Phase 6 dashboard.
+`evaluate.py` — SHAP explainability, 4 validation checks, HTML report, 4 JSON artifacts for Phase 6.
 
 **Two modes:**
 ```bash
-~/.venv/bin/python evaluate.py --ingest   # Step 1: ingest 2021/2023/2024/2025 → regen labeled_table.csv (network required)
-~/.venv/bin/python evaluate.py            # Step 2: SHAP + validation → outputs/
+~/.venv/bin/python evaluate.py --ingest   # ingest 2021/2023/2024/2025 → regen labeled_table.csv
+~/.venv/bin/python evaluate.py            # SHAP + validation → outputs/
 ```
 
-**Output artifacts:**
+**Output artifacts (in `outputs/`):**
 ```
 outputs/
-├── shap_report.html          # Self-contained HTML (shareable portfolio artifact)
-├── shap_data.json            # Per-lap SHAP values for all years/drivers
+├── shap_report.html          # Self-contained HTML portfolio artifact
+├── shap_data.json            # Per-lap SHAP values (class-averaged)
 ├── predictions.json          # Severity + mode probabilities per lap/year/driver
-└── validation_report.json    # 4 validation check results (numeric + pass/fail)
+└── validation_report.json    # 4 validation check results
 ```
 
-**4 validation checks (priority order):**
-1. SHAP Feature Importance — `MB_PeakLatG` or `MB_TimeSec` in top-5 SHAP for severity model
-2. Pit Timing Hit Rate — DegSeverity >= 2 in 3 laps before >= 50% of pit stops
-3. Spearman Rank Correlation — rho > 0.3 on 2022 NOR blistering stint
-4. Out-of-sample 2024 — weighted-F1 >= 0.10 on held-out 2024 data (skipped if data absent)
+**Validation results (2022 Silverstone, single-year):**
+- [P1] SHAP importance: FAIL — top feature is `FuelEstKg`, not `MB_PeakLatG`/`MB_TimeSec`. Expected with low-CV single-year model. Rerun after multi-year ingest.
+- [P2] Pit timing hit rate: computed from 2022 data
+- [P3] Spearman NOR 2022 anchor stint: computed
+- [P4] OOS 2024: SKIPPED — no 2024 data yet
 
-**LAP_KEY format:** `"{year}_{driver}_{lap_number}"` (e.g. `"2022_NOR_32"`)
+**Key implementation decisions:**
+- SHAP via `booster.predict(dm, pred_contribs=True)` — `shap.TreeExplainer` broken on XGBoost 3.2.0 multiclass
+- `validate_oos_2024` retrains on non-2024 rows (true holdout), not the production model
+- NaN guards on `TyreLife`/`StintId` — map to `-1` if NaN
+- Pit timing denominator excludes pits where no pre-pit lap has a valid prediction
+- Feature list always loaded from `feature_list.json` (85 features), never hardcoded
 
-**track_progress formula:** `(LapNumber - 1) / max_LapNumber_for_year` — maps to `curve.getPointAt()` in Phase 6.
+**Review issues fixed before merge (adversarial code review):**
+- `validate_oos_2024` was in-sample (production model trained on all years) → fixed with internal retrain
+- `int(TyreLife)` crash on NaN → guarded with `pd.notna()`
+- Pit timing denominator inflated by un-warnable pits → fixed
+- Empty predictions early exit added
+- `top_features[0]` IndexError guard added
 
-**Test file:** `tests/test_evaluate.py` (6 test functions matching spec).
+### Outputs
+```
+evaluate.py                    ← Phase 5, DONE — SHAP + validation + HTML report
+tests/test_evaluate.py         ← 6 unit tests (all pass)
+outputs/shap_report.html       ← gitignored, regenerate with evaluate.py
+outputs/shap_data.json         ← gitignored
+outputs/predictions.json       ← gitignored
+outputs/validation_report.json ← gitignored
+```
 
-**Key dependencies (all installed):**
-- shap 0.49.1
-- scipy 1.17.1
-- plotly 6.7.0 (for HTML report figures)
-- xgboost 3.2.0
-- pandas 2.x, numpy 2.x
-
-**SHAP API for v0.49.x with XGBoost:**
+### Public interface for Phase 6
 ```python
-import shap
-explainer = shap.TreeExplainer(model)
-shap_expl = explainer(X)   # returns Explanation object
-# shap_expl.values: (n_samples, n_features) or (n_samples, n_features, n_classes) for multiclass
-# Use mean(|shap_expl.values|, axis=0) for feature importance (average over classes for multiclass)
+# Load JSON artifacts written by evaluate.py
+import json
+from pathlib import Path
+
+predictions = json.loads(Path("outputs/predictions.json").read_text())
+# predictions["meta"]: years, drivers, severity_classes, mode_classes, features
+# predictions["laps"]: list of {key, year, driver, lap_number, stint_id, compound,
+#                               tyre_life, lap_delta, severity_true, severity_pred,
+#                               severity_probs, mode_true, mode_pred, mode_probs,
+#                               track_progress}
+
+shap_data = json.loads(Path("outputs/shap_data.json").read_text())
+# shap_data["top_features"]["severity"]: [[feat_name, importance], ...]
+# shap_data["shap_values"]["severity"][lap_key]: {feat_name: shap_val, ...}
 ```
 
 ---
@@ -253,6 +271,22 @@ data/labeled_table.parquet
 
 ---
 
+## What Happened This Session — Phase 5 Implementation (2026-05-15)
+
+`evaluate.py` implemented, reviewed (adversarial code review), and merged to main.
+
+| Step | Result |
+|---|---|
+| Codex built `evaluate.py` + `tests/test_evaluate.py` | 6/6 tests pass |
+| Dry run on 2022 data | 4 artifacts in `outputs/` |
+| Adversarial code review | 2 P1 + 4 P2 issues found |
+| Codex fixed all issues | All 6 fixes verified |
+| Merged to main | Commit `a8e0aaf` |
+
+**Gotchas added to "What Didn't Work" table:**
+- `validate_oos_2024` with production model → in-sample (not true OOS); always retrain inside the function on non-OOS rows
+- `int(row["TyreLife"])` without NaN guard → `ValueError` on FastF1 rows with missing stint data
+
 ## What Happened This Session — Plan Writing (2026-05-15)
 
 ### Phase 5 plan (`docs/superpowers/plans/2026-05-15-phase5-evaluate.md`)
@@ -347,33 +381,26 @@ Carries forward from prior session, plus new entries:
 | Subagent running out of context | Long spec-amendment subagent hit context limit before completing | Break spec amendments into smaller targeted subagent tasks (1 file per dispatch) |
 | `shap.TreeExplainer` on XGBoost 3.2.0 multiclass | `base_score` serialized as string array → `ValueError: could not convert string to float` | Use `model.get_booster().predict(dm, pred_contribs=True)` — native XGBoost SHAP path |
 | Planning subagent returning file content as text | Plan subagent wrote plan as assistant message instead of saving to file | Parent agent must save the returned text using Write tool |
+| `validate_oos_2024` using production model | Production `sev_model` trained on all years including OOS year → in-sample evaluation, not true holdout | Retrain a fresh model inside `validate_oos_2024` on `df[Year != OOS_YEAR]` rows |
+| `int(row["TyreLife"])` without NaN guard | FastF1 can produce NaN TyreLife on in-laps or SC laps; `int(float('nan'))` raises `ValueError` with no useful context | Wrap with `int(v) if pd.notna(v) else -1` at all integer conversions from DataFrame rows |
 
 ---
 
 ## Immediate Next Steps
 
-### Step 1 — Implement Phase 5 (`evaluate.py`)
-Use `superpowers:subagent-driven-development` + `ai-engineer` agent.
-Plan: `docs/superpowers/plans/2026-05-15-phase5-evaluate.md`
-Branch: `phase-5-evaluate`
-
-Run order:
+### Step 1 — Ingest multi-year data (optional, improves model)
 ```bash
-~/.venv/bin/python evaluate.py --ingest   # expand to all 5 years (network required)
-~/.venv/bin/python evaluate.py            # SHAP + validation → outputs/
+~/.venv/bin/python evaluate.py --ingest   # expand to 2021/2023/2024/2025 (network required)
+~/.venv/bin/python train_model.py         # retrain on multi-year data
+~/.venv/bin/python evaluate.py            # regenerate outputs/ with multi-year model
 ```
 
-### Step 2 — Retrain models on multi-year data (after --ingest)
-```bash
-~/.venv/bin/python train_model.py
-```
-
-### Step 3 — Implement Phase 6 (`dashboard/`)
+### Step 2 — Implement Phase 6 (`dashboard/`)
 Use `superpowers:subagent-driven-development` + `frontend-developer` + `nextjs-architecture-expert` agents.
 Plan: `docs/superpowers/plans/2026-05-15-phase6-dashboard.md`
 Branch: `phase-6-dashboard`
 
-Pre-requisite: Phase 5 outputs must exist in `outputs/` before starting Phase 6.
+Pre-requisite: `outputs/` artifacts must exist (they do — generated by Phase 5).
 Generate Higgsfield assets first (see plan Task 19).
 Deploy to Vercel when complete.
 
