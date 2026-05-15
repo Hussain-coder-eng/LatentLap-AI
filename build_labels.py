@@ -39,7 +39,7 @@ OUTLIER_DELTA_CAP     = 8.0    # LapDelta > 8s → flag as -1 (unreliable)
 PRE_PIT_LAPS          = 3      # last N laps of a stint get +1 severity boost
 
 # ── Failure mode thresholds ──────────────────────────────────────────────────
-# p90 of SLEI distribution on 2022 corrected feature_table.csv (C-1 fix applied); re-evaluate for multi-year.
+# p90 of SLEI on chunked-window 2022 feature_table.csv (C-1 fix applied); recalibrate after regenerating with rolling-window code.
 SLEI_BLISTER          = 30.479
 THERMAL_ACCUM_BLISTER = 0.010  # ThermalAccumProxy above this in combo
 DEGRATEACCEL_BLISTER  = 1.00   # DegRateAccel threshold for late-stint combo
@@ -66,19 +66,18 @@ DELTA_WEAR            = 0.60   # minimum LapDelta to call wear
 
 
 def assign_stints(df: pd.DataFrame) -> pd.DataFrame:
-    """Add StintId per driver based on TyreLife resets."""
+    """Add StintId per driver using FastF1 Stint column (dense rank, 0-indexed)."""
+    if 'Stint' not in df.columns:
+        raise KeyError("'Stint' column required; regenerate feature_table.csv with build_feature_table.py")
     df = df.copy()
-    df['StintId'] = 0
-    for (year, driver), sub in df.groupby(['Year', 'Driver']):
-        sub = sub.sort_values('LapNumber')
-        stint = 0
-        prev_tl = None
-        for idx, row in sub.iterrows():
-            tl = row['TyreLife']
-            if prev_tl is not None and tl < prev_tl:
-                stint += 1
-            df.at[idx, 'StintId'] = stint
-            prev_tl = tl
+    stint_col = df.groupby(['Year', 'Driver'])['Stint'].transform(
+        lambda s: s.fillna(s.median() if s.notna().any() else 1.0)
+    )
+    df['StintId'] = (
+        stint_col.groupby([df['Year'], df['Driver']])
+        .rank(method='dense')
+        .astype(int) - 1
+    )
     return df
 
 
