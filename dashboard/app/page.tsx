@@ -26,7 +26,7 @@ export default function DashboardPage() {
   return (
     <RaceProvider>
       {/* pb-[72px] on mobile reserves space for sticky LapScrubber */}
-      <div className="min-h-screen bg-[var(--bg)] flex flex-col pb-[72px] md:pb-0">
+      <div className="min-h-[100dvh] bg-[var(--bg)] flex flex-col pb-[72px] md:pb-0">
         <Header />
 
         <div className="flex flex-1 flex-col md:flex-row gap-2 md:gap-3 p-2 md:p-3 xl:max-w-[1600px] xl:mx-auto xl:w-full">
@@ -37,7 +37,7 @@ export default function DashboardPage() {
               <SeverityBadgeCard />
             </div>
             {/* sm+: full 3D track */}
-            <div className="hidden sm:block sm:min-h-[40vh] md:flex-1 md:min-h-[400px] rounded-lg overflow-hidden border border-[var(--border)]">
+            <div className="hidden sm:block sm:min-h-[40vh] md:flex-1 md:h-[50vh] rounded-lg overflow-hidden border border-[var(--border)]">
               <Suspense><Track3D /></Suspense>
             </div>
           </div>
