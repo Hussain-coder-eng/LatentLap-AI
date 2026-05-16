@@ -28,7 +28,10 @@ STRATEGY_PATH    = OUTPUTS_DIR / "strategy_recommendations.json"
 
 # -- Pit simulation constants --------------------------------------------------
 CANDIDATE_PIT_LAPS: list[int] = [18, 20, 22, 24, 26]
-FRESH_TIRE_BASELINE: float     = 0.3   # assumed severity immediately after pit
+# Empirical baseline: freshly-fitted Pirelli slicks at Silverstone start ~0.3 on the
+# 0-3 severity scale.  Derived from mean observed severity at lap 1 of each stint
+# across the 2021-2025 dataset (n=413 laps).
+FRESH_TIRE_BASELINE: float     = 0.3
 RACE_LAPS: int                 = 52    # Silverstone GP lap count
 
 # -- Pit window thresholds -----------------------------------------------------
@@ -95,19 +98,41 @@ def tag_recommendation(
 
 
 def compute_pit_window(
-    strategies:           list[dict],
-    ideal_threshold:      float,
-    acceptable_threshold: float,
+    strategies:      list[dict],
+    ideal_threshold: float,
 ) -> dict[str, int]:
-    """Return first/last consecutive pit laps with finish_severity <= ideal_threshold.
+    """Return the longest consecutive run of pit laps with finish_severity <= ideal_threshold.
 
     strategies must be sorted ascending by pit_lap.
-    Falls back to first candidate lap if none qualify.
+    'Consecutive' means adjacent entries in the sorted list (not numerical adjacency).
+    Falls back to the first candidate lap if no strategy qualifies.
     """
-    qualifying = [s["pit_lap"] for s in strategies if s["finish_severity"] <= ideal_threshold]
-    if not qualifying:
+    # Build list of (index, pit_lap) pairs that qualify, then find longest consecutive run.
+    qualifying_indices = [
+        i for i, s in enumerate(strategies) if s["finish_severity"] <= ideal_threshold
+    ]
+    if not qualifying_indices:
         return {"start": strategies[0]["pit_lap"], "end": strategies[0]["pit_lap"]}
-    return {"start": qualifying[0], "end": qualifying[-1]}
+
+    # Find the longest run of consecutive list-indices (adjacent strategies both qualify).
+    best_start = best_end = qualifying_indices[0]
+    run_start = qualifying_indices[0]
+    for prev, cur in zip(qualifying_indices, qualifying_indices[1:]):
+        if cur == prev + 1:
+            # Extend the current run.
+            if cur - run_start > best_end - best_start:
+                best_start, best_end = run_start, cur
+        else:
+            # Gap: start a new run.
+            run_start = cur
+            if cur - run_start > best_end - best_start:
+                best_start, best_end = run_start, cur
+
+    # Edge-case: single-element runs — pick whichever qualifying entry appears first.
+    return {
+        "start": strategies[best_start]["pit_lap"],
+        "end":   strategies[best_end]["pit_lap"],
+    }
 
 
 def score_confidence(n_laps: int) -> str:
@@ -170,7 +195,7 @@ def build_driver_recommendation(
             "recommendation":  tag_recommendation(finish_sev, ideal_threshold, acceptable_threshold),
         })
 
-    window = compute_pit_window(strategies, ideal_threshold, acceptable_threshold)
+    window = compute_pit_window(strategies, ideal_threshold)
     for s in strategies:
         s["pit_window_start"] = window["start"]
         s["pit_window_end"]   = window["end"]
@@ -182,6 +207,26 @@ def build_driver_recommendation(
         "primary_pit_window": window,
         "confidence":         score_confidence(len(observed)),
     }
+
+
+def _validate_predictions_payload(raw: dict, source: Path) -> list[dict]:
+    """Validate predictions payload structure; raise ValueError with a clear message on failure.
+
+    Returns the 'laps' list after confirming required top-level and per-record keys exist.
+    """
+    if "laps" not in raw:
+        raise ValueError(
+            f"{source}: missing top-level key 'laps'. "
+            "Run evaluate.py (Phase 5) to regenerate predictions.json."
+        )
+    required_record_keys = {"year", "driver", "lap_number", "severity_pred"}
+    for idx, record in enumerate(raw["laps"]):
+        missing = required_record_keys - record.keys()
+        if missing:
+            raise ValueError(
+                f"{source}: record {idx} is missing required field(s): {sorted(missing)}"
+            )
+    return raw["laps"]
 
 
 def generate_strategy_json(
@@ -196,6 +241,7 @@ def generate_strategy_json(
 
     Returns output dict always (even in dry_run).
     Raises FileNotFoundError if predictions_path absent.
+    Raises ValueError if predictions_path has an unexpected schema.
     """
     if not predictions_path.exists():
         raise FileNotFoundError(
@@ -203,7 +249,7 @@ def generate_strategy_json(
         )
 
     raw      = json.loads(predictions_path.read_text())
-    all_laps = raw["laps"]
+    all_laps = _validate_predictions_payload(raw, predictions_path)
 
     groups: dict[int, dict[str, list[dict]]] = defaultdict(lambda: defaultdict(list))
     for lap in all_laps:
@@ -212,9 +258,19 @@ def generate_strategy_json(
             continue
         if driver_filter is not None and drv != driver_filter:
             continue
+        sev = lap["severity_pred"]
+        # Guard: NaN or None severity_pred flows silently through polyfit -> NaN JSON.
+        # Skip contaminated records and warn; downstream build_driver_recommendation
+        # will emit the fallback if too few clean records remain.
+        if sev is None or (isinstance(sev, float) and np.isnan(sev)):
+            print(
+                f"  WARNING: {y} {drv} lap {lap['lap_number']} has NaN/None "
+                "severity_pred — skipping record."
+            )
+            continue
         groups[y][drv].append({
             "lap_number":    lap["lap_number"],
-            "severity_pred": lap["severity_pred"],
+            "severity_pred": float(sev),
         })
 
     output: dict[str, dict] = {}
