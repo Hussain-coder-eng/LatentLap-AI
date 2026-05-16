@@ -89,7 +89,8 @@ export default function TireHealth() {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/media/mclaren_car_front.webp" alt="McLaren F1 car"
         className="w-full h-20 object-contain mb-3"
-        style={{ filter: `hue-rotate(${lap.severity_pred * 30}deg)` }} />
+        style={{ filter: `hue-rotate(${lap.severity_pred * 30}deg)` }}
+        onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
 
       <div className="space-y-2">
         {MODE_KEYS.map(mode => (
@@ -102,6 +103,7 @@ export default function TireHealth() {
               <div ref={el => { barRefs.current[mode] = el }}
                 className="h-full bg-[var(--mclaren)] rounded" style={{ width: '0%' }}
                 role="progressbar" aria-valuenow={Math.round(lap.mode_probs[mode] * 100)}
+                aria-valuemin={0} aria-valuemax={100}
                 aria-label={`${MODE_LABELS[mode]} probability`} />
             </div>
           </div>

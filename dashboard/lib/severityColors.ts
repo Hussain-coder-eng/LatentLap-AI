@@ -3,7 +3,7 @@ export const SEVERITY_LABELS = ['Healthy', 'Mild Degradation', 'Moderate Degrada
 export const SEVERITY_CSS_VARS = ['--sev-0', '--sev-1', '--sev-2', '--sev-3'] as const
 
 const SEVERITY_HEX: Record<number, string> = {
-  0: '#00E676', 1: '#FFD600', 2: '#FF6D00', 3: '#FF1744',
+  0: '#00E676', 1: '#FFD600', 2: '#FF4500', 3: '#FF1744',
 }
 
 export function getSeverityCSSVar(severity: number): string {

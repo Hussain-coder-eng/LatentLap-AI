@@ -30,6 +30,7 @@ function Track({ style }: { style: string }) {
 
 function Car({ lapProgress, severityPred }: { lapProgress: number; severityPred: number }) {
   const meshRef = useRef<THREE.Mesh>(null)
+  const lightRef = useRef<THREE.PointLight>(null)
   const clampedProgress = Math.max(0, Math.min(lapProgress, 0.9999))
   const position = SILVERSTONE_CURVE.getPointAt(clampedProgress)
   const tangent = SILVERSTONE_CURVE.getTangentAt(clampedProgress)
@@ -39,12 +40,12 @@ function Car({ lapProgress, severityPred }: { lapProgress: number; severityPred:
     if (!meshRef.current) return
     meshRef.current.position.copy(position)
     meshRef.current.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), tangent)
+    if (lightRef.current && severityPred >= 3) {
+      lightRef.current.intensity = Math.sin(clock.elapsedTime * 4) * 0.5 + 1.5
+    }
   })
 
   const isCritical = severityPred >= 2
-  const glowIntensity = severityPred >= 3
-    ? Math.sin(clock.elapsedTime * 4) * 0.5 + 1.5
-    : severityPred * 2
 
   return (
     <group>
@@ -57,8 +58,8 @@ function Car({ lapProgress, severityPred }: { lapProgress: number; severityPred:
         />
       </mesh>
       {isCritical && (
-        <pointLight position={[position.x, position.y + 0.2, position.z]}
-          color="#FF1744" intensity={glowIntensity} distance={2} />
+        <pointLight ref={lightRef} position={[position.x, position.y + 0.2, position.z]}
+          color="#FF1744" intensity={severityPred * 2} distance={2} />
       )}
     </group>
   )
@@ -90,7 +91,7 @@ function CameraController({ activePanelId, topSHAPFeature, carPositions, activeD
 }
 
 function Scene() {
-  const { currentLap, currentYear, currentDriver, activePanelId, topSHAPFeature, trackStyle, setCarPositions } = useRaceContext()
+  const { currentLap, currentYear, currentDriver, activePanelId, topSHAPFeature, trackStyle } = useRaceContext()
   const drivers = getDriversForYear(currentYear)
   const carPositionsRef = useRef<Map<string, THREE.Vector3>>(new Map())
 
@@ -110,7 +111,6 @@ function Scene() {
     for (const [driver, data] of Object.entries(driverData)) {
       updated.set(driver, SILVERSTONE_CURVE.getPointAt(Math.max(0, Math.min(data.progress, 0.9999))))
     }
-    setCarPositions(updated)
     carPositionsRef.current = updated
   })
 
@@ -143,7 +143,8 @@ export default function Track3D() {
   return (
     <div className="relative w-full h-full">
       <video src="/media/silverstone_flyover.mp4" autoPlay loop muted playsInline preload="none"
-        className="absolute inset-0 w-full h-full object-cover opacity-20 pointer-events-none" aria-hidden="true" />
+        className="absolute inset-0 w-full h-full object-cover opacity-20 pointer-events-none" aria-hidden="true"
+        onError={e => { (e.target as HTMLVideoElement).style.display = 'none' }} />
       <Canvas camera={{ position: [0, 6, 8], fov: 50 }} aria-label="Silverstone circuit 3D visualization" className="w-full h-full">
         <Scene />
       </Canvas>

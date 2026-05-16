@@ -1,6 +1,6 @@
 // app/components/LapScrubber.tsx
 'use client'
-import { useCallback, useEffect } from 'react'
+import { useRef, useCallback, useEffect } from 'react'
 import { useRaceContext } from '../RaceContext'
 import { getLapRange } from '../../lib/data'
 import { useReducedMotion } from '../../lib/useReducedMotion'
@@ -9,6 +9,7 @@ export default function LapScrubber() {
   const { currentLap, currentYear, currentDriver, setCurrentLap } = useRaceContext()
   const [minLap, maxLap] = getLapRange(currentYear, currentDriver)
   const reducedMotion = useReducedMotion()
+  const replayRef = useRef<{ pause: () => void } | null>(null)
 
   // Keyboard navigation — NO animation (high-frequency, arrow keys)
   useEffect(() => {
@@ -20,9 +21,15 @@ export default function LapScrubber() {
     return () => window.removeEventListener('keydown', handler)
   }, [currentLap, minLap, maxLap, setCurrentLap])
 
+  // Cancel replay on year/driver change or unmount
+  useEffect(() => {
+    return () => { replayRef.current?.pause() }
+  }, [currentYear, currentDriver])
+
   // Replay: single Anime.js v4 createTimeline, one .add() per lap at 800ms intervals
   const startReplay = useCallback(() => {
     if (reducedMotion) return
+    replayRef.current?.pause()
     // Anime.js v4: createTimeline (NOT anime.timeline())
     import('animejs').then(({ createTimeline }) => {
       const lapRef = { value: minLap }
@@ -30,6 +37,7 @@ export default function LapScrubber() {
       const tl = createTimeline({ defaults: { ease: 'outQuart', duration: 400 } })
       lapRange.forEach((lap, i) => { tl.add(lapRef, { value: lap }, i * 800) })
       tl.onUpdate = () => setCurrentLap(Math.round(lapRef.value))
+      replayRef.current = tl
     })
   }, [minLap, maxLap, setCurrentLap, reducedMotion])
 

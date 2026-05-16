@@ -79,7 +79,9 @@ export default function ShapPanel() {
                     style={{ width: `${pct}%`, backgroundColor: barColor }}
                     className="h-full rounded"
                     role="progressbar"
-                    aria-valuenow={Math.round(Math.abs(value) * 1000) / 1000}
+                    aria-valuenow={Math.round(pct)}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
                     aria-label={`Feature: ${humanReadable(feature)}, contribution: ${value >= 0 ? '+' : ''}${value.toFixed(3)}`} />
                 </div>
               </div>

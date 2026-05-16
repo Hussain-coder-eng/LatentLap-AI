@@ -26,11 +26,17 @@ export default function Header() {
 
   const crossFadeThen = (fn: () => void) => {
     if (reducedMotion) { fn(); return }
-    import('animejs').then(({ createTimeline }) => {
+    import('animejs').then(({ animate }) => {
       const panels = Array.from(document.querySelectorAll('[data-panel-id]'))
-      const tl = createTimeline({ defaults: { ease: 'inOutCubic', duration: 150 } })
-      tl.add(panels, { opacity: [1, 0] }).add(panels, { opacity: [0, 1] })
-      tl.onComplete = fn
+      animate(panels, {
+        opacity: [1, 0],
+        ease: 'inOutCubic',
+        duration: 150,
+        onComplete: () => {
+          fn()
+          animate(panels, { opacity: [0, 1], ease: 'inOutCubic', duration: 150 })
+        },
+      })
     })
   }
 
