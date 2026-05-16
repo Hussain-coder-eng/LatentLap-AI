@@ -64,7 +64,6 @@ OOS_YEAR             = 2024
 OOS_F1_MIN           = 0.10
 
 SEVERITY_CLASSES = [0, 1, 2, 3]
-EXCLUDED_FAILURE_MODES = {"graining", "unreliable"}
 
 
 def ingest_all_years() -> None:

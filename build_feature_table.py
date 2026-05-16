@@ -649,12 +649,12 @@ def pit_and_compound_features(df: pd.DataFrame) -> pd.DataFrame:
             if prev_ins.empty:
                 continue
             in_row = prev_ins.iloc[-1]
-            try:
-                dur = (out_row["PitOutTime"] - in_row["PitInTime"]).total_seconds()
-                if 0 < dur < 600:
-                    df.loc[out_idx, "PitStopDuration"] = dur
-            except Exception:
-                pass
+            dur = (out_row["PitOutTime"] - in_row["PitInTime"]).total_seconds()
+            if 0 < dur < 600:
+                df.loc[out_idx, "PitStopDuration"] = dur
+            elif dur >= 600:
+                print(f"  [WARN] PitStopDuration {dur:.0f}s out of range for {driver} "
+                      f"outlap {out_row['LapNumber']:.0f} — skipping")
 
     # PrevCompound: compound from the immediately preceding Stint per driver.
     # Build (Driver, Stint) → first Compound mapping.

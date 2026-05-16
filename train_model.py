@@ -4,7 +4,7 @@ Phase 4 — XGBoost Tire Degradation Classifiers
 
 Trains two classifiers from raw telemetry features:
   severity_model : DegSeverity (0–3, ordinal)
-  mode_model     : FailureMode (none / thermal / wear)
+  mode_model     : FailureMode (blistering / none / thermal / wear)
 
 Labels are heuristic proxy approximations, not physical measurements.
 Run build_feature_table.py + build_labels.py before training.
