@@ -86,11 +86,12 @@ export default function TireHealth() {
         {isCritical && <span className="ml-2 text-xs text-[var(--text-muted)]">heuristic proxy — not a physical tire sensor</span>}
       </p>
 
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/media/mclaren_car_front.webp" alt="McLaren F1 car"
-        className="w-full h-20 object-contain mb-3"
-        style={{ filter: `hue-rotate(${lap.severity_pred * 30}deg)` }}
-        onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+      <div className="w-full h-4 rounded mb-3 overflow-hidden bg-[var(--surface-2)]">
+        <div
+          className="h-full rounded transition-all duration-300"
+          style={{ width: `${(lap.severity_pred / 3) * 100}%`, backgroundColor: sevColor }}
+        />
+      </div>
 
       <div className="space-y-2">
         {MODE_KEYS.map(mode => (
