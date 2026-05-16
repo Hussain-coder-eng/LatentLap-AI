@@ -222,5 +222,5 @@ def test_save_load_severity_roundtrip(tmp_path, monkeypatch):
 
 
 def test_mode_encoding_covers_expected_classes():
-    assert set(MODE_ENCODING.keys()) == {"none", "thermal", "wear"}
-    assert sorted(MODE_ENCODING.values()) == [0, 1, 2]
+    assert set(MODE_ENCODING.keys()) == {"none", "thermal", "wear", "blistering"}
+    assert sorted(MODE_ENCODING.values()) == [0, 1, 2, 3]

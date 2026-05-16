@@ -28,7 +28,7 @@ FEATURE_LIST_PATH   = MODELS_DIR / "feature_list.json"
 CV_RESULTS_PATH     = MODELS_DIR / "cv_results.json"
 
 # ── Mode label encoding (alphabetical → integer for XGBoost) ──────────────────
-MODE_CLASSES  = ["none", "thermal", "wear"]   # none=0, thermal=1, wear=2
+MODE_CLASSES  = ["blistering", "none", "thermal", "wear"]  # alphabetical → 0,1,2,3
 MODE_ENCODING = {c: i for i, c in enumerate(sorted(MODE_CLASSES))}
 MODE_DECODING = {i: c for c, i in MODE_ENCODING.items()}
 
@@ -262,31 +262,31 @@ def main() -> None:
 
     # ── Mode classifier ────────────────────────────────────────────────────────
     print("\n" + "=" * 60)
-    print("MODE CLASSIFIER  (FailureMode: none / thermal / wear)")
+    print("MODE CLASSIFIER  (FailureMode: blistering / none / thermal / wear)")
     print("=" * 60)
     df_mode = df_all[
         (df_all["DegSeverity"] != -1) &
-        (~df_all["FailureMode"].isin(["graining", "blistering", "unreliable"]))
+        (~df_all["FailureMode"].isin(["graining", "unreliable"]))
     ].copy().reset_index(drop=True)
     df_mode["ModeLabel"] = df_mode["FailureMode"].map(MODE_ENCODING)
     print(f"Training rows: {len(df_mode)}")
     print(f"Class dist: {df_mode['FailureMode'].value_counts().to_dict()}")
     print(f"Encoding: {MODE_ENCODING}")
 
-    mode_cv = run_loo_cv(df_mode, features=features, target_col="ModeLabel", num_class=3)
+    mode_cv = run_loo_cv(df_mode, features=features, target_col="ModeLabel", num_class=4)
     for fold in mode_cv["folds"]:
         print(f"\n  Fold — test={fold['test_driver']}  "
               f"best_iter={fold['best_iteration']}  "
               f"weighted_F1={fold['weighted_f1']:.3f}")
         print(fold["report"])
-        print("  Confusion matrix (rows/cols: none=0, thermal=1, wear=2):\n",
+        print("  Confusion matrix (rows/cols: blistering=0, none=1, thermal=2, wear=3):\n",
               np.array(fold["confusion_matrix"]))
     print(f"\nMode avg weighted-F1 : {mode_cv['avg_weighted_f1']:.3f}")
     print(f"Mode avg best_iter   : {mode_cv['avg_best_iteration']:.1f}")
 
     mode_model = train_final(
         df_mode, features=features, target_col="ModeLabel",
-        num_class=3, avg_best_iteration=mode_cv["avg_best_iteration"],
+        num_class=4, avg_best_iteration=mode_cv["avg_best_iteration"],
     )
 
     # ── Save artifacts ─────────────────────────────────────────────────────────
