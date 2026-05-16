@@ -163,8 +163,15 @@ test.describe('StrategyAdvisor', () => {
     const text = await panel.textContent()
     if (text?.includes('No strategy data')) return
     const slider = panel.locator('input[type="range"]')
+    await slider.scrollIntoViewIfNeeded()
     await expect(slider).toBeVisible()
-    await slider.fill('1.5')
+    // Dispatch React-compatible events (fill alone unreliable on mobile viewports)
+    await slider.evaluate((el) => {
+      const input = el as HTMLInputElement
+      input.value = '1.5'
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+      input.dispatchEvent(new Event('change', { bubbles: true }))
+    })
     await expect(panel).toContainText('1.5')
   })
 
