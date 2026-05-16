@@ -1,7 +1,7 @@
 // app/page.tsx
 'use client'
 import dynamic from 'next/dynamic'
-import { Suspense } from 'react'
+import React, { Suspense } from 'react'
 import { RaceProvider } from './RaceContext'
 import Header from './components/Header'
 import LapScrubber from './components/LapScrubber'
@@ -10,6 +10,29 @@ import ShapPanel from './components/ShapPanel'
 import Timeline from './components/Timeline'
 import StrategyAdvisor from './components/StrategyAdvisor'
 import SeverityBadgeCard from './components/SeverityBadgeCard'
+
+class Track3DErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false }
+  static getDerivedStateFromError() { return { hasError: true } }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[Track3D] WebGL render error:', error, info.componentStack)
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="w-full h-full flex items-center justify-center bg-[var(--surface)]">
+          <span className="font-['Rajdhani'] text-xs text-[var(--text-muted)] tracking-widest">
+            WebGL unavailable
+          </span>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 const Track3D = dynamic(() => import('./components/Track3D'), {
   ssr: false,
@@ -38,7 +61,9 @@ export default function DashboardPage() {
             </div>
             {/* sm+: full 3D track */}
             <div className="hidden sm:block sm:min-h-[40vh] md:flex-1 md:h-[50vh] rounded-lg overflow-hidden border border-[var(--border)]">
-              <Suspense><Track3D /></Suspense>
+              <Track3DErrorBoundary>
+                <Suspense><Track3D /></Suspense>
+              </Track3DErrorBoundary>
             </div>
           </div>
 

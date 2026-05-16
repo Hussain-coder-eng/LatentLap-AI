@@ -42,11 +42,14 @@ export default function StrategyAdvisor() {
   const { currentYear, currentDriver, currentLap, setActivePanelId } = useRaceContext()
   // Hydration-safe: initialise with default, then sync from localStorage in effect
   const [severityThreshold, setSeverityThreshold] = useState<number>(2.0)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     const stored = localStorage.getItem('strategy_severity_threshold')
     if (stored !== null) setSeverityThreshold(Number(stored))
   }, [])
+
+  useEffect(() => { setMounted(true) }, [])
 
   const data = useMemo((): StrategyData | null => {
     return strategy[String(currentYear)]?.[currentDriver] ?? null
@@ -161,32 +164,34 @@ export default function StrategyAdvisor() {
 
       {/* Recharts bar chart */}
       <div className="h-[100px] sm:h-[120px] md:h-[140px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-            <XAxis
-              dataKey="pitLap"
-              tick={{ fill: 'var(--text-muted)', fontSize: 10, fontFamily: 'Fira Code' }}
-              tickFormatter={v => `L${v}`}
-            />
-            <YAxis domain={[0, 3]} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} width={20} />
-            <Tooltip
-              contentStyle={{ background: 'var(--surface-2)', border: '1px solid var(--border)', fontFamily: 'DM Sans', fontSize: 11 }}
-              formatter={(value) => [Number(value).toFixed(3), 'Finish Severity']}
-            />
-            <ReferenceLine
-              y={severityThreshold}
-              stroke="var(--mclaren)"
-              strokeDasharray="4 2"
-              label={{ value: `Threshold ${severityThreshold.toFixed(1)}`, fill: 'var(--mclaren)', fontSize: 9, position: 'insideTopRight' }}
-            />
-            <Bar dataKey="finishSeverity" radius={[2, 2, 0, 0]}>
-              {chartData.map((entry, i) => (
-                <Cell key={i} fill={REC_COLORS[entry.recommendation] ?? 'var(--text-muted)'} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+        {mounted && (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+              <XAxis
+                dataKey="pitLap"
+                tick={{ fill: 'var(--text-muted)', fontSize: 10, fontFamily: 'Fira Code' }}
+                tickFormatter={v => `L${v}`}
+              />
+              <YAxis domain={[0, 3]} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} width={20} />
+              <Tooltip
+                contentStyle={{ background: 'var(--surface-2)', border: '1px solid var(--border)', fontFamily: 'DM Sans', fontSize: 11 }}
+                formatter={(value) => [Number(value).toFixed(3), 'Finish Severity']}
+              />
+              <ReferenceLine
+                y={severityThreshold}
+                stroke="var(--mclaren)"
+                strokeDasharray="4 2"
+                label={{ value: `Threshold ${severityThreshold.toFixed(1)}`, fill: 'var(--mclaren)', fontSize: 9, position: 'insideTopRight' }}
+              />
+              <Bar dataKey="finishSeverity" radius={[2, 2, 0, 0]}>
+                {chartData.map((entry, i) => (
+                  <Cell key={i} fill={REC_COLORS[entry.recommendation] ?? 'var(--text-muted)'} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
       {/* Threshold slider */}
