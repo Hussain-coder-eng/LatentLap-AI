@@ -1,0 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Fira+Code:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #090909;
+  --surface: #111111;
+  --surface-2: #1A1A1A;
+  --border: #222222;
+  --text-primary: #F0F0F0;
+  --text-muted: #8A8A8A;
+  --mclaren: #FF8000;
+  --sev-0: #00E676;
+  --sev-1: #FFD600;
+  --sev-2: #FF4500;
+  --sev-3: #FF1744;
+  --sev-3-glow: 0 0 12px #FF1744, 0 0 24px #FF174466;
+  --dur-1: 120ms;
+  --dur-2: 180ms;
+  --dur-3: 240ms;
+  --dur-4: 300ms;
+  --dur-5: 500ms;
+  --ease-out-quart: cubic-bezier(.165, .84, .44, 1);
+  --ease-in-out-cubic: cubic-bezier(.645, .045, .355, 1);
+  --ease-out-expo: cubic-bezier(.19, 1, .22, 1);
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text-primary);
+  font-family: 'DM Sans', sans-serif;
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: var(--sev-3-glow); }
+  50%       { box-shadow: 0 0 6px #FF1744, 0 0 12px #FF174433; }
+}
+
+/* Custom range thumb — 44px touch target (WCAG 2.5.8 + Fitts's Law) */
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+}
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--mclaren);
+  cursor: pointer;
+  border: 3px solid var(--surface);
+}
+input[type='range']::-moz-range-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--mclaren);
+  cursor: pointer;
+  border: 3px solid var(--surface);
+}
+input[type='range']:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--mclaren);
+  outline-offset: 3px;
+}
+
+/* SC 2.4.11 Focus Not Obscured — prevent panels hiding behind fixed LapScrubber */
+[data-panel-id] {
+  scroll-margin-bottom: 64px;
+}
