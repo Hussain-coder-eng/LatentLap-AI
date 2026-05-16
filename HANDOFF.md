@@ -1,6 +1,6 @@
 # LatentLap-AI — Agent Handoff Document
 
-Generated: 2026-05-14 | Last updated: 2026-05-15 (Phase 5 complete)
+Generated: 2026-05-14 | Last updated: 2026-05-16 (Phases 4-5-7 updated, pit features, 4-class blistering mode)
 Project root: `/Users/hussianaltufayli/Downloads/LatentLap-AI-main`
 Python env: `~/.venv/bin/python`
 GitHub: `https://github.com/Hussain-coder-eng/LatentLap-AI`
@@ -26,27 +26,37 @@ The approved design doc is at:
 | 1 — Data ingestion | ✅ Done | `explore_data.py` |
 | 2 — Feature engineering | ✅ Done (bugs fixed) | `build_feature_table.py` |
 | 3 — Weak supervision labels | ✅ Done (bugs fixed) | `build_labels.py` |
-| 4 — XGBoost model | ✅ Done | `train_model.py` |
+| 4 — XGBoost model | ✅ Done (multi-year, pit features) | `train_model.py` |
 | 5 — SHAP explainability + validation | ✅ Done | `evaluate.py` |
 | 6 — Interactive web dashboard | 📋 Plan written | `dashboard/` (Next.js app, to be created) |
+| 7 — Strategy Advisor | ✅ Done | `strategy.py` |
 
 ---
 
-## Current State — Phase 5 Complete, Phase 6 Next
+## Current State — Phases 1–5 + 7 Complete, Phase 6 Next
 
-Phases 1–5 are complete. Phase 6 (interactive web dashboard) is the next step.
+Phases 1–5 and Phase 7 are complete. Phase 6 (interactive Next.js dashboard) is the next step.
 
 **Plans:**
 - Phase 5 plan: `docs/superpowers/plans/2026-05-15-phase5-evaluate.md` (15 tasks)
-- Phase 6 plan: `docs/superpowers/plans/2026-05-15-phase6-dashboard.md` (22 tasks)
+- Phase 6 plan: `docs/superpowers/plans/2026-05-15-phase6-dashboard.md` (22 tasks, updated to 4-class mode_probs)
 
-**Gang expanded:** 7 specialist agents added to CLAUDE.md (commit `6da54f2`):
-- `frontend-developer`, `ui-ux-designer`, `ai-engineer`, `react-performance-optimization`, `nextjs-architecture-expert`, `mcp-expert`, `code-reviewer` (template)
-- Selection rule: specialists before generalists. `ai-engineer` for Phase 5; `frontend-developer` + `nextjs-architecture-expert` for Phase 6.
+**Gang + Codex MCP:** 7 specialist agents in CLAUDE.md. Codex MCP server: `/opt/homebrew/bin/codex mcp-server` at user scope. **Agent Orchestration Workflow** (Claude=Architect, Codex=Builder, adversarial review loop) now in CLAUDE.md.
 
-**Communication:** `caveman` skill installed at `.agents/skills/caveman/` — active by default.
+**Communication:** `caveman` skill active by default.
 
-**Data coverage:** `data/labeled_table.csv` still contains **2022 Silverstone only** (82 laps). Run `~/.venv/bin/python evaluate.py --ingest` to expand to all 5 years (network required). Retrain models after: `~/.venv/bin/python train_model.py`.
+**Data coverage (2026-05-16):** `data/labeled_table.csv` — **413 laps, 2021–2025 Silverstone**. 2 new features: `PitStopDuration` (seconds, OutLap only), `PrevCompoundCode` (-1 = first stint).
+
+**Model performance (current):**
+- Severity avg weighted-F1: **0.451** (driver LOO-CV; NOR/PIA/RIC folds)
+- Mode avg weighted-F1: **0.686** (4-class: blistering=0, none=1, thermal=2, wear=3)
+- Blistering detection: NOR 88%/92% prec/recall, PIA 78%/88%
+- SLEI_BLISTER: **40.537** (p90 rolling-window SLEI, 2021–2025, excl. 40 artifact laps)
+- evaluate.py gates: P1 SHAP ✅ P2 pit timing ✅ P3 Spearman 0.913 ✅ P4 OOS-2024 F1=0.525 ✅
+
+**Mode classifier expanded:** `blistering` added (51 laps → enough signal). `mode_probs` shape now `(n, 4)`. Phase 6 plan updated to match.
+
+**Phase 7 (Strategy Advisor):** `strategy.py` — pit window extrapolation from degradation curve fit. 34 tests pass.
 
 ---
 
@@ -96,7 +106,7 @@ sev_model, features = load_severity_model()   # XGBClassifier + list[str]
 mode_model, features = load_mode_model()      # XGBClassifier + list[str]
 # Inference:
 probs = sev_model.predict_proba(df[features].values)  # shape (n, 4)
-mode_probs = mode_model.predict_proba(df[features].values)  # shape (n, 3), classes: none/thermal/wear
+mode_probs = mode_model.predict_proba(df[features].values)  # shape (n, 4), classes: blistering/none/thermal/wear (alphabetical)
 ```
 
 Note: Models are not committed to git. Run `~/.venv/bin/python train_model.py` to regenerate.
