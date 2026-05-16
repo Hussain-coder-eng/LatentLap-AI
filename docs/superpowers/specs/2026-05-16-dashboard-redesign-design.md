@@ -29,40 +29,90 @@ LatentLap-AI is a McLaren F1 tire degradation intelligence system for Silverston
 
 ## 2. Design Concept
 
-### Core metaphor
-A **top-down McLaren F1 car** drives through five narrative chapters as the user scrolls. The car is the persistent anchor — always visible, always in roughly the same screen position. What changes is the **world around it**: the track, the heat, the corner zones, the pit lane. The car and its tires are the visual thread that ties everything together.
+### Core metaphor: the tire as hero object (anime.js pattern)
+Directly inspired by animejs.com — a large central SVG object, always on screen, with continuously moving internal parts and data text floating to its left and right. Our object is a **large front-facing F1 tire** (~50vmin diameter), centered in the viewport for the entire scroll journey.
+
+**The tire has three animation layers, all running simultaneously:**
+
+1. **Whole-object rotation** — the entire tire spins on its axis, driven by scroll (GSAP ScrollTrigger scrub). Fast scroll = fast spin. Slow scroll = slow rotation. Like the anime.js object rotating as you scroll. The rotation accumulates — it doesn't reset between chapters.
+
+2. **Internal dynamic parts** — independent sub-elements animate continuously inside the tire, regardless of scroll:
+   - **Outer tread ring**: rotates clockwise at its own speed, tread pattern morphs between deep grooves (fresh) and smooth (worn) using anime.js `morphTo` driven by severity
+   - **Middle structural ring**: counter-rotates slowly, contains structural spoke geometry
+   - **Inner data ring**: slowest rotation, contains the severity readout at center
+   - **Orbiting degradation particles**: small dots orbit the inner circle; count and speed scale with severity (4 at sev-0, 20 at sev-3). At sev-3 some particles eject outward.
+   - **Glow pulse**: radial glow behind the tire, color and pulse speed driven by severity
+
+3. **Scroll-reactive state changes** — as the user scrolls through chapters, the tire morphs:
+   - Tread geometry changes (fresh → worn → slick) via `morphTo`
+   - Ring colors shift through severity palette
+   - Particle count and orbit radius animate between states
+   - The severity number inside the tire counts up/down with anime.js counter
+
+### Side text: anime.js floating callout pattern
+Data is **never in panels or cards**. It floats as clean text groups anchored to the left and right of the tire, exactly how anime.js displays feature descriptions beside their hero:
+
+```
+[LEFT side]                    [TIRE]                    [RIGHT side]
+TIRE SEVERITY                  ( 2/3 )                   WHY THIS LAP?
+High Degradation               [spins]                   MB G-Force ████ +0.047
+"Tires under significant       [glows]                   Tyre Age   ███  +0.031
+ stress this lap."             [orbits]                  Track Temp ██   -0.023
+```
+
+- Left callouts = **the metric** (what the model says)
+- Right callouts = **the explanation** (what drove it — SHAP)
+- As you scroll to a new chapter, current callouts slide out (translateX + opacity 0) and new ones slide in from the opposite direction
+- Text uses anime.js stagger on individual lines — each line drops in 40ms after the previous
+- `[ + Technical ]` button at the bottom of the right callout expands raw model values inline
+
+### Silverstone circuit + car motionPath
+The **Silverstone circuit SVG** sits in the background, semi-transparent (`~10% opacity`). On page load it draws itself using `createDrawable` (`draw: '0 1'`, 2s duration). A small 3D-rendered car (or detailed SVG) follows the circuit continuously using `createMotionPath`. The car's position on the circuit corresponds to the current lap — lap 1 = start/finish line, lap 52 = just before S/F line again.
+
+```js
+// Core anime.js circuit animations
+animate(createDrawable('.silverstone-circuit'), {
+  draw: ['0 0', '0 1'],
+  duration: 2000,
+  ease: 'outCubic',
+})
+
+animate('.circuit-car', {
+  ...createMotionPath('.silverstone-circuit'),
+  duration: lapDuration,  // maps to current lap position
+  loop: false,
+})
+```
+
+The circuit morphs between chapters — e.g. in the Predictors chapter, Maggotts-Becketts section of the circuit glows orange while the car passes through it.
+
+### Speedometer (persistent, top-left)
+Fixed `position: fixed; top: 24px; left: 24px`. A semicircular F1 gauge:
+- Needle driven by **scroll velocity** in real time: `deltaY / deltaTime` → map to 0–270° rotation
+- Fast swipe → needle maxes, decays back with anime.js `ease: 'outExpo'`
+- Display: `0–300 km/h` (thematic, not literal), Fira Code numerals
+- Dark dial face, `#FF8000` needle, white tick marks at 0 / 100 / 200 / 300
 
 ### Scroll behavior
-- One continuous vertical page
-- CSS `scroll-snap-type: y mandatory` on the root container
-- Each chapter: `height: 100dvh`, `scroll-snap-align: start`
-- Chapter transitions: GSAP ScrollTrigger drives parallax, fade, and background morphing
-- Mobile: touch swipe works naturally with scroll-snap
-- Keyboard: `PageDown` / `PageUp` advances chapters
+- One continuous vertical page, **no scroll-snap** — free flowing
+- GSAP ScrollTrigger `scrub: true` ties all chapter transitions to scroll position
+- The tire stays centered; text callouts swap left/right as scroll progress crosses chapter thresholds
+- Total scroll height: `500vh` (5 chapters × 100vh each, pinned tire)
+- Mobile: touch scroll works natively with ScrollTrigger
 
-### The tire is the data
-The car's four tires change color and glow based on the current lap's severity:
-
-| Severity | Tire Color | Glow |
-|---|---|---|
-| 0 | `#00E676` green | Soft steady pulse |
-| 1 | `#FFD600` yellow | Gentle pulse |
-| 2 | `#FF6D00` amber | Active pulse |
-| 3 | `#FF1744` red | Intense pulsing bloom, `glow-pulse` CSS animation |
-
-This single visual element communicates the model's primary output without any text needed.
+### Severity → visual state
+| Severity | Ring color | Glow | Tread morph | Particles |
+|---|---|---|---|---|
+| 0 | `#00E676` | Faint, 3s pulse | Deep grooves | 4 slow |
+| 1 | `#FFD600` | Medium, 2s pulse | Moderate | 8 medium |
+| 2 | `#FF6D00` | Strong, 1.5s pulse | Worn | 14 fast |
+| 3 | `#FF1744` | Intense bloom, 1.2s | Slick | 20 fast + ejecting |
 
 ### Dual-audience: layered reveal
-Every chapter shows **plain-English explanation by default**. A `[ + Technical ]` button in the lower-right corner of each chapter's content area expands a technical details panel inline.
-
-- Non-technical visitors: read the story, understand the insight, never see a number they didn't ask for
-- Engineers / ML reviewers: tap `[ + Technical ]` to see raw SHAP values, model notes, confidence scores, methodology caveats
-- The toggle state persists across chapters (if you expand technical in ch2, ch3 opens expanded too)
+Plain-English explanation always visible. `[ + Technical ]` in each right-side callout expands raw model output (SHAP values, model notes, confidence) inline. Toggle state persists across chapters.
 
 ### Intent: portfolio showcase
-This is a public portfolio piece demonstrating a complete ML engineering project. Both audiences matter:
-- General visitors get the F1 narrative
-- Technical reviewers see the ML rigor (XGBoost, SHAP, weak supervision, heuristic labels)
+Public portfolio piece. General visitors get the F1 narrative. Technical reviewers get the ML rigor via `[ + Technical ]`.
 
 ---
 
@@ -418,15 +468,16 @@ setIsTechnicalMode: (v: boolean) => void
 ### New components (replace existing)
 | New Component | Replaces | Notes |
 |---|---|---|
-| `ChapterContainer.tsx` | `page.tsx` layout | Scroll-snap root, progress dots, scrubber |
-| `CarTopDown.tsx` | `Track3D.tsx` | SVG car, tire color prop, GSAP-animated position |
-| `HeroChapter.tsx` | `Header.tsx` | Chapter 1 |
-| `SeverityChapter.tsx` | `TireHealth.tsx` | Chapter 2, merged with mode bars |
-| `PredictorsChapter.tsx` | `ShapPanel.tsx` | Chapter 3, with plain-English per feature |
-| `RaceArcChapter.tsx` | `Timeline.tsx` | Chapter 4, background-as-chart |
-| `StrategyChapter.tsx` | `StrategyAdvisor.tsx` | Chapter 5, chart-only |
-| `TechnicalPanel.tsx` | — | New: expandable technical detail drawer |
-| `LapScrubberFixed.tsx` | `LapScrubber.tsx` | Fixed-position, persists across all chapters |
+| `ScrollStage.tsx` | `page.tsx` layout | GSAP ScrollTrigger root, 500vh pinned container |
+| `TireHero.tsx` | `Track3D.tsx` + `TireHealth.tsx` | Central SVG tire, all 3 animation layers, severity prop |
+| `TireRings.tsx` | — | Sub-component: 3 concentric rings with independent rotation |
+| `TireTread.tsx` | — | Sub-component: morphing tread path via animejs `morphTo` |
+| `TireParticles.tsx` | — | Sub-component: orbiting/ejecting degradation particles |
+| `SilvestoneCircuit.tsx` | — | Background SVG circuit, `createDrawable` draw-in, `createMotionPath` car |
+| `Speedometer.tsx` | — | Fixed top-left gauge, scroll-velocity needle |
+| `CalloutLeft.tsx` | — | Left-side floating text (metric label + value + plain English) |
+| `CalloutRight.tsx` | — | Right-side floating text (SHAP drivers + `[ + Technical ]`) |
+| `LapScrubberFixed.tsx` | `LapScrubber.tsx` | Fixed bottom strip, persists across all scroll |
 
 ### Deleted components
 - `SeverityBadgeCard.tsx` — replaced by `SeverityChapter`
