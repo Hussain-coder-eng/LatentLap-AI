@@ -108,7 +108,7 @@ def test_compute_pit_window_finds_qualifying_range():
         {"pit_lap": 24, "finish_severity": 2.6},
         {"pit_lap": 26, "finish_severity": 3.0},
     ]
-    window = compute_pit_window(strategies, ideal_threshold=2.0, acceptable_threshold=2.5)
+    window = compute_pit_window(strategies, ideal_threshold=2.0)
     assert window["start"] == 18
     assert window["end"] == 20
 
@@ -121,7 +121,7 @@ def test_compute_pit_window_no_qualifying():
         {"pit_lap": 24, "finish_severity": 2.9},
         {"pit_lap": 26, "finish_severity": 3.0},
     ]
-    window = compute_pit_window(strategies, ideal_threshold=2.0, acceptable_threshold=2.5)
+    window = compute_pit_window(strategies, ideal_threshold=2.0)
     assert window["start"] == 18
     assert window["end"] == 18
 
@@ -134,9 +134,29 @@ def test_compute_pit_window_all_qualify():
         {"pit_lap": 24, "finish_severity": 1.8},
         {"pit_lap": 26, "finish_severity": 1.9},
     ]
-    window = compute_pit_window(strategies, ideal_threshold=2.0, acceptable_threshold=2.5)
+    window = compute_pit_window(strategies, ideal_threshold=2.0)
     assert window["start"] == 18
     assert window["end"] == 26
+
+
+def test_compute_pit_window_non_consecutive_qualifying():
+    """Laps 18 and 22 qualify but 20 does not.
+
+    The window must NOT span 18-22 (which would implicitly endorse lap 20).
+    The longest consecutive run is length-1, so both candidates tie; the function
+    must return the first qualifying lap for both start and end.
+    """
+    strategies = [
+        {"pit_lap": 18, "finish_severity": 1.9},   # qualifies
+        {"pit_lap": 20, "finish_severity": 2.3},   # does NOT qualify
+        {"pit_lap": 22, "finish_severity": 1.8},   # qualifies — non-consecutive
+        {"pit_lap": 24, "finish_severity": 2.6},   # does not
+        {"pit_lap": 26, "finish_severity": 3.0},   # does not
+    ]
+    window = compute_pit_window(strategies, ideal_threshold=2.0)
+    # Longest run is exactly 1 entry; first qualifying entry is lap 18.
+    assert window["start"] == 18
+    assert window["end"] == 18
 
 
 # -- score_confidence ----------------------------------------------------------
@@ -264,3 +284,52 @@ def test_generate_strategy_json_missing_predictions(tmp_path):
             predictions_path=tmp_path / "nonexistent.json",
             output_path=tmp_path / "out.json",
         )
+
+
+def test_generate_strategy_json_missing_laps_key(tmp_path):
+    """predictions.json without 'laps' key must raise ValueError with a clear message."""
+    p = tmp_path / "predictions.json"
+    p.write_text(json.dumps({"meta": {"years": [2022]}}))
+    with pytest.raises(ValueError, match="missing top-level key 'laps'"):
+        generate_strategy_json(
+            predictions_path=p,
+            output_path=tmp_path / "out.json",
+        )
+
+
+def test_generate_strategy_json_malformed_record(tmp_path):
+    """A record missing 'severity_pred' must raise ValueError naming the field."""
+    p = tmp_path / "predictions.json"
+    laps = [{"year": 2022, "driver": "NOR", "lap_number": i} for i in range(1, 10)]
+    p.write_text(json.dumps({"laps": laps}))
+    with pytest.raises(ValueError, match="severity_pred"):
+        generate_strategy_json(
+            predictions_path=p,
+            output_path=tmp_path / "out.json",
+        )
+
+
+def test_generate_strategy_json_nan_severity_skipped(tmp_path, capsys):
+    """NaN severity_pred records are skipped with a warning; clean records still produce output."""
+    laps = []
+    for lap_n in range(1, 53):
+        sev = float("nan") if lap_n == 10 else round(min(3.0, 0.04 * lap_n), 4)
+        laps.append({
+            "year": 2022, "driver": "NOR",
+            "lap_number": lap_n, "severity_pred": sev,
+        })
+    p = tmp_path / "predictions.json"
+    # json.dumps emits NaN as a bare NaN literal — use allow_nan=True (default).
+    p.write_text(json.dumps({"laps": laps}))
+    out_path = tmp_path / "out.json"
+    result = generate_strategy_json(predictions_path=p, output_path=out_path)
+    captured = capsys.readouterr()
+    assert "WARNING" in captured.out
+    assert "NaN" in captured.out or "nan" in captured.out.lower()
+    # Remaining 51 clean laps must still produce a valid recommendation.
+    assert "2022" in result
+    assert result["2022"]["NOR"]["confidence"] in {"high", "medium", "low"}
+    # Finish severities must be real numbers, not NaN.
+    for s in result["2022"]["NOR"]["pit_strategies"]:
+        if s["finish_severity"] is not None:
+            assert not (isinstance(s["finish_severity"], float) and np.isnan(s["finish_severity"]))
