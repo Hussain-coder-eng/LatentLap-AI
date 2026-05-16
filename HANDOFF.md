@@ -1,6 +1,6 @@
 # LatentLap-AI — Agent Handoff Document
 
-Generated: 2026-05-14 | Last updated: 2026-05-16 (Phases 4-5-7 updated, pit features, 4-class blistering mode)
+Generated: 2026-05-14 | Last updated: 2026-05-16 (Phase 7 Strategy Advisor compute complete; Phase 6 StrategyAdvisor.tsx next)
 Project root: `/Users/hussianaltufayli/Downloads/LatentLap-AI-main`
 Python env: `~/.venv/bin/python`
 GitHub: `https://github.com/Hussain-coder-eng/LatentLap-AI`
@@ -33,7 +33,7 @@ The approved design doc is at:
 
 ---
 
-## Current State — Phases 1–5 + 7 Complete, Phase 6 Next
+## Current State — Phases 1–5 + 7 Complete, Phase 6 (dashboard + StrategyAdvisor) Next
 
 Phases 1–5 and Phase 7 are complete. Phase 6 (interactive Next.js dashboard) is the next step.
 
@@ -56,7 +56,7 @@ Phases 1–5 and Phase 7 are complete. Phase 6 (interactive Next.js dashboard) i
 
 **Mode classifier expanded:** `blistering` added (51 laps → enough signal). `mode_probs` shape now `(n, 4)`. Phase 6 plan updated to match.
 
-**Phase 7 (Strategy Advisor):** `strategy.py` — pit window extrapolation from degradation curve fit. 34 tests pass.
+**Phase 7 (Strategy Advisor — compute):** `strategy.py` — polynomial degradation curve fit, pit window extrapolation, JSON output. 34 tests pass. `outputs/strategy_recommendations.json` generated for all 10 driver-year combos. **StrategyAdvisor.tsx (Phase 6 dashboard panel) is not yet built** — that is the next step.
 
 ---
 
@@ -182,6 +182,35 @@ shap_data = json.loads(Path("outputs/shap_data.json").read_text())
 # shap_data["shap_values"]["severity"][lap_key]: {feat_name: shap_val, ...}
 ```
 
+### Public interface for Phase 6 (from Phase 7)
+```python
+import json
+from pathlib import Path
+
+strategy = json.loads(Path("outputs/strategy_recommendations.json").read_text())
+# strategy[year_str][driver] = {
+#   "current_lap": int,
+#   "current_severity": float | None,
+#   "pit_strategies": [
+#       {
+#           "pit_lap": int,               # one of [18, 20, 22, 24, 26]
+#           "finish_severity": float,     # projected severity at lap 52
+#           "recommendation": str,        # "optimal" | "acceptable" | "late" | "critical"
+#           "pit_window_start": int,
+#           "pit_window_end": int,
+#       }, ...  # 5 entries
+#   ],
+#   "primary_pit_window": {"start": int, "end": int},
+#   "confidence": str,   # "high" | "medium" | "low"
+# }
+
+# Regenerate:
+# ~/.venv/bin/python strategy.py                # all years
+# ~/.venv/bin/python strategy.py --year 2022 --driver NOR
+# ~/.venv/bin/python strategy.py --current-lap 24   # mid-race simulation
+# ~/.venv/bin/python strategy.py --dry-run
+```
+
 ---
 
 ## Phase 6 — Spec Approved, Implementation Pending
@@ -280,6 +309,49 @@ data/labeled_table.parquet
 ```
 
 ---
+
+## What Happened This Session — Phase 7 Strategy Advisor (2026-05-16)
+
+Designed, implemented, reviewed, and merged Phase 7 compute (`strategy.py` + `tests/test_strategy.py`).
+
+### Execution approach: Concurrent agents (Claude Architect + Codex Builder)
+Following the Agent Orchestration Workflow in CLAUDE.md:
+- **Codex explorer** mapped target files (confirmed Python 3.9, predictions schema)
+- **Worker A** (ai-engineer subagent) implemented `strategy.py` — all 8 functions
+- **Worker B** (ai-engineer subagent) implemented `tests/test_strategy.py` — 34 tests
+- Workers A and B ran **in parallel** (independent files, no conflicts)
+- Adversarial code review (`superpowers:code-reviewer`) found 2 Critical + 1 Important issues; all fixed
+
+### Build results
+
+| Step | Result |
+|---|---|
+| Codex explorer | Python 3.9.23 confirmed, severity_pred is float, no strategy.py existed |
+| Worker A: strategy.py | 8 functions, 150 lines, clean import verified |
+| Worker B: tests/test_strategy.py | 34 tests, syntax verified |
+| First test run | 30/30 pass |
+| Dry-run on real data | 10 driver-year combos, no errors, valid JSON |
+| Adversarial code review | 2 Critical + 1 Important found + fixed |
+| Final test run | 34/34 pass (4 new regression tests from fixes) |
+| Merged to main | Commit `00dfeda` |
+
+### Design decisions
+
+| Decision | Detail |
+|---|---|
+| Mathematical model | `finish_severity = baseline + (p(race_laps) - p(pit_lap + 1))` — earlier pit gives higher finish severity (more fresh-tire laps consumed by race end) |
+| Pit window definition | Consecutive candidate laps [18,20,22,24,26] where finish_severity ≤ ideal_threshold (2.0) |
+| Python 3.9 compat | `from __future__ import annotations` enables `int \| None` and `list[int]` syntax on Python 3.9 |
+| Polynomial degree | Degree 2 — captures typical acceleration-phase degradation without overfitting sparse stint data |
+
+### Phase 7 outputs
+```
+strategy.py                        ← Phase 7 compute script
+tests/test_strategy.py             ← 34 tests (unit + integration)
+outputs/strategy_recommendations.json  ← gitignored; regenerate with strategy.py
+docs/superpowers/specs/2026-05-15-phase7-strategy-design.md  ← approved design spec
+docs/superpowers/plans/2026-05-15-phase7-strategy.md         ← implementation plan
+```
 
 ## What Happened This Session — Phase 5 Implementation (2026-05-15)
 
@@ -393,26 +465,48 @@ Carries forward from prior session, plus new entries:
 | Planning subagent returning file content as text | Plan subagent wrote plan as assistant message instead of saving to file | Parent agent must save the returned text using Write tool |
 | `validate_oos_2024` using production model | Production `sev_model` trained on all years including OOS year → in-sample evaluation, not true holdout | Retrain a fresh model inside `validate_oos_2024` on `df[Year != OOS_YEAR]` rows |
 | `int(row["TyreLife"])` without NaN guard | FastF1 can produce NaN TyreLife on in-laps or SC laps; `int(float('nan'))` raises `ValueError` with no useful context | Wrap with `int(v) if pd.notna(v) else -1` at all integer conversions from DataFrame rows |
+| Test assertion direction reversed for `extrapolate_finish_severity` | Plan had `sev_late >= sev_early` but model gives "earlier pit = higher finish severity" (more fresh-tire laps = more wear at race end) | Fixed assertion to `sev_early >= sev_late`; updated docstring |
+| `compute_pit_window` returning non-consecutive windows | Original `qualifying[0]` / `qualifying[-1]` logic endorsed intermediate non-qualifying laps (e.g. pit 18 and 22 qualify but 20 doesn't → window reported as 18–22) | Replaced with longest-consecutive-run scan; dead `acceptable_threshold` param removed |
+| NaN `severity_pred` propagating silently through polyfit | NaN in any lap's severity_pred passed through `np.polyfit` → `np.poly1d` → `np.clip` without error; output JSON contained NaN literals (invalid strict JSON) | Added NaN guard in `generate_strategy_json`; contaminated records skipped with WARNING print |
+| Missing schema validation on predictions.json | Bare `KeyError: 'laps'` with no path or record context if predictions.json had schema drift | Added `_validate_predictions_payload(raw, source)` that checks `laps` key and all required per-record fields with named error messages |
+| `int \| None` syntax on Python 3.9 | PEP 604 union syntax requires Python 3.10+; project runs Python 3.9.23 | Add `from __future__ import annotations` at top of any file using modern union syntax |
 
 ---
 
 ## Immediate Next Steps
 
-### Step 1 — Ingest multi-year data (optional, improves model)
+### Step 1 — Build Phase 6 dashboard + StrategyAdvisor.tsx
+Branch: `phase-6-dashboard`
+Plan: `docs/superpowers/plans/2026-05-15-phase6-dashboard.md`
+Spec: `docs/superpowers/specs/2026-05-14-phase6-dashboard-design.md`
+Strategy spec: `docs/superpowers/specs/2026-05-15-phase7-strategy-design.md`
+
+Use `frontend-developer` + `nextjs-architecture-expert` agents via subagent-driven-development.
+
+**Phase 6 includes StrategyAdvisor.tsx** — new panel replacing the old `Comparison` component:
+- Reads `strategy_recommendations.json` (Phase 7 output)
+- Pre-race: table + chart of 5 pit strategies vs finish severity
+- Live-race: pit window highlight, anomaly alerts, updates per lap
+- Threshold tuning: collapsible sliders for ideal/acceptable/anomaly thresholds, stored in localStorage
+
+Pre-requisites:
+- `outputs/` artifacts must exist (generated by Phase 5 ✅)
+- `outputs/strategy_recommendations.json` must exist (generated by Phase 7 ✅)
+- Generate Higgsfield assets (see spec Task 19) before building Track3D
+
+### Step 2 — Deploy to Vercel
+```bash
+cd dashboard && npm run build   # static export
+```
+Then deploy via Vercel CLI or GitHub integration.
+
+### Step 3 — Optional: ingest multi-year data to improve model
 ```bash
 ~/.venv/bin/python evaluate.py --ingest   # expand to 2021/2023/2024/2025 (network required)
 ~/.venv/bin/python train_model.py         # retrain on multi-year data
 ~/.venv/bin/python evaluate.py            # regenerate outputs/ with multi-year model
+~/.venv/bin/python strategy.py            # regenerate strategy_recommendations.json
 ```
-
-### Step 2 — Implement Phase 6 (`dashboard/`)
-Use `superpowers:subagent-driven-development` + `frontend-developer` + `nextjs-architecture-expert` agents.
-Plan: `docs/superpowers/plans/2026-05-15-phase6-dashboard.md`
-Branch: `phase-6-dashboard`
-
-Pre-requisite: `outputs/` artifacts must exist (they do — generated by Phase 5).
-Generate Higgsfield assets first (see plan Task 19).
-Deploy to Vercel when complete.
 
 ---
 
@@ -541,7 +635,8 @@ LatentLap-AI-main/
 ├── build_labels.py            ← Phase 3, DONE — DegSeverity + FailureMode labels
 ├── explore_data.py            ← Phase 1, DONE — data validation
 ├── train_model.py             ← Phase 4, DONE — severity + mode XGBoost classifiers
-├── evaluate.py                ← Phase 5, TO CREATE
+├── evaluate.py                ← Phase 5, DONE — SHAP + validation + outputs
+├── strategy.py                ← Phase 7, DONE — pit window extrapolation compute
 ├── CLAUDE.md                  ← Mandatory agent workflow rules
 ├── HANDOFF.md                 ← this file
 ├── .agents/skills/            ← Installed: animejs, gsap-*, deploy-to-vercel, web-design-guidelines
@@ -552,9 +647,12 @@ LatentLap-AI-main/
 │   └── superpowers/
 │       ├── specs/
 │       │   ├── 2026-05-14-phase5-evaluate-design.md   ← APPROVED
-│       │   └── 2026-05-14-phase6-dashboard-design.md  ← APPROVED (v2: Anime.js + Camera POV)
+│       │   ├── 2026-05-14-phase6-dashboard-design.md  ← APPROVED (v2 + StrategyAdvisor)
+│       │   └── 2026-05-15-phase7-strategy-design.md   ← APPROVED
 │       └── plans/
-│           └── (plans to be written next)
+│           ├── 2026-05-15-phase5-evaluate.md    ← Phase 5 plan
+│           ├── 2026-05-15-phase6-dashboard.md   ← Phase 6 plan (22 tasks)
+│           └── 2026-05-15-phase7-strategy.md    ← Phase 7 plan
 ├── models/                    ← gitignored; regenerate with train_model.py
 │   ├── severity_model.ubj
 │   ├── mode_model.ubj
@@ -563,6 +661,12 @@ LatentLap-AI-main/
 ├── data/                      ← gitignored
 │   ├── feature_table.csv      ← 2022 only (82 laps × 112 features)
 │   └── labeled_table.csv      ← 2022 only (82 laps × 115 cols)
+├── tests/
+│   ├── test_build_feature_table.py
+│   ├── test_build_labels.py
+│   ├── test_train_model.py
+│   ├── test_evaluate.py
+│   └── test_strategy.py       ← Phase 7, 34 tests
 └── cache/                     ← FastF1 cache, do not delete
 ```
 
