@@ -2,6 +2,7 @@
 'use client'
 import * as THREE from 'three'
 import { createContext, useContext, useState, useMemo, ReactNode } from 'react'
+import { getLapRange } from '../lib/data'
 
 export interface RaceContextValue {
   currentLap: number
@@ -23,7 +24,7 @@ export interface RaceContextValue {
 const RaceContext = createContext<RaceContextValue | null>(null)
 
 export function RaceProvider({ children }: { children: ReactNode }) {
-  const [currentLap, setCurrentLap] = useState(1)
+  const [currentLap, setCurrentLap] = useState(() => getLapRange(2022, 'NOR')[0])
   const [currentYear, setCurrentYear] = useState(2022)
   const [currentDriver, setCurrentDriver] = useState('NOR')
   const [activePanelId, setActivePanelId] = useState<string | null>(null)

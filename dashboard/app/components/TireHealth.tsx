@@ -54,7 +54,13 @@ export default function TireHealth() {
     }
   }, [currentLap, currentYear, currentDriver, lap, reducedMotion])
 
-  if (!lap) return <div className="p-4 text-[var(--text-muted)]">No data for this lap.</div>
+  if (!lap) return (
+    <section data-panel-id="tire-health" aria-label="Tire health panel" tabIndex={0}
+      className="p-4 bg-[var(--surface)] border border-[var(--border)] rounded-lg">
+      <p className="font-['DM_Sans'] text-xs text-[var(--text-muted)] uppercase tracking-widest mb-1">Tire Severity</p>
+      <p className="font-['DM_Sans'] text-sm text-[var(--text-muted)]">No data for this lap.</p>
+    </section>
+  )
 
   const sevColor = getSeverityHex(lap.severity_pred)
   const isCritical = lap.severity_pred >= 3

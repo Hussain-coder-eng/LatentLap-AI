@@ -34,7 +34,7 @@ export default function LapScrubber() {
   }, [minLap, maxLap, setCurrentLap, reducedMotion])
 
   return (
-    <div className="flex items-center gap-3 px-4 py-2" data-panel-id="scrubber">
+    <div className="flex items-center gap-3 px-4 py-2" data-panel-id="scrubber" aria-label="Lap scrubber">
       <span className="font-['Rajdhani'] text-sm text-[var(--text-muted)]">
         LAP {currentLap}/{maxLap}
       </span>
