@@ -44,8 +44,8 @@ VALIDATION_REPORT_PATH = OUTPUTS_DIR / "validation_report.json"
 ALL_YEARS = [2021, 2022, 2023, 2024, 2025]
 
 # -- Mode labels ---------------------------------------------------------------
-# Shared with train_model.py via import. MODE_ENCODING = {"none":0,"thermal":1,"wear":2}
-MODE_CLASSES = ["none", "thermal", "wear"]
+# Shared with train_model.py via import. MODE_ENCODING = {"blistering":0,"none":1,"thermal":2,"wear":3}
+MODE_CLASSES = ["blistering", "none", "thermal", "wear"]
 
 # -- Validation thresholds -----------------------------------------------------
 SHAP_TOP_K           = 5
@@ -64,7 +64,6 @@ OOS_YEAR             = 2024
 OOS_F1_MIN           = 0.10
 
 SEVERITY_CLASSES = [0, 1, 2, 3]
-EXCLUDED_FAILURE_MODES = {"graining", "blistering", "unreliable"}
 
 
 def ingest_all_years() -> None:
@@ -114,7 +113,7 @@ def compute_predictions(df: pd.DataFrame, sev_model, mode_model, features: list)
         raise ValueError(f"labeled_table.csv has {dupes} duplicate (Year, Driver, LapNumber) rows — cannot build unique lap keys.")
 
     sev_probs  = sev_model.predict_proba(df_valid[features].values)   # (n, 4)
-    mode_probs = mode_model.predict_proba(df_valid[features].values)  # (n, 3)
+    mode_probs = mode_model.predict_proba(df_valid[features].values)  # (n, 4)
 
     laps = []
     for i, (idx, row) in enumerate(df_valid.iterrows()):
@@ -140,9 +139,10 @@ def compute_predictions(df: pd.DataFrame, sev_model, mode_model, features: list)
             "mode_true":      str(row["FailureMode"]),
             "mode_pred":      MODE_DECODING[int(np.argmax(mp))],
             "mode_probs": {
-                "none":    round(mp[MODE_ENCODING["none"]], 4),
-                "thermal": round(mp[MODE_ENCODING["thermal"]], 4),
-                "wear":    round(mp[MODE_ENCODING["wear"]], 4),
+                "blistering": round(mp[MODE_ENCODING["blistering"]], 4),
+                "none":       round(mp[MODE_ENCODING["none"]], 4),
+                "thermal":    round(mp[MODE_ENCODING["thermal"]], 4),
+                "wear":       round(mp[MODE_ENCODING["wear"]], 4),
             },
             "track_progress": round(float(tp), 6),
         })

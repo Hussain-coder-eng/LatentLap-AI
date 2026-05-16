@@ -30,7 +30,7 @@ def _make_minimal_df(n: int = 30, year: int = 2022) -> pd.DataFrame:
         "LapNumber":   list(range(1, n + 1)),
         "StintId":     stint_ids,
         "DegSeverity": severity.tolist(),
-        "FailureMode": (["none", "thermal", "wear"] * ((n // 3) + 1))[:n],
+        "FailureMode": (["blistering", "none", "thermal", "wear"] * ((n // 4) + 1))[:n],
         "Compound":    ["MEDIUM"] * n,
         "TyreLife":    rng.integers(1, 30, n).tolist(),
         "LapDelta":    lap_delta.tolist(),
@@ -58,12 +58,13 @@ def _train_tiny_sev_model(df: pd.DataFrame, features: list):
 def _train_tiny_mode_model(df: pd.DataFrame, features: list):
     df_valid = df[df["DegSeverity"] != -1]
     X = df_valid[features].values
-    mode_enc = {"none": 0, "thermal": 1, "wear": 2}
-    y = np.array([mode_enc.get(m, 0) for m in df_valid["FailureMode"]])
+    # 4-class encoding: blistering=0, none=1, thermal=2, wear=3 (alphabetical)
+    mode_enc = {"blistering": 0, "none": 1, "thermal": 2, "wear": 3}
+    y = np.array([mode_enc.get(m, 1) for m in df_valid["FailureMode"]])
     model = xgb.XGBClassifier(
         n_estimators=5,
         max_depth=2,
-        num_class=3,
+        num_class=4,
         objective="multi:softprob",
         eval_metric="mlogloss",
         random_state=0,
@@ -93,7 +94,7 @@ def test_compute_predictions_schema(sample_data):
     lap = result["laps"][0]
     assert "key" in lap
     assert len(lap["severity_probs"]) == 4
-    assert set(lap["mode_probs"].keys()) == {"none", "thermal", "wear"}
+    assert set(lap["mode_probs"].keys()) == {"blistering", "none", "thermal", "wear"}
     assert "track_progress" in lap
 
 

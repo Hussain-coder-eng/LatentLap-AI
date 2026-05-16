@@ -628,6 +628,60 @@ def post_merge_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Feature group 7 — Pit stop & previous compound
+# ─────────────────────────────────────────────────────────────────────────────
+
+def pit_and_compound_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Add PitStopDuration, PrevCompound (intermediate), PrevCompoundCode.
+
+    Must be called while PitInTime and PitOutTime are still present in df.
+    """
+    df = df.copy()
+
+    # PitStopDuration: seconds from pit-in to pit-out, assigned to the OutLap row.
+    df["PitStopDuration"] = np.nan
+    for driver in df["Driver"].unique():
+        d = df[df["Driver"] == driver].sort_values("LapNumber")
+        in_rows  = d[d["PitInTime"].notna()]
+        out_rows = d[d["PitOutTime"].notna()]
+        for out_idx, out_row in out_rows.iterrows():
+            prev_ins = in_rows[in_rows["LapNumber"] < out_row["LapNumber"]]
+            if prev_ins.empty:
+                continue
+            in_row = prev_ins.iloc[-1]
+            dur = (out_row["PitOutTime"] - in_row["PitInTime"]).total_seconds()
+            if 0 < dur < 600:
+                df.loc[out_idx, "PitStopDuration"] = dur
+            elif dur >= 600:
+                print(f"  [WARN] PitStopDuration {dur:.0f}s out of range for {driver} "
+                      f"outlap {out_row['LapNumber']:.0f} — skipping")
+
+    # PrevCompound: compound from the immediately preceding Stint per driver.
+    # Build (Driver, Stint) → first Compound mapping.
+    stint_compound = (
+        df.sort_values("LapNumber")
+        .groupby(["Driver", "Stint"])["Compound"]
+        .first()
+    )
+
+    def _prev_cmpd(row):
+        try:
+            return stint_compound.loc[(row["Driver"], row["Stint"] - 1)]
+        except KeyError:
+            return np.nan
+
+    df["PrevCompound"] = df.apply(_prev_cmpd, axis=1)
+
+    # PrevCompoundCode: numeric encoding; -1 = no previous stint.
+    cmpd_map = {"SOFT": 0, "MEDIUM": 1, "HARD": 2, "INTERMEDIATE": 3, "WET": 4}
+    df["PrevCompoundCode"] = (
+        df["PrevCompound"].map(cmpd_map).fillna(-1).astype(int)
+    )
+
+    return df
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Per-session pipeline
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -659,15 +713,18 @@ def process_session(session, year: int, dry_run: bool = False):
     print("  Building post-merge derived features...")
     df = post_merge_features(df)
 
+    print("  Building pit stop + previous compound features...")
+    df = pit_and_compound_features(df)
+
     df["Year"] = year
 
-    # Drop internal FastF1 housekeeping columns
+    # Drop internal FastF1 housekeeping columns + intermediate string columns
     drop_cols = [c for c in df.columns if
                  "SessionTime" in c or c in {
                      "PitInTime", "PitOutTime", "LapStartDate", "LapStartTime",
                      "FastF1Generated", "Deleted", "DeletedReason",
                      "IsPersonalBest", "Time", "StintBest", "S2Best",
-                     "NextLapDelta", "CompoundBudget",
+                     "NextLapDelta", "CompoundBudget", "PrevCompound",
                  }]
     df.drop(columns=[c for c in drop_cols if c in df.columns], inplace=True)
 
