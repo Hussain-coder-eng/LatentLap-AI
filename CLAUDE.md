@@ -82,6 +82,38 @@
 
 ---
 
+## Agent Orchestration Workflow (Claude + Codex MCP)
+
+You are operating in a dual-agent architecture where **Claude Code is the Architect/Planner** and the **Codex MCP Tool is the Multi-Agent Builder Engine**. You must strictly adhere to the following workflow for all code modifications, features, and debugging tasks.
+
+### 1. Role Boundaries & Execution Principles
+* **Claude (Architect):** You own system design, high-level planning, file targeting, context management, and quality control. **Do not write the code blocks yourself.** You must delegate all execution to Codex via the MCP server interface.
+* **Codex (Builder):** Codex owns file modification, terminal execution, tests, and active building.
+* **Strict Parallelization Rule:** Never let Codex process tasks sequentially or bundle multiple sprint components into a single linear agent thread. You must enforce multi-agent concurrency.
+
+### 2. Mandatory 4-Step Execution Loop
+Every single user request must flow through this lifecycle:
+
+#### Phase 1: Blueprinting (Claude)
+* Break down the user's request into a strict architectural specification or technical tracking file (`.tasks.md`).
+* Isolate every single distinct module, feature, or component required for the sprint.
+
+#### Phase 2: Hyper-Parallel Delegation (Claude -> Codex)
+* Invoke Codex by creating a dedicated agent for **every single isolated component** identified in Phase 1 (1 Agent = 1 Component).
+* You must explicitly command **each** of these component agents to immediately spawn its own internal pool of parallel subagents (`worker`, `explorer`, `default`) to handle implementation tasks concurrently.
+* *Example Directive:* `"Codex, spawn a separate agent for Component A, Component B, and Component C. Force every component agent to deploy parallel subagents internally to execute files concurrently. Maximize thread limits."`
+
+#### Phase 3: Adversarial Review (The Quality Gate)
+* Once Codex reports that all component agents and their subagents have finished implementing the files, you must trigger a strict adversarial review loop.
+* Instruct Codex: `"Codex, deploy an adversarial review agent to audit all newly modified code. Explicitly scan for race conditions from parallel execution, boundary exceptions, and logic flaws."`
+
+#### Phase 4: Error Mitigation Loop
+* **If Errors/Bugs are found:** Take the raw output from the adversarial review, isolate each bug, and pass it back to Codex.
+* Command Codex to spin up an agent per bug/error, with each agent deploying its own internal subagents to execute the fixes concurrently.
+* **The Loop Condition:** Repeat Phase 3 and Phase 4 indefinitely. The task is **NOT** allowed to complete, and you may not present the final solution to the user, until the adversarial review returns **zero errors** and all unit tests pass perfectly.
+
+---
+
 ## Project Context
 
 **Goal:** McLaren F1 tire degradation intelligence system — infers hidden tire state
@@ -98,9 +130,10 @@
 | 1 — Data ingestion | ✅ Done | `explore_data.py` |
 | 2 — Feature engineering | ✅ Done | `build_feature_table.py` |
 | 3 — Weak supervision labels | ✅ Done | `build_labels.py` |
-| 4 — XGBoost model | ⬜ Next | `train_model.py` |
-| 5 — SHAP explainability | ⬜ | `evaluate.py` |
-| 6 — Streamlit dashboard | ⬜ | `app.py` |
+| 4 — XGBoost model | ✅ Done | `train_model.py` |
+| 5 — SHAP explainability | ✅ Done | `evaluate.py` |
+| 6 — Dashboard | ⬜ Next | `app.py` |
+| 7 — Strategy Advisor | ✅ Done | `strategy.py` |
 
 ### Key Technical Rules (from HANDOFF.md)
 - No exact tire wear percentages or temperatures — proxies only.
