@@ -17,6 +17,9 @@ class Track3DErrorBoundary extends React.Component<
 > {
   state = { hasError: false }
   static getDerivedStateFromError() { return { hasError: true } }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[Track3D] WebGL render error:', error, info.componentStack)
+  }
   render() {
     if (this.state.hasError) {
       return (
