@@ -7,14 +7,16 @@ interface TireRingsProps {
   severityColor: string
 }
 
+const r2 = (n: number) => Math.round(n * 100) / 100
+
 // 6 spoke paths for middle ring at 60° intervals
 function buildSpokePaths(outerR: number, innerR: number): string[] {
   return Array.from({ length: 6 }, (_, i) => {
     const angle = (i * 60 * Math.PI) / 180
-    const x1 = 200 + Math.cos(angle) * innerR
-    const y1 = 200 + Math.sin(angle) * innerR
-    const x2 = 200 + Math.cos(angle) * outerR
-    const y2 = 200 + Math.sin(angle) * outerR
+    const x1 = r2(200 + Math.cos(angle) * innerR)
+    const y1 = r2(200 + Math.sin(angle) * innerR)
+    const x2 = r2(200 + Math.cos(angle) * outerR)
+    const y2 = r2(200 + Math.sin(angle) * outerR)
     return `M ${x1} ${y1} L ${x2} ${y2}`
   })
 }
@@ -23,10 +25,10 @@ function buildSpokePaths(outerR: number, innerR: number): string[] {
 function buildTickPaths(r: number, tickLen: number): string[] {
   return Array.from({ length: 8 }, (_, i) => {
     const angle = (i * 45 * Math.PI) / 180
-    const x1 = 200 + Math.cos(angle) * (r - tickLen)
-    const y1 = 200 + Math.sin(angle) * (r - tickLen)
-    const x2 = 200 + Math.cos(angle) * r
-    const y2 = 200 + Math.sin(angle) * r
+    const x1 = r2(200 + Math.cos(angle) * (r - tickLen))
+    const y1 = r2(200 + Math.sin(angle) * (r - tickLen))
+    const x2 = r2(200 + Math.cos(angle) * r)
+    const y2 = r2(200 + Math.sin(angle) * r)
     return `M ${x1} ${y1} L ${x2} ${y2}`
   })
 }
@@ -64,7 +66,7 @@ export function TireRings({ severityColor }: TireRingsProps) {
       <g ref={middleRef} style={{ transformOrigin: '200px 200px' }}>
         <circle cx={200} cy={200} r={140} fill="none" stroke={severityColor} strokeWidth={12} opacity={0.5} />
         {spokePaths.map((d, i) => (
-          <path key={i} d={d} stroke={severityColor} strokeWidth={2} opacity={0.5} />
+          <path key={i} d={d} stroke={severityColor} strokeWidth={2} opacity={0.5} suppressHydrationWarning />
         ))}
       </g>
 
@@ -72,7 +74,7 @@ export function TireRings({ severityColor }: TireRingsProps) {
       <g ref={innerRef} style={{ transformOrigin: '200px 200px' }}>
         <circle cx={200} cy={200} r={110} fill="none" stroke={severityColor} strokeWidth={6} opacity={0.7} />
         {tickPaths.map((d, i) => (
-          <path key={i} d={d} stroke={severityColor} strokeWidth={2} opacity={0.7} />
+          <path key={i} d={d} stroke={severityColor} strokeWidth={2} opacity={0.7} suppressHydrationWarning />
         ))}
       </g>
 
