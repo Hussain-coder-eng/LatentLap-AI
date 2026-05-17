@@ -94,3 +94,17 @@ Started: Sat May 16 20:16:52 EDT 2026
   - React SVG DOM refs: setAttribute in useEffect is safe for per-lap position updates (bypasses re-renders)
   - Build circuit path at module level (outside component) to avoid re-computation on every render
 ---
+
+## 2026-05-17 - US-007
+- Implemented: CalloutLeft.tsx — slide-in/out via translateX + opacity stagger on visible prop change
+- Implemented: CalloutRight.tsx — SHAP rows with signed value labels (orange/blue), progress bars, customLines, technical toggle
+- CalloutRight syncs isTechnicalMode to/from local expanded state via useRaceContext
+- Both use useReducedMotion to skip animate() calls
+- Files changed: dashboard/app/components/CalloutLeft.tsx, dashboard/app/components/CalloutRight.tsx
+- **Learnings for future iterations:**
+  - stagger(40) with animejs: `delay: stagger(40)` — staggers each child element 40ms apart
+  - Slide-in from left: translateX:[-40,0]; slide-out to right: translateX:[0,40]
+  - Slide-in from right: translateX:[40,0]; slide-out to left: translateX:[0,-40]
+  - Export type interfaces from component files (CalloutLeftContent, CalloutRightContent, ShapRow) for use in ScrollStage
+  - SHAP bar width: `Math.min(row.barPct, 100)%` to cap at 100%
+---
