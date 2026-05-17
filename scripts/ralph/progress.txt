@@ -108,3 +108,15 @@ Started: Sat May 16 20:16:52 EDT 2026
   - Export type interfaces from component files (CalloutLeftContent, CalloutRightContent, ShapRow) for use in ScrollStage
   - SHAP bar width: `Math.min(row.barPct, 100)%` to cap at 100%
 ---
+
+## 2026-05-17 - US-008
+- Implemented: LapScrubberFixed.tsx — fixed bottom bar (zIndex:50, 48px, rgba(8,8,8,0.95) blur), Fira Code LAP label, prev/next buttons, range input accentColor #FF8000, ArrowLeft/Right keyboard nav
+- Implemented: ChapterDots.tsx — fixed right:16px top:50% translateY(-50%), 5 dots, active dot #FF8000 scale(1.3), aria-label per dot
+- Implemented: SettingsPopover.tsx — fixed top:20px right:20px, ⚙ button aria-expanded, popover with year pills 2021-2025 and driver pills, active pill #FF8000, click-outside closes
+- Files changed: dashboard/app/components/LapScrubberFixed.tsx, dashboard/app/components/ChapterDots.tsx, dashboard/app/components/SettingsPopover.tsx
+- **Learnings for future iterations:**
+  - LapData field is `lap_number` not `lap` — use `l.lap_number` when mapping
+  - getAllLapsForDriver returns LapData[]; derive minLap/maxLap with Math.min/max spread over lap_number array
+  - SettingsPopover: when year changes, check if currentDriver still available for new year; reset to first driver if not
+  - Click-outside popover: useEffect + mousedown on document, check !popoverRef.current.contains(e.target)
+---
