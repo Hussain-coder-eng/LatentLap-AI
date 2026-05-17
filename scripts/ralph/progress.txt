@@ -14,6 +14,7 @@ Started: Sat May 16 20:16:52 EDT 2026
 - All new dashboard components use NAMED exports (not default) — SilverstoneCircuit, CalloutLeft, CalloutRight, TireRings, TireTread, TireParticles. TireHero uses default export.
 - JSON import path from dashboard/app/components/: `../../public/data/filename.json` (2 levels up = dashboard root, then public/data)
 - `string(x)` is invalid TS — use `String(x)` or `` `${x}` `` for runtime type coercion
+- animejs v4 `morphTo(arg)` calls `querySelectorAll(arg)` — MUST pass a CSS selector, never a raw SVG path string. Fix: hidden `<defs>` paths with IDs, then `morphTo('#my-id')`
 
 ## 2026-05-16 - US-001
 - Implemented: GSAP installed (npm install gsap in dashboard/), circuitSvg.ts created with 14 CIRCUIT_POINTS, buildCircuitPath(), CORNER_SVG, lapToCircuitProgress()
@@ -179,4 +180,26 @@ Started: Sat May 16 20:16:52 EDT 2026
 - Files changed: scripts/ralph/prd.json (passes=true, note)
 - **Learnings for future iterations:**
   - US-012 scope was contained in ScrollStage.tsx spec — when US-010 and US-012 share the same file, implement both in one pass
+---
+
+## 2026-05-17 - US-013
+- Build: `npm run build` → 0 errors, static export, 422kB first load JS
+- TypeScript: `npx tsc --noEmit` → 0 errors
+- Browser QA (Playwright/browse): dashboard loads at http://localhost:3000
+  - Speedometer top-left: visible, dark dial, #FF8000 needle
+  - Gear icon top-right: visible
+  - Tire center: black hub, severity "1" displayed
+  - Left callout: "LATENTLAP-AI / McLaren · Silverstone · 2022"
+  - Right callout: "WHAT IS THIS?" + bullet points + Technical toggle
+  - 5 chapter dots right edge: visible, orange active dot
+  - Lap scrubber bottom: "LAP 4 / 52"
+  - 500vh page height (scroll stage working)
+- Fixed bug discovered during QA: TireTread.tsx used `morphTo(pathString)` — animejs morphTo passes the arg to `querySelectorAll`, causing SyntaxError. Fix: hidden `<defs>` paths with IDs, pass `morphTo('#tread-ref-N')` selector instead.
+- Remaining console entry: React hydration Warning (not error) for floating-point SVG path coord diff (130.717...492 vs ...494) in TireRings — benign, SSR/client tiny FP difference.
+- Files changed: dashboard/app/components/TireTread.tsx (morphTo fix), scripts/ralph/prd.json, scripts/ralph/progress.txt
+- **Learnings for future iterations:**
+  - animejs v4 `morphTo(arg)` passes `arg` directly to `document.querySelectorAll()` — it MUST be a CSS selector, NEVER a raw SVG path string
+  - Fix pattern: add hidden `<defs>` paths with unique IDs, use `morphTo('#my-ref-id')` to target them
+  - React hydration warning for SSR/client floating-point SVG diffs is benign — ignore
+  - `npm run build` and `npx tsc --noEmit` are separate checks; build may pass while tsc fails if skipLibCheck covers it
 ---
