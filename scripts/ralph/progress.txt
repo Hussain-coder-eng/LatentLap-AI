@@ -1,0 +1,50 @@
+# Ralph Progress Log
+Started: Sat May 16 20:16:52 EDT 2026
+---
+
+## Codebase Patterns
+- globals.css lives in dashboard/styles/globals.css (not dashboard/app/globals.css)
+- RaceContext.tsx uses useMemo for the context value — add new state vars to both the state block and the useMemo deps array
+- animejs v4 uses named exports: `import { animate, stagger, morphTo, createDrawable, createMotionPath, utils } from 'animejs'` — NOT the default export `anime({...})`
+- GSAP ScrollTrigger must be registered: `gsap.registerPlugin(ScrollTrigger)` before use
+- TypeScript check: `cd dashboard && npx tsc --noEmit`
+- Dashboard Python env: `~/.venv/bin/python`
+
+## 2026-05-16 - US-001
+- Implemented: GSAP installed (npm install gsap in dashboard/), circuitSvg.ts created with 14 CIRCUIT_POINTS, buildCircuitPath(), CORNER_SVG, lapToCircuitProgress()
+- Updated globals.css: added --compound-soft/medium/hard, --shap-pos/neg, --speedometer-size; fixed --sev-2 from #FF4500 to #FF6D00; added glow-pulse-sev0 through sev3 keyframes, pit-pulse keyframe, prefers-reduced-motion media block
+- Updated RaceContext.tsx: added isTechnicalMode: boolean and setIsTechnicalMode to interface and RaceProvider
+- Files changed: dashboard/package.json, dashboard/package-lock.json, dashboard/lib/circuitSvg.ts, dashboard/styles/globals.css, dashboard/app/RaceContext.tsx
+- **Learnings for future iterations:**
+  - globals.css path is dashboard/styles/globals.css
+  - The existing --sev-2 was #FF4500 (wrong), spec requires #FF6D00 — fixed
+  - GSAP installs cleanly via npm, no peer dep issues
+  - TypeScript passed cleanly after adding isTechnicalMode to both the interface and the useMemo deps
+---
+
+## 2026-05-16 - US-002
+- Implemented: TireRings.tsx — 3 concentric rotating SVG rings using animejs v4
+- Outer ring (r=170, 8s CW), middle ring (r=140, 14s CCW + 6 spokes), inner ring (r=110, 22s CW + 8 ticks), center hub (r=80, #0a0a0a)
+- Component renders raw SVG elements (no own <svg>) to be hosted inside TireHero's parent SVG viewBox 0 0 400 400
+- useReducedMotion gates all animate() calls
+- Files changed: dashboard/app/components/TireRings.tsx
+- **Learnings for future iterations:**
+  - TireRings (and other sub-components) export raw SVG `<g>` elements — no wrapping `<svg>` tag, since TireHero.tsx hosts the parent SVG
+  - animejs v4: `animate(ref.current, { rotate: 360, duration, loop: true, ease: 'linear' })` — use plain number 360 (not string '360deg') for continuous rotation
+  - Counter-clockwise rotation: `rotate: -360`
+  - `style={{ transformOrigin: '200px 200px' }}` on each `<g>` to pivot around SVG center
+---
+
+## 2026-05-16 - US-003
+- Implemented: TireTread.tsx — morphing SVG tread path via animejs morphTo
+- TREAD_PATHS: 4 paths (sev 0-3), all M+11L+Z structure, represent fresh→slick tread
+- animate(pathRef, { d: morphTo(targetPath), duration:800, ease:'inOutCubic' }) on severity change
+- reducedMotion: setAttribute('d', targetPath) directly
+- Returns <g><path/></g> — no wrapping <svg> (hosted in TireHero's SVG)
+- Files changed: dashboard/app/components/TireTread.tsx
+- **Learnings for future iterations:**
+  - morphTo(pathString) returns FunctionValue; valid as AnimationParams value (Record<string, TweenOptions>) — no type cast needed
+  - All TREAD_PATHS must have identical command count for morphTo to interpolate — M+11L+Z = 13 commands each
+  - useEffect with [severity, reducedMotion] deps: runs on mount (animates from initial to same path — no-op visually) and on changes
+  - TireTread renders inside hub (center 200,200 r=80) so path coords stay within ~140-260 range
+---
