@@ -159,3 +159,24 @@ Started: Sat May 16 20:16:52 EDT 2026
   - GSAP dynamic import pattern: import('gsap').then(({ default: gsap }) => import('gsap/ScrollTrigger').then(({ ScrollTrigger }) => ...))
   - ScrollTrigger cleanup: store return of ScrollTrigger.create() and call .kill() in useEffect return
 ---
+
+## 2026-05-17 - US-011
+- Rewrote dashboard/app/page.tsx: 'use client', RaceProvider wraps Speedometer + SettingsPopover + ScrollStage + LapScrubberFixed
+- Deleted: Track3D.tsx, TireHealth.tsx, ShapPanel.tsx, Timeline.tsx, StrategyAdvisor.tsx, SeverityBadgeCard.tsx, Header.tsx, LapScrubber.tsx, lib/trackPath.ts
+- Typecheck: 0 errors after fixing Speedometer import (named export, not default)
+- Files changed: dashboard/app/page.tsx (rewrite); 9 files deleted
+- **Learnings for future iterations:**
+  - Speedometer uses NAMED export `export function Speedometer()` — import { Speedometer } from './components/Speedometer'
+  - LapScrubberFixed, SettingsPopover, ChapterDots, TireHero, ScrollStage use default exports
+  - git rm is needed for tracked files that are deleted outside of git — or just `rm` then `git add -u`
+---
+
+## 2026-05-17 - US-012
+- No new files — all US-012 features were pre-implemented inside ScrollStage.tsx during US-010
+- Chapter 3 lap-band background (getSeverityHex, opacity 0.25, #FF8000 pit boundaries via stint_id diff): lines 273-288
+- StrategyBars inline component at bottom of file: static JSON import, colors optimal/acceptable/late/critical, primary_pit_window opacity, returns null if no data
+- Typecheck already passing from US-010 + US-011
+- Files changed: scripts/ralph/prd.json (passes=true, note)
+- **Learnings for future iterations:**
+  - US-012 scope was contained in ScrollStage.tsx spec — when US-010 and US-012 share the same file, implement both in one pass
+---
