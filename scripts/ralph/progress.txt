@@ -11,6 +11,9 @@ Started: Sat May 16 20:16:52 EDT 2026
 - GSAP ScrollTrigger must be registered: `gsap.registerPlugin(ScrollTrigger)` before use
 - TypeScript check: `cd dashboard && npx tsc --noEmit`
 - Dashboard Python env: `~/.venv/bin/python`
+- All new dashboard components use NAMED exports (not default) — SilverstoneCircuit, CalloutLeft, CalloutRight, TireRings, TireTread, TireParticles. TireHero uses default export.
+- JSON import path from dashboard/app/components/: `../../public/data/filename.json` (2 levels up = dashboard root, then public/data)
+- `string(x)` is invalid TS — use `String(x)` or `` `${x}` `` for runtime type coercion
 
 ## 2026-05-16 - US-001
 - Implemented: GSAP installed (npm install gsap in dashboard/), circuitSvg.ts created with 14 CIRCUIT_POINTS, buildCircuitPath(), CORNER_SVG, lapToCircuitProgress()
@@ -136,4 +139,23 @@ Started: Sat May 16 20:16:52 EDT 2026
   - Counter: animate plain object ref with animejs; read mutated .v in onUpdate to set SVGTextElement.textContent
   - Glow restart on severity change: use `key={severity}` on the glow div — React remounts it, CSS animation restarts
   - `Parameters<typeof animate>[0]` cast needed to pass plain object to animejs v4 animate() without TS error
+---
+
+## 2026-05-17 - US-010
+- Implemented: ScrollStage.tsx — 500vh GSAP ScrollTrigger pin + 5-chapter content orchestration
+- GSAP loaded via dynamic import (import('gsap') + import('gsap/ScrollTrigger')) to avoid SSR issues
+- ScrollTrigger.create pins pinRef inside stageRef; onUpdate drives scrollProgress + activeChapter state
+- progressToChapter(): thresholds [0, 0.2, 0.4, 0.6, 0.8] → chapters 0-4
+- StrategyBars inline component reads strategy_recommendations.json via static JSON import
+- chapterContent[5] array: Hero / Severity / Predictors / Race Arc / Strategy chapters
+- Chapter 3 lap-band background (severity colors, #FF8000 pit boundaries)
+- Chapter 4 StrategyBars (optimal/acceptable/late/critical colors, opacity by pit window)
+- Keyboard PageDown/PageUp chapter nav via useEffect with cleanup
+- Files changed: dashboard/app/components/ScrollStage.tsx
+- **Learnings for future iterations:**
+  - SilverstoneCircuit, CalloutLeft, CalloutRight use NAMED exports — import { ComponentName } from './File'
+  - strategy_recommendations.json path from dashboard/app/components/ is `../../public/data/strategy_recommendations.json` (NOT `../../../...`)
+  - `string(x)` is invalid TypeScript — use `String(x)` or template literal `\`${x}\`` for runtime string conversion
+  - GSAP dynamic import pattern: import('gsap').then(({ default: gsap }) => import('gsap/ScrollTrigger').then(({ ScrollTrigger }) => ...))
+  - ScrollTrigger cleanup: store return of ScrollTrigger.create() and call .kill() in useEffect return
 ---
