@@ -3,6 +3,8 @@ Started: Sat May 16 20:16:52 EDT 2026
 ---
 
 ## Codebase Patterns
+- TireParticles: base circles at cx=200 cy=200; use translateX/translateY keyframes (not cx/cy attrs) to orbit — more reliable with animejs v4
+- animejs v4 `.pause()` is the cleanup method for looping animations in useEffect return
 - globals.css lives in dashboard/styles/globals.css (not dashboard/app/globals.css)
 - RaceContext.tsx uses useMemo for the context value — add new state vars to both the state block and the useMemo deps array
 - animejs v4 uses named exports: `import { animate, stagger, morphTo, createDrawable, createMotionPath, utils } from 'animejs'` — NOT the default export `anime({...})`
@@ -47,4 +49,18 @@ Started: Sat May 16 20:16:52 EDT 2026
   - All TREAD_PATHS must have identical command count for morphTo to interpolate — M+11L+Z = 13 commands each
   - useEffect with [severity, reducedMotion] deps: runs on mount (animates from initial to same path — no-op visually) and on changes
   - TireTread renders inside hub (center 200,200 r=80) so path coords stay within ~140-260 range
+---
+
+## 2026-05-17 - US-004
+- Implemented: TireParticles.tsx — orbiting/ejecting severity-scaled SVG particles using animejs v4
+- PARTICLE_CONFIG: {0:4/90/6000/0, 1:8/90/4000/0, 2:14/92/2800/0, 3:20/94/1800/4}
+- Orbiting: 61-keyframe translateX/translateY loop per particle (not cx/cy — CSS transforms more reliable)
+- Ejecting (sev3 i<4): keyframe translateX/translateY from orbitR to 200px, opacity 1→0, loop:true
+- useReducedMotion gates all animate() calls; cleanup via a.pause() on severity change
+- Files changed: dashboard/app/components/TireParticles.tsx
+- **Learnings for future iterations:**
+  - Base particles at cx=200 cy=200; translateX/translateY keyframes orbit them around center
+  - 61 frames (not 60) closes the loop: frame 0 == frame 60 angle, loop: true connects seamlessly
+  - ReturnType<typeof animate>[] works for animation cleanup array typing
+  - particleRefs.current[i] = null when circle unmounts (count decrease) — check el != null in effect
 ---
