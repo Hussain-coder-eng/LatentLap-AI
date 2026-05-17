@@ -23,20 +23,28 @@ export function TireTread({ severity }: TireTreadProps) {
 
   useEffect(() => {
     if (!pathRef.current) return
-    const targetPath = TREAD_PATHS[Math.max(0, Math.min(3, Math.round(severity)))]
+    const targetPath = TREAD_PATHS[clampedSev]
     if (reducedMotion) {
       pathRef.current.setAttribute('d', targetPath)
     } else {
+      // morphTo expects a CSS selector pointing to a DOM element — pass the
+      // hidden reference path ID, not the path string directly.
       animate(pathRef.current, {
-        d: morphTo(targetPath),
+        d: morphTo(`#tread-ref-${clampedSev}`),
         duration: 800,
         ease: 'inOutCubic',
       })
     }
-  }, [severity, reducedMotion])
+  }, [clampedSev, reducedMotion])
 
   return (
     <g>
+      {/* Hidden reference paths — morphTo reads their `d` attribute via CSS selector */}
+      <defs>
+        {([0, 1, 2, 3] as const).map(k => (
+          <path key={k} id={`tread-ref-${k}`} d={TREAD_PATHS[k]} />
+        ))}
+      </defs>
       <path
         ref={pathRef}
         d={TREAD_PATHS[clampedSev]}
