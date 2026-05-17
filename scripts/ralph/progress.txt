@@ -120,3 +120,20 @@ Started: Sat May 16 20:16:52 EDT 2026
   - SettingsPopover: when year changes, check if currentDriver still available for new year; reset to first driver if not
   - Click-outside popover: useEffect + mousedown on document, check !popoverRef.current.contains(e.target)
 ---
+
+## 2026-05-17 - US-009
+- Implemented: TireHero.tsx — orchestrator composing TireRings + TireTread + TireParticles inside single SVG viewBox 0 0 400 400
+- Scroll rotation: `rotate(${scrollProgress * 720}deg)` via inline CSS transform on SVG (CSS transform, not animejs — scroll-driven values update on every frame)
+- Severity counter: plain object ref `{ v: 0 }` animated by animejs, onUpdate writes Math.round(v) to SVGTextElement.textContent
+- Glow div: `key={severity}` forces React remount on severity change so CSS animation restarts cleanly; uses `glow-pulse-sev{N}` keyframes from globals.css
+- Compound → ring color: SOFT/MEDIUM/HARD mapped to CSS vars (--compound-soft/medium/hard); passed to TireRings as severityColor
+- Severity color (getSeverityHex) passed to TireParticles; compound color to TireRings; severity int to both TireTread and TireParticles
+- 50vmin container div; aria-label on SVG; aria-live polite on severity text
+- Files changed: dashboard/app/components/TireHero.tsx
+- **Learnings for future iterations:**
+  - TireRings/TireTread/TireParticles use named exports (not default) — import { TireRings } from './TireRings'
+  - Scroll-driven CSS rotation is simpler as inline style transform; no animejs needed for scrub-tied values
+  - Counter: animate plain object ref with animejs; read mutated .v in onUpdate to set SVGTextElement.textContent
+  - Glow restart on severity change: use `key={severity}` on the glow div — React remounts it, CSS animation restarts
+  - `Parameters<typeof animate>[0]` cast needed to pass plain object to animejs v4 animate() without TS error
+---
