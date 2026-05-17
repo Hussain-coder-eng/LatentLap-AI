@@ -64,3 +64,19 @@ Started: Sat May 16 20:16:52 EDT 2026
   - ReturnType<typeof animate>[] works for animation cleanup array typing
   - particleRefs.current[i] = null when circle unmounts (count decrease) — check el != null in effect
 ---
+
+## 2026-05-17 - US-005
+- Implemented: Speedometer.tsx — fixed top-left scroll-velocity gauge (120x120px SVG, position:fixed top:24px left:24px zIndex:60)
+- Dark dial, 270° arc track (buildArcPath() via angleToPoint helper), tick marks + labels at 0/100/200/300 km/h in Fira Code
+- #FF8000 needle + center cap; needle pivots via transformOrigin on wrapping <g>
+- Scroll listener (passive): computes |deltaY|/deltaTime → clamp to 4px/ms → map to -135..+135 deg needle rotation
+- animate(needle, { rotate: deg, duration: 80, ease: 'outQuad' }) on scroll; setTimeout(100ms) decay to -135 via outExpo 1200ms
+- reducedMotionRef tracks reducedMotion inside listener closure (avoids re-registering listener on every change)
+- Initial needle position set via animate(el, { rotate: -135, duration: 0 }) in mount useEffect
+- Files changed: dashboard/app/components/Speedometer.tsx
+- **Learnings for future iterations:**
+  - angleToPoint(deg, r): deg=0 means "up" (12 o'clock); x = cx + r*sin(rad), y = cy - r*cos(rad)
+  - Arc from -135° to +135°: SVG A command with large-arc-flag=1 sweep-flag=1 goes clockwise over the top
+  - For event listeners that need latest state: track via ref (reducedMotionRef.current) updated in separate useEffect
+  - animate(el, { rotate: deg, duration: 0 }) is reliable way to set initial animejs transform without CSS inline clash
+---
