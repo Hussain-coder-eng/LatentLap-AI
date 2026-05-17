@@ -10,12 +10,14 @@ export interface RaceContextValue {
   activePanelId: string | null
   topSHAPFeature: string | null
   trackStyle: 'A' | 'B' | 'C' | 'D'
+  isTechnicalMode: boolean
   setCurrentLap: (n: number) => void
   setCurrentYear: (y: number) => void
   setCurrentDriver: (d: string) => void
   setActivePanelId: (id: string | null) => void
   setTopSHAPFeature: (f: string | null) => void
   setTrackStyle: (s: 'A' | 'B' | 'C' | 'D') => void
+  setIsTechnicalMode: (v: boolean) => void
 }
 
 const RaceContext = createContext<RaceContextValue | null>(null)
@@ -27,11 +29,12 @@ export function RaceProvider({ children }: { children: ReactNode }) {
   const [activePanelId, setActivePanelId] = useState<string | null>(null)
   const [topSHAPFeature, setTopSHAPFeature] = useState<string | null>(null)
   const [trackStyle, setTrackStyle] = useState<'A' | 'B' | 'C' | 'D'>('A')
+  const [isTechnicalMode, setIsTechnicalMode] = useState(false)
 
   const value = useMemo<RaceContextValue>(() => ({
-    currentLap, currentYear, currentDriver, activePanelId, topSHAPFeature, trackStyle,
-    setCurrentLap, setCurrentYear, setCurrentDriver, setActivePanelId, setTopSHAPFeature, setTrackStyle,
-  }), [currentLap, currentYear, currentDriver, activePanelId, topSHAPFeature, trackStyle])
+    currentLap, currentYear, currentDriver, activePanelId, topSHAPFeature, trackStyle, isTechnicalMode,
+    setCurrentLap, setCurrentYear, setCurrentDriver, setActivePanelId, setTopSHAPFeature, setTrackStyle, setIsTechnicalMode,
+  }), [currentLap, currentYear, currentDriver, activePanelId, topSHAPFeature, trackStyle, isTechnicalMode])
 
   return <RaceContext.Provider value={value}>{children}</RaceContext.Provider>
 }
