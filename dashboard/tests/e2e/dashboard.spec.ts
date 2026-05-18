@@ -4,10 +4,10 @@ import { test, expect } from '@playwright/test'
 // Panels: Header, LapScrubber, TireHealth, ShapPanel, Timeline, StrategyAdvisor
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/')
-  // Wait for load event then for a key hydrated element (networkidle unreliable with Next.js HMR websocket)
+  await page.goto(process.env.PLAYWRIGHT_BASE_URL ?? '/')
+  // Wait for load event then for a hydrated shell element (networkidle unreliable with Next.js HMR websocket)
   await page.waitForLoadState('load')
-  await page.waitForSelector('[data-panel-id="strategy"]', { timeout: 15000 })
+  await page.waitForSelector('[aria-label="Lap scrubber"]', { timeout: 15000 })
 })
 
 // ── Header ────────────────────────────────────────────────────────────────────
@@ -77,6 +77,36 @@ test.describe('LapScrubber', () => {
     await page.keyboard.press('ArrowRight')
     const after = Number(await scrubber.inputValue())
     expect(after).toBeGreaterThanOrEqual(before)
+  })
+})
+
+// ── SilverstoneCircuit ───────────────────────────────────────────────────────
+
+test.describe('SilverstoneCircuit', () => {
+  test('F1 marker replaces cube and stays attached after lap scrub', async ({ page }) => {
+    const marker = page.getByTestId('circuit-car-marker')
+    await expect(marker).toBeAttached()
+    await expect(marker).toBeVisible()
+
+    const circuitSvg = marker.locator('xpath=ancestor::svg[1]')
+    await expect(circuitSvg.locator('rect[width="6"][height="10"][fill="#FF8000"]')).toHaveCount(0)
+
+    const initialTransform = await marker.getAttribute('transform')
+    expect(initialTransform).toMatch(/^translate\(/)
+
+    const scrubber = page.locator('input[type="range"][aria-label^="Lap "]').first()
+    const currentLap = Number(await scrubber.inputValue())
+    const minLap = Number(await scrubber.getAttribute('min'))
+    const maxLap = Number(await scrubber.getAttribute('max'))
+    const nextLap = currentLap < maxLap ? currentLap + 1 : Math.max(currentLap - 1, minLap)
+
+    await scrubber.focus()
+    await page.keyboard.press(nextLap > currentLap ? 'ArrowRight' : 'ArrowLeft')
+
+    await expect(scrubber).toHaveValue(String(nextLap))
+    await expect(marker).toBeAttached()
+    await expect(marker).toBeVisible()
+    await expect.poll(() => marker.getAttribute('transform')).not.toBe(initialTransform)
   })
 })
 
