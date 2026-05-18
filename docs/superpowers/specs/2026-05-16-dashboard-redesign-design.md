@@ -100,13 +100,26 @@ Fixed `position: fixed; top: 24px; left: 24px`. A semicircular F1 gauge:
 - Total scroll height: `500vh` (5 chapters × 100vh each, pinned tire)
 - Mobile: touch scroll works natively with ScrollTrigger
 
-### Severity → visual state
-| Severity | Ring color | Glow | Tread morph | Particles |
-|---|---|---|---|---|
-| 0 | `#00E676` | Faint, 3s pulse | Deep grooves | 4 slow |
-| 1 | `#FFD600` | Medium, 2s pulse | Moderate | 8 medium |
-| 2 | `#FF6D00` | Strong, 1.5s pulse | Worn | 14 fast |
-| 3 | `#FF1744` | Intense bloom, 1.2s | Slick | 20 fast + ejecting |
+### Compound → ring color (Pirelli standardized)
+The **ring stroke color** always reflects the fitted tire compound — Pirelli's official three-color ID system. This is read from `getLap().compound` (FastF1 returns `'SOFT'`, `'MEDIUM'`, or `'HARD'`).
+
+| Compound | Ring color | Hex |
+|---|---|---|
+| SOFT | Red | `#E8002D` |
+| MEDIUM | Yellow | `#FFC906` |
+| HARD | White | `#FFFFFF` |
+
+Intermediate and Wet are out of scope (Silverstone dry races only in dataset).
+
+### Severity → visual state (glow + tread + particles only)
+Ring color is compound-driven (above). Severity drives everything else.
+
+| Severity | Glow | Tread morph | Particles |
+|---|---|---|---|
+| 0 | Faint, 3s pulse | Deep grooves | 4 slow |
+| 1 | Medium, 2s pulse | Moderate | 8 medium |
+| 2 | Strong, 1.5s pulse | Worn | 14 fast |
+| 3 | Intense bloom, 1.2s | Slick | 20 fast + ejecting |
 
 ### Dual-audience: layered reveal
 Plain-English explanation always visible. `[ + Technical ]` in each right-side callout expands raw model output (SHAP values, model notes, confidence) inline. Toggle state persists across chapters.
@@ -125,10 +138,13 @@ Public portfolio piece. General visitors get the F1 narrative. Technical reviewe
 | `--surface` | `#111111` | Panel backgrounds |
 | `--border` | `#1e1e1e` | Subtle dividers |
 | `--mclaren` | `#FF8000` | Primary accent, CTA |
-| `--sev-0` | `#00E676` | Severity 0 — fresh |
-| `--sev-1` | `#FFD600` | Severity 1 — nominal |
-| `--sev-2` | `#FF6D00` | Severity 2 — high |
-| `--sev-3` | `#FF1744` | Severity 3 — critical |
+| `--sev-0` | `#00E676` | Severity 0 — glow/particles (fresh) |
+| `--sev-1` | `#FFD600` | Severity 1 — glow/particles (nominal) |
+| `--sev-2` | `#FF6D00` | Severity 2 — glow/particles (high) |
+| `--sev-3` | `#FF1744` | Severity 3 — glow/particles (critical) |
+| `--compound-soft` | `#E8002D` | Pirelli soft — ring stroke |
+| `--compound-medium` | `#FFC906` | Pirelli medium — ring stroke |
+| `--compound-hard` | `#FFFFFF` | Pirelli hard — ring stroke |
 | `--text-primary` | `#EEEEEE` | Main text |
 | `--text-muted` | `#666666` | Labels, captions |
 | `--shap-pos` | `#FF8000` | Positive SHAP contribution |

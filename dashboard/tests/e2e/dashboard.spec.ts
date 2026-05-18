@@ -30,6 +30,12 @@ test.describe('Header', () => {
     expect(count).toBeGreaterThanOrEqual(1)
   })
 
+  test('defaults to 2025 Silverstone race following NOR', async ({ page }) => {
+    await expect(page.getByText('McLaren · Silverstone · 2025')).toBeVisible()
+    await expect(page.getByText(/Following NOR in the 2025 British Grand Prix/)).toBeVisible()
+    await expect(page.getByText('Race date: July 6, 2025')).toBeVisible()
+  })
+
   test('desktop: track style buttons A/B/C/D rendered', async ({ page, isMobile }) => {
     if (isMobile) return
     const buttons = page.locator('[aria-pressed]')
@@ -135,6 +141,14 @@ test.describe('TireHealth', () => {
     const panel = page.locator('[data-panel-id="tire-health"]')
     const bars = panel.locator('[role="progressbar"]')
     await expect(bars).toHaveCount(4)
+  })
+
+  test('severity chapter explains 0-3 scale', async ({ page }) => {
+    await page.evaluate(() => window.scrollTo(0, window.innerHeight * 1.2))
+    await expect(page.getByText(/Scale: 0 = healthy/)).toBeVisible()
+    await expect(page.getByText(/1 = mild degradation/)).toBeVisible()
+    await expect(page.getByText(/2 = moderate degradation/)).toBeVisible()
+    await expect(page.getByText(/3 = critical degradation/)).toBeVisible()
   })
 })
 
