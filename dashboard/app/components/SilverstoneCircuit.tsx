@@ -55,7 +55,7 @@ export function SilverstoneCircuit({ activeChapter, topFeature: _topFeature }: S
         inset: 0,
         width: '100%',
         height: '100%',
-        opacity: 0.2,
+        overflow: 'visible',
         pointerEvents: 'none',
       }}
       viewBox="0 0 200 200"
@@ -80,7 +80,7 @@ export function SilverstoneCircuit({ activeChapter, topFeature: _topFeature }: S
         strokeWidth={2}
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity={0.95}
+        opacity={0.32}
         filter="url(#silverstoneTrackGlow)"
       />
 
@@ -95,7 +95,7 @@ export function SilverstoneCircuit({ activeChapter, topFeature: _topFeature }: S
             fill="none"
             stroke="#FF8000"
             strokeWidth={2}
-            opacity={0.8}
+            opacity={0.45}
           />
         ))}
 
