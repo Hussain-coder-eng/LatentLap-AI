@@ -11,6 +11,10 @@ import ChapterDots from './ChapterDots'
 import strategyRaw from '../../public/data/strategy_recommendations.json'
 
 const CHAPTER_THRESHOLDS = [0, 0.2, 0.4, 0.6, 0.8]
+const RACE_ARC_TIMELINE_BOTTOM_PX = 64
+const RACE_ARC_TIMELINE_HEIGHT_PX = 18
+const RACE_ARC_TIMELINE_MIN_SEGMENT_PX = 2
+const RACE_ARC_TIMELINE_SIDE_INSET = 'clamp(16px, 12vw, 180px)'
 
 function progressToChapter(progress: number): number {
   for (let i = CHAPTER_THRESHOLDS.length - 1; i >= 0; i--) {
@@ -269,19 +273,36 @@ export default function ScrollStage() {
           {/* Background circuit */}
           <SilverstoneCircuit activeChapter={activeChapter} topFeature={topFeatureKey} />
 
-          {/* Chapter 3 (Race Arc): lap band timeline background */}
+          {/* Chapter 3 (Race Arc): compact lap severity timeline */}
           {activeChapter === 3 && (
-            <div style={{
-              position: 'absolute', inset: 0, pointerEvents: 'none',
-              display: 'flex', flexDirection: 'column', opacity: 0.25,
-            }}>
+            <div
+              data-testid="race-arc-timeline"
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                left: RACE_ARC_TIMELINE_SIDE_INSET,
+                right: RACE_ARC_TIMELINE_SIDE_INSET,
+                bottom: RACE_ARC_TIMELINE_BOTTOM_PX,
+                height: RACE_ARC_TIMELINE_HEIGHT_PX,
+                pointerEvents: 'none',
+                display: 'flex',
+                alignItems: 'stretch',
+                border: '1px solid rgba(255,255,255,0.16)',
+                borderRadius: 4,
+                overflow: 'hidden',
+                boxShadow: '0 0 0 1px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.28)',
+                zIndex: 2,
+              }}
+            >
               {laps.map((l, i) => (
                 <div key={l.lap_number} style={{
                   flex: 1,
+                  minWidth: RACE_ARC_TIMELINE_MIN_SEGMENT_PX,
                   background: getSeverityHex(l.severity_pred),
-                  borderBottom: l.stint_id !== laps[i + 1]?.stint_id
-                    ? '1px solid #FF8000' : undefined,
-                  outline: l.lap_number === currentLap ? '1px solid rgba(255,255,255,0.3)' : undefined,
+                  borderRight: l.stint_id !== laps[i + 1]?.stint_id
+                    ? '2px solid #FF8000' : undefined,
+                  outline: l.lap_number === currentLap ? '1px solid rgba(255,255,255,0.75)' : undefined,
+                  outlineOffset: -1,
                 }} />
               ))}
             </div>
