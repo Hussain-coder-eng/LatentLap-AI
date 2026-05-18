@@ -13,10 +13,11 @@ interface TireHeroProps {
   scrollProgress: number
 }
 
+// Hardcoded hex — CSS var() not resolved in SVG presentation attributes
 const COMPOUND_COLOR: Record<string, string> = {
-  SOFT: 'var(--compound-soft)',
-  MEDIUM: 'var(--compound-medium)',
-  HARD: 'var(--compound-hard)',
+  SOFT: '#E8002D',
+  MEDIUM: '#FFC906',
+  HARD: '#FFFFFF',
 }
 
 const GLOW_DURATION: Record<number, string> = { 0: '3s', 1: '2s', 2: '1.5s', 3: '1.2s' }
