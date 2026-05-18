@@ -13,3 +13,14 @@ Started: Mon May 18 08:54:11 EDT 2026
   - `transformBox: 'fill-box' as const` required for TypeScript satisfaction on CSSStyleDeclaration
   - animate(element, {scale, opacity, loop, delay}) works cleanly for expand-fade loops
 ---
+
+## 2026-05-18 - US-003
+- TireHero.tsx already imported ThermalRings + EKGPulse, rendered both correctly — prior session had done the swap
+- TireRings.tsx + TireTread.tsx were already staged for deletion (git rm) from prior session
+- Only action needed: git add TireHero.tsx + commit all three staged changes
+- tsc --noEmit: 0 errors; npm run build: 0 errors
+- Files changed: dashboard/app/components/TireHero.tsx (staged), dashboard/app/components/TireRings.tsx (deleted), dashboard/app/components/TireTread.tsx (deleted)
+- **Learnings for future iterations:**
+  - When git status shows `D ` (staged deletion) + ` M` (unstaged modification), need to `git add` the modified file before committing
+  - US-003 was nearly complete from previous session — check git status carefully before re-implementing
+---
