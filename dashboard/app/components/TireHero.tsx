@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useRef } from 'react'
-import { animate } from 'animejs'
+import { animate, createAnimatable, createSpring, createTimeline } from 'animejs'
 import { getLap } from '../../lib/data'
 import { getSeverityHex } from '../../lib/severityColors'
 import { useRaceContext } from '../RaceContext'
@@ -35,6 +35,10 @@ export default function TireHero({ scrollProgress }: TireHeroProps) {
   // plain object that animejs mutates; we read it in onUpdate to set SVG text
   const counterObj = useRef<{ v: number }>({ v: 0 })
   const counterRef = useRef<SVGTextElement>(null)
+  const svgRef = useRef<SVGSVGElement>(null)
+  const animRotRef = useRef<ReturnType<typeof createAnimatable> | null>(null)
+  const glowRef = useRef<HTMLDivElement>(null)
+  const prevSeverityRef = useRef(severity)
 
   useEffect(() => {
     if (!counterRef.current) return
@@ -45,7 +49,7 @@ export default function TireHero({ scrollProgress }: TireHeroProps) {
     }
     const anim = animate(counterObj.current as unknown as Parameters<typeof animate>[0], {
       v: severity,
-      ease: 'outExpo',
+      ease: createSpring({ stiffness: 300, damping: 22 }) as unknown as string,
       duration: 600,
       onUpdate: () => {
         if (counterRef.current) {
@@ -56,13 +60,60 @@ export default function TireHero({ scrollProgress }: TireHeroProps) {
     return () => { anim.pause() }
   }, [severity, reducedMotion])
 
-  const rotateDeg = reducedMotion ? 0 : scrollProgress * 720
+  // Mount-time animatable setup for scroll-driven rotation
+  useEffect(() => {
+    if (!svgRef.current || reducedMotion) return
+    animRotRef.current = createAnimatable(svgRef.current, {
+      rotate: { duration: 400, ease: 'outExpo' },
+    } as Parameters<typeof createAnimatable>[1])
+    return () => {
+      animRotRef.current?.revert()
+      animRotRef.current = null
+    }
+  }, [reducedMotion])
+
+  // Apply scroll rotation via animatable
+  useEffect(() => {
+    if (reducedMotion) return
+    animRotRef.current?.rotate(scrollProgress * 720)
+  }, [scrollProgress, reducedMotion])
+
+  // Entrance timeline — runs once on mount (or when reducedMotion changes)
+  useEffect(() => {
+    if (reducedMotion) return
+    const tl = createTimeline({ autoplay: true })
+    if (glowRef.current) {
+      tl.add(glowRef.current, { opacity: [0, 1], duration: 400, ease: 'outExpo' }, '-=600')
+    }
+    if (svgRef.current) {
+      tl.add(svgRef.current, { scale: [0.85, 1], duration: 500, ease: 'outBack' }, 0)
+    }
+    if (counterRef.current) {
+      tl.add(counterRef.current, { opacity: [0, 1], duration: 300 }, '+=200')
+    }
+    return () => { tl.pause(); tl.revert() }
+  }, [reducedMotion])
+
+  // Glow crossfade on severity change
+  useEffect(() => {
+    if (reducedMotion || !glowRef.current) return
+    if (prevSeverityRef.current === severity) return
+    prevSeverityRef.current = severity
+    const el = glowRef.current
+    animate(el, { opacity: [1, 0], duration: 200 }).then(() => {
+      if (el) {
+        el.style.background = `radial-gradient(circle, ${severityColor}55 0%, transparent 70%)`
+        el.style.animation = `glow-pulse-sev${severity} ${GLOW_DURATION[severity]} ease-in-out infinite`
+        animate(el, { opacity: [0, 1], duration: 200 })
+      }
+    })
+  }, [severity, severityColor, reducedMotion])
 
   return (
     <div style={{ position: 'relative', width: '50vmin', height: '50vmin' }}>
-      {/* Glow layer — keyed to severity so CSS animation restarts on change */}
+      {/* Glow layer — crossfade handled by animejs effect */}
       <div
-        key={severity}
+        ref={glowRef}
         aria-hidden="true"
         style={{
           position: 'absolute',
@@ -77,13 +128,13 @@ export default function TireHero({ scrollProgress }: TireHeroProps) {
         }}
       />
       <svg
+        ref={svgRef}
         viewBox="0 0 400 400"
         width="100%"
         height="100%"
         style={{
           position: 'relative',
           zIndex: 1,
-          transform: `rotate(${rotateDeg}deg)`,
           transformOrigin: 'center center',
           overflow: 'visible',
         }}
