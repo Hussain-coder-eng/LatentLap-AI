@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useRef } from 'react'
-import { animate, createSpring, morphTo } from 'animejs'
+import { animate, spring, morphTo } from 'animejs'
 import { useReducedMotion } from '../../lib/useReducedMotion'
 
 // All paths: M + 11L + Z (13 commands) — required for morphTo interpolation
@@ -31,7 +31,7 @@ export function TireTread({ severity }: TireTreadProps) {
       // hidden reference path ID, not the path string directly.
       animate(pathRef.current, {
         d: morphTo(`#tread-ref-${clampedSev}`),
-        ease: createSpring({ stiffness: 180, damping: 16 }),
+        ease: spring({ stiffness: 180, damping: 16 }) as unknown as string,
         duration: 0,
       })
     }

@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useRef } from 'react'
-import { animate, createAnimatable, createSpring, createTimeline } from 'animejs'
+import { animate, createAnimatable, spring, createTimeline } from 'animejs'
 import { getLap } from '../../lib/data'
 import { getSeverityHex } from '../../lib/severityColors'
 import { useRaceContext } from '../RaceContext'
@@ -49,7 +49,7 @@ export default function TireHero({ scrollProgress }: TireHeroProps) {
     }
     const anim = animate(counterObj.current as unknown as Parameters<typeof animate>[0], {
       v: severity,
-      ease: createSpring({ stiffness: 300, damping: 22 }) as unknown as string,
+      ease: spring({ stiffness: 300, damping: 22 }) as unknown as string,
       duration: 600,
       onUpdate: () => {
         if (counterRef.current) {
