@@ -166,7 +166,7 @@ export default function ScrollStage() {
         label: 'LatentLap-AI',
         value: `McLaren · Silverstone · ${currentYear}`,
         valueColor: '#FF8000',
-        explanation: "This dashboard reconstructs what happened inside McLaren's tires during a race — lap by lap — using AI trained on public F1 telemetry. Scroll to explore.",
+        explanation: `Following ${currentDriver} in the 2025 British Grand Prix. Race date: July 6, 2025. This dashboard reconstructs what happened inside McLaren's tires during a race — lap by lap — using AI trained on public F1 telemetry. Scroll to explore.`,
       },
       right: {
         heading: 'What is this?',
@@ -180,7 +180,7 @@ export default function ScrollStage() {
         label: 'Tire Severity',
         value: sevLabel,
         valueColor: sevColor,
-        explanation: `Our model rates this lap at ${severity}/3. Think of it like a battery — ${severity >= 3 ? 'critically low, the tire is at its limit.' : severity >= 2 ? 'running low, degrading faster each lap.' : severity >= 1 ? 'moderate, stress is building.' : 'fully charged, tires are fresh.'}`,
+        explanation: `Our model rates this lap at ${severity}/3 using probabilistic telemetry proxies. Scale: 0 = healthy, 1 = mild degradation, 2 = moderate degradation, 3 = critical degradation.`,
       },
       right: {
         heading: 'Failure Mode',

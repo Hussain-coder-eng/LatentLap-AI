@@ -22,10 +22,13 @@ export interface RaceContextValue {
 
 const RaceContext = createContext<RaceContextValue | null>(null)
 
+const DEFAULT_YEAR = 2025
+const DEFAULT_DRIVER = 'NOR'
+
 export function RaceProvider({ children }: { children: ReactNode }) {
-  const [currentLap, setCurrentLap] = useState(() => getLapRange(2022, 'NOR')[0])
-  const [currentYear, setCurrentYear] = useState(2022)
-  const [currentDriver, setCurrentDriver] = useState('NOR')
+  const [currentLap, setCurrentLap] = useState(() => getLapRange(DEFAULT_YEAR, DEFAULT_DRIVER)[0])
+  const [currentYear, setCurrentYear] = useState(DEFAULT_YEAR)
+  const [currentDriver, setCurrentDriver] = useState(DEFAULT_DRIVER)
   const [activePanelId, setActivePanelId] = useState<string | null>(null)
   const [topSHAPFeature, setTopSHAPFeature] = useState<string | null>(null)
   const [trackStyle, setTrackStyle] = useState<'A' | 'B' | 'C' | 'D'>('A')
