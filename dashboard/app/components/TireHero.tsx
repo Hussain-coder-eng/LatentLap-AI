@@ -5,19 +5,12 @@ import { getLap } from '../../lib/data'
 import { getSeverityHex } from '../../lib/severityColors'
 import { useRaceContext } from '../RaceContext'
 import { useReducedMotion } from '../../lib/useReducedMotion'
-import { TireRings } from './TireRings'
-import { TireTread } from './TireTread'
+import { ThermalRings } from './ThermalRings'
+import { EKGPulse } from './EKGPulse'
 import { TireParticles } from './TireParticles'
 
 interface TireHeroProps {
   scrollProgress: number
-}
-
-// Hardcoded hex — CSS var() not resolved in SVG presentation attributes
-const COMPOUND_COLOR: Record<string, string> = {
-  SOFT: '#E8002D',
-  MEDIUM: '#FFC906',
-  HARD: '#FFFFFF',
 }
 
 const GLOW_DURATION: Record<number, string> = { 0: '3s', 1: '2s', 2: '1.5s', 3: '1.2s' }
@@ -28,9 +21,7 @@ export default function TireHero({ scrollProgress }: TireHeroProps) {
 
   const lap = getLap(currentYear, currentDriver, currentLap)
   const severity = Math.min(3, Math.max(0, lap ? Math.round(lap.severity_pred) : 0))
-  const compound = lap?.compound ?? 'SOFT'
   const severityColor = getSeverityHex(severity)
-  const compoundColor = COMPOUND_COLOR[compound] ?? COMPOUND_COLOR.SOFT
 
   // plain object that animejs mutates; we read it in onUpdate to set SVG text
   const counterObj = useRef<{ v: number }>({ v: 0 })
@@ -155,8 +146,8 @@ export default function TireHero({ scrollProgress }: TireHeroProps) {
         }}
         aria-label={`F1 tire, degradation severity ${severity} of 3`}
       >
-        <TireRings severityColor={compoundColor} />
-        <TireTread severity={severity} />
+        <ThermalRings severity={severity} severityColor={severityColor} />
+        <EKGPulse severity={severity} severityColor={severityColor} />
         <TireParticles severity={severity} severityColor={severityColor} />
         <text
           ref={counterRef}
