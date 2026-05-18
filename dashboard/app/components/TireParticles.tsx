@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useRef } from 'react'
-import { animate } from 'animejs'
+import { animate, stagger, spring } from 'animejs'
 import { useReducedMotion } from '../../lib/useReducedMotion'
 
 interface TireParticlesProps {
@@ -31,6 +31,18 @@ export function TireParticles({ severity, severityColor }: TireParticlesProps) {
     const config = PARTICLE_CONFIG[sev]
     const anims: ReturnType<typeof animate>[] = []
 
+    // Spring entrance for all particles on mount/severity change
+    const allEls = particleRefs.current.slice(0, config.count).filter((el): el is SVGCircleElement => el != null)
+    if (allEls.length > 0) {
+      animate(allEls, {
+        scale: [0, 1],
+        opacity: [0, 1],
+        ease: spring({ stiffness: 280, damping: 14 }) as unknown as string,
+        duration: 0,
+        delay: stagger(60, { from: 'first' }),
+      })
+    }
+
     for (let i = 0; i < config.count; i++) {
       const el = particleRefs.current[i]
       if (!el) continue
@@ -54,7 +66,8 @@ export function TireParticles({ severity, severityColor }: TireParticlesProps) {
             loop: true,
             ease: 'outQuad',
             delay: i * 300,
-          })
+            composition: 'blend',
+          } as Parameters<typeof animate>[1])
         )
       } else {
         // 60 cx/cy keyframe positions around the orbit circle
