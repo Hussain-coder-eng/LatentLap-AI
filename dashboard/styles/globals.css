@@ -13,7 +13,7 @@
   --mclaren: #FF8000;
   --sev-0: #00E676;
   --sev-1: #FFD600;
-  --sev-2: #FF4500;
+  --sev-2: #FF6D00;
   --sev-3: #FF1744;
   --sev-3-glow: 0 0 12px #FF1744, 0 0 24px #FF174466;
   --dur-1: 120ms;
@@ -24,6 +24,12 @@
   --ease-out-quart: cubic-bezier(.165, .84, .44, 1);
   --ease-in-out-cubic: cubic-bezier(.645, .045, .355, 1);
   --ease-out-expo: cubic-bezier(.19, 1, .22, 1);
+  --compound-soft: #E8002D;
+  --compound-medium: #FFC906;
+  --compound-hard: #FFFFFF;
+  --shap-pos: #FF8000;
+  --shap-neg: #2979FF;
+  --speedometer-size: 120px;
 }
 
 body {
@@ -71,4 +77,33 @@ input[type='range']:focus-visible::-webkit-slider-thumb {
 /* SC 2.4.11 Focus Not Obscured — prevent panels hiding behind fixed LapScrubber */
 [data-panel-id] {
   scroll-margin-bottom: 64px;
+}
+
+@keyframes glow-pulse-sev0 {
+  0%, 100% { filter: drop-shadow(0 0 8px #00E676); }
+  50%       { filter: drop-shadow(0 0 24px #00E676); }
+}
+@keyframes glow-pulse-sev1 {
+  0%, 100% { filter: drop-shadow(0 0 10px #FFD600); }
+  50%       { filter: drop-shadow(0 0 28px #FFD600); }
+}
+@keyframes glow-pulse-sev2 {
+  0%, 100% { filter: drop-shadow(0 0 14px #FF6D00); }
+  50%       { filter: drop-shadow(0 0 36px #FF6D00); }
+}
+@keyframes glow-pulse-sev3 {
+  0%, 100% { filter: drop-shadow(0 0 18px #FF1744); opacity: 0.8; }
+  50%       { filter: drop-shadow(0 0 48px #FF1744); opacity: 1; }
+}
+@keyframes pit-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
