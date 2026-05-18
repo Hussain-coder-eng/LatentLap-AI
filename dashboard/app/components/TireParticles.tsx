@@ -37,8 +37,7 @@ export function TireParticles({ severity, severityColor }: TireParticlesProps) {
       animate(allEls, {
         scale: [0, 1],
         opacity: [0, 1],
-        ease: spring({ stiffness: 280, damping: 14 }) as unknown as string,
-        duration: 0,
+        ease: spring({ stiffness: 280, damping: 14 }),
         delay: stagger(60, { from: 'first' }),
       })
     }

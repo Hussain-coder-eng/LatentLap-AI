@@ -31,8 +31,7 @@ export function TireTread({ severity }: TireTreadProps) {
       // hidden reference path ID, not the path string directly.
       animate(pathRef.current, {
         d: morphTo(`#tread-ref-${clampedSev}`),
-        ease: spring({ stiffness: 180, damping: 16 }) as unknown as string,
-        duration: 0,
+        ease: spring({ stiffness: 180, damping: 16 }),
       })
     }
   }, [clampedSev, reducedMotion])

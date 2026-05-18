@@ -39,6 +39,14 @@ export default function TireHero({ scrollProgress }: TireHeroProps) {
   const animRotRef = useRef<ReturnType<typeof createAnimatable> | null>(null)
   const glowRef = useRef<HTMLDivElement>(null)
   const prevSeverityRef = useRef(severity)
+  const fadeOutRef = useRef<ReturnType<typeof animate> | null>(null)
+  const fadeInRef = useRef<ReturnType<typeof animate> | null>(null)
+  const latestGlowState = useRef({ severity, severityColor })
+
+  // Keep latestGlowState current so the async fade-out callback reads the latest severity/color
+  useEffect(() => {
+    latestGlowState.current = { severity, severityColor }
+  })
 
   useEffect(() => {
     if (!counterRef.current) return
@@ -49,7 +57,7 @@ export default function TireHero({ scrollProgress }: TireHeroProps) {
     }
     const anim = animate(counterObj.current as unknown as Parameters<typeof animate>[0], {
       v: severity,
-      ease: spring({ stiffness: 300, damping: 22 }) as unknown as string,
+      ease: spring({ stiffness: 300, damping: 22 }),
       duration: 600,
       onUpdate: () => {
         if (counterRef.current) {
@@ -83,7 +91,8 @@ export default function TireHero({ scrollProgress }: TireHeroProps) {
     if (reducedMotion) return
     const tl = createTimeline({ autoplay: true })
     if (glowRef.current) {
-      tl.add(glowRef.current, { opacity: [0, 1], duration: 400, ease: 'outExpo' }, '-=600')
+      // Start glow fade-in at t=0, before SVG scale (no negative offset on first add)
+      tl.add(glowRef.current, { opacity: [0, 1], duration: 400, ease: 'outExpo' }, 0)
     }
     if (svgRef.current) {
       tl.add(svgRef.current, { scale: [0.85, 1], duration: 500, ease: 'outBack' }, 0)
@@ -94,19 +103,25 @@ export default function TireHero({ scrollProgress }: TireHeroProps) {
     return () => { tl.pause(); tl.revert() }
   }, [reducedMotion])
 
-  // Glow crossfade on severity change
+  // Glow crossfade on severity change — cancels any in-flight fade to avoid race conditions
   useEffect(() => {
     if (reducedMotion || !glowRef.current) return
     if (prevSeverityRef.current === severity) return
     prevSeverityRef.current = severity
     const el = glowRef.current
-    animate(el, { opacity: [1, 0], duration: 200 }).then(() => {
-      if (el) {
-        el.style.background = `radial-gradient(circle, ${severityColor}55 0%, transparent 70%)`
-        el.style.animation = `glow-pulse-sev${severity} ${GLOW_DURATION[severity]} ease-in-out infinite`
-        animate(el, { opacity: [0, 1], duration: 200 })
-      }
+    fadeOutRef.current?.pause()
+    fadeInRef.current?.pause()
+    fadeOutRef.current = animate(el, { opacity: [1, 0], duration: 200 })
+    fadeOutRef.current.then(() => {
+      const { severity: s, severityColor: c } = latestGlowState.current
+      el.style.background = `radial-gradient(circle, ${c}55 0%, transparent 70%)`
+      el.style.animation = `glow-pulse-sev${s} ${GLOW_DURATION[s]} ease-in-out infinite`
+      fadeInRef.current = animate(el, { opacity: [0, 1], duration: 200 })
     })
+    return () => {
+      fadeOutRef.current?.pause()
+      fadeInRef.current?.pause()
+    }
   }, [severity, severityColor, reducedMotion])
 
   return (

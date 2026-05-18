@@ -61,8 +61,7 @@ export function TireRings({ severityColor }: TireRingsProps) {
       outer.style.opacity = '1'
       middle.style.opacity = '1'
       inner.style.opacity = '1'
-      startRotations()
-      return () => rotations.forEach((rotation) => rotation.pause())
+      return
     }
 
     const outerCircle = outerCircleRef.current
@@ -76,13 +75,15 @@ export function TireRings({ severityColor }: TireRingsProps) {
     const entrance = createTimeline()
       .add(outer, { opacity: [0, 1], duration: 900, ease: 'inOutExpo' }, 0)
       .add(createDrawable(outerCircle), { draw: ['0 0', '0 1'], opacity: [0, 1], duration: 900, ease: 'inOutExpo' }, 0)
-      .add(middle, { opacity: [0, 1], duration: 900, ease: 'inOutExpo' }, '+300')
+      // '+=300': middle ring starts 300ms after outer ring entrance starts — intentional overlapping stagger
+      .add(middle, { opacity: [0, 1], duration: 900, ease: 'inOutExpo' }, '+=300')
       .add(
         createDrawable(middleCircle),
         { draw: ['0 0', '0 1'], opacity: [0, 1], duration: 900, ease: 'inOutExpo' },
         '<',
       )
-      .add(inner, { opacity: [0, 1], duration: 900, ease: 'inOutExpo' }, '+300')
+      // '+=300': inner ring starts 300ms after middle ring entrance starts — intentional overlapping stagger
+      .add(inner, { opacity: [0, 1], duration: 900, ease: 'inOutExpo' }, '+=300')
       .add(
         createDrawable(innerCircle),
         { draw: ['0 0', '0 1'], opacity: [0, 1], duration: 900, ease: 'inOutExpo' },
