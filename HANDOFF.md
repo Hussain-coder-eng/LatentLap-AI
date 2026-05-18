@@ -1,6 +1,6 @@
 # LatentLap-AI — Agent Handoff Document
 
-Generated: 2026-05-14 | Last updated: 2026-05-16 (Phase 7 Strategy Advisor compute complete; Phase 6 StrategyAdvisor.tsx next)
+Generated: 2026-05-14 | Last updated: 2026-05-17 (ALL PHASES COMPLETE — 17/17 dashboard stories pass, merged to main)
 Project root: `/Users/hussianaltufayli/Downloads/LatentLap-AI-main`
 Python env: `~/.venv/bin/python`
 GitHub: `https://github.com/Hussain-coder-eng/LatentLap-AI`
@@ -28,18 +28,20 @@ The approved design doc is at:
 | 3 — Weak supervision labels | ✅ Done (bugs fixed) | `build_labels.py` |
 | 4 — XGBoost model | ✅ Done (multi-year, pit features) | `train_model.py` |
 | 5 — SHAP explainability + validation | ✅ Done | `evaluate.py` |
-| 6 — Interactive web dashboard | 📋 Plan written | `dashboard/` (Next.js app, to be created) |
+| 6 — Interactive web dashboard | ✅ **Done** (17/17 stories pass, merged to main, Vercel deployed) | `dashboard/` (Next.js 14 App Router) |
 | 7 — Strategy Advisor | ✅ Done | `strategy.py` |
 
 ---
 
-## Current State — Phases 1–5 + 7 Complete, Phase 6 (dashboard + StrategyAdvisor) Next
+## Current State — ALL PHASES COMPLETE
 
-Phases 1–5 and Phase 7 are complete. Phase 6 (interactive Next.js dashboard) is the next step.
+All phases complete. Phase 6 (interactive Next.js dashboard) was redesigned from scratch — the original multi-panel WebGL layout was replaced with a cinematic, animejs-driven scrollable experience. All 17 user stories (US-001–US-017) pass. Merged to `main` on 2026-05-17 and pushed to GitHub (Vercel auto-deploys on push).
 
 **Plans:**
 - Phase 5 plan: `docs/superpowers/plans/2026-05-15-phase5-evaluate.md` (15 tasks)
-- Phase 6 plan: `docs/superpowers/plans/2026-05-15-phase6-dashboard.md` (22 tasks, updated to 4-class mode_probs)
+- Phase 6 original plan: `docs/superpowers/plans/2026-05-15-phase6-dashboard.md` (superseded by redesign)
+- **Phase 6 redesign plan (active):** `docs/superpowers/plans/2026-05-16-dashboard-redesign.md` (13 tasks)
+- **Phase 6 redesign spec (active):** `docs/superpowers/specs/2026-05-16-dashboard-redesign-design.md`
 
 **Gang + Codex MCP:** 7 specialist agents in CLAUDE.md. Codex MCP server: `/opt/homebrew/bin/codex mcp-server` at user scope. **Agent Orchestration Workflow** (Claude=Architect, Codex=Builder, adversarial review loop) now in CLAUDE.md.
 
@@ -213,74 +215,51 @@ strategy = json.loads(Path("outputs/strategy_recommendations.json").read_text())
 
 ---
 
-## Phase 6 — Spec Approved, Implementation Pending
+## Phase 6 — Dashboard Redesign (Plan Ready)
 
-### Spec location
-`docs/superpowers/specs/2026-05-14-phase6-dashboard-design.md`
+### Specs
+- **Redesign spec (active):** `docs/superpowers/specs/2026-05-16-dashboard-redesign-design.md`
+- Original spec (superseded): `docs/superpowers/specs/2026-05-14-phase6-dashboard-design.md`
 
-### Stack change from original design
-Original plan was Streamlit + Plotly. **Changed to React/Next.js + Three.js** because:
-- 3D spinnable track with glowing cars requires WebGL, impossible in Streamlit
-- Anime.js animations require direct DOM access
-- Deployment to Vercel (not Streamlit Cloud)
+### What changed from original Phase 6
+The multi-panel 3D WebGL dashboard was built and deployed. It was **fully redesigned** because:
+- Hard to understand for non-technical visitors
+- No narrative flow between chapters
+- WebGL Track3D adds load time with no explanatory value
 
-### Tech stack (final)
+### New design: anime.js-inspired cinematic experience
+Central hero object = large F1 tire (SVG, ~50vmin), always centered. Data floats left and right as callouts, exactly like animejs.com. 5 chapters driven by GSAP ScrollTrigger (500vh, scrub, no snap).
+
+### Tech stack (redesign)
 ```
-Next.js 14 (App Router) + static export → Vercel
-@react-three/fiber + @react-three/drei → 3D WebGL track
-animejs v4 → number counters, stagger entrances, replay timeline, SVG draw-on
-framer-motion → React component animations (panel entrances, spring transitions)
-recharts → race timeline bar chart + stint comparison (built-in animations)
-Tailwind CSS → layout + utility classes
+Next.js 15 (App Router) → Vercel native (no static export)
+animejs v4 → tire ring rotation, morphTo tread, particles, stagger callouts, createDrawable circuit
+GSAP + ScrollTrigger → scroll-driven pin (500vh), chapter progress, scrub
+SVG → all visuals (tire, Silverstone circuit, speedometer) — no WebGL
+Tailwind CSS → layout
 ```
 
-**NPM packages to install (in `dashboard/`):**
+**New dependency:**
 ```bash
-npm install next@14 react react-dom three @react-three/fiber @react-three/drei
-npm install animejs framer-motion recharts
-npm install -D @types/three typescript tailwindcss postcss autoprefixer
+cd dashboard && npm install gsap
 ```
 
-### Visual design decisions
-- **Color palette:** Dark OLED `#090909` + McLaren Papaya Orange `#FF8000`
-- **Severity scale:** `#00E676` (0) → `#FFD600` (1) → `#FF6D00` (2) → `#FF1744` (3)
-- **Typography:** Rajdhani (HUD/numbers), Fira Code (data labels), DM Sans (body). Never Inter/Roboto.
-- **Track visual:** Style A (Pure White Light Beam) default — `#FFFFFF` emissive 0.8. User can switch to 4 styles (B=Orange, C=Blueprint, D=Crimson) via header selector.
+### Visual design decisions (redesign)
+- **Color palette:** Dark OLED `#080808` + McLaren Papaya Orange `#FF8000`
+- **Tire ring color:** Pirelli compound system — Soft `#E8002D`, Medium `#FFC906`, Hard `#FFFFFF`
+- **Severity:** drives glow color, tread morph, particle count/speed (NOT ring color)
+  - Sev 0: `#00E676` glow | Sev 1: `#FFD600` | Sev 2: `#FF6D00` | Sev 3: `#FF1744`
+- **Typography:** Rajdhani (hero numbers), Fira Code (data labels), DM Sans (body)
+- **Dual-audience:** plain English always visible; `[ + Technical ]` expander per chapter for ML/engineering detail
 
-### Track visual prototype
-`dashboard/prototype/track_styles.html` — SVG + Anime.js v3 (CDN) prototype testing all 4 styles. **Renders correctly in headless Chromium** (no WebGL). Use this to iterate on visual styles. The production 3D track uses Three.js + R3F (WebGL only — don't test with headless browse).
-
-### Camera POV system
-Camera state is driven by `activePanelId` in React Context:
-- `overview` (default): `[0, 6, 8]` 45° tilt
-- `follow-driver` (TireHealth focused): behind + above selected car
-- `corner-focus` (ShapPanel focused, MB_/Copse_/Club_/Stowe_ feature): zoom to corner apex
-- `birds-eye` (Timeline/Comparison focused): `[0, 14, 0]` overhead
-- `split` (Comparison with 2 drivers): `[0, 10, 4]` shows both cars
-
-Transition mechanism: `camera.position.lerp(target, 0.04)` in `useFrame` — same for all POV transitions.
-
-### Higgsfield assets (pre-generate before building)
-Run these once with Higgsfield CLI to generate `dashboard/public/media/` assets:
-```bash
-# Silverstone flyover (8s, hero background)
-higgsfield generate create seedance_2_0 --prompt "Aerial drone flyover of Silverstone F1 circuit, overcast British sky, cinematic" --duration 8 --aspect_ratio 16:9 --wait
-
-# Tire blister close-up (4s, mode indicator)
-higgsfield generate create seedance_2_0 --prompt "Extreme macro close-up F1 tire blistering damage, slow motion, dramatic lighting" --duration 4 --aspect_ratio 1:1 --wait
-
-# McLaren car image
-higgsfield generate create gpt_image_2 --prompt "McLaren F1 2022 papaya orange livery, front 3/4 angle, studio black background, photorealistic" --aspect_ratio 1:1 --resolution 2k --wait
-```
-
-### Key gotchas for Phase 6 implementation
-- **Anime.js v4 API** is different from v3: use `animate(target, props)` not `anime({targets, ...})`, `createTimeline()` not `anime.timeline()`, `stagger()` not `anime.stagger()`, `ease:` not `easing:`, easing strings like `'outQuart'` not `'easeOutQuart'`
-- **WebGL in headless Chromium will fail** with `BindToCurrentSequence failed` — do NOT test Track3D.tsx with the browse tool. Test logic with unit tests; visual QA only in a real browser
-- **framer-motion is installed** (npm) and available for React component animations alongside Anime.js
-- **R3F + Next.js:** Add `'use client'` to all components that use `@react-three/fiber` or browser APIs
-- **Static export config** in `next.config.js`: `output: 'export'`, `images: { unoptimized: true }`
-- **JSON data** loaded via static import (no fetch), must be in `public/data/` for static export
-- **OrbitControls** must be imported from `@react-three/drei`, not `three/examples`
+### Key gotchas for redesign implementation
+- **Anime.js v4 API:** `animate(target, props)` not `anime({targets,...})`, `createTimeline()`, `stagger()`, `ease:` not `easing:`, no `easeXxx` prefix
+- **GSAP ScrollTrigger:** `scrub: true`, not snap — free scroll throughout
+- **No WebGL** — Track3D.tsx is deleted; all visuals are SVG + CSS
+- **`'use client'`** on all components using browser APIs or animation libs
+- **Compound color** read from `getLap().compound` (FastF1 string: `'SOFT'`/`'MEDIUM'`/`'HARD'`)
+- **Circuit SVG:** `lib/circuitSvg.ts` projects Silverstone 3D waypoints to 2D (same data as deleted `trackPath.ts`; SVG x = (wx+4.5)×22, y = (wz+4.5)×22)
+- **JSON data** in `public/data/` loaded via static import — unchanged from original build
 
 ---
 
@@ -307,6 +286,114 @@ FailureMode:  none×43, wear×24, thermal×10, graining×2, blistering×2, unrel
 data/labeled_table.csv       (82 laps × 115 features+labels)
 data/labeled_table.parquet
 ```
+
+---
+
+## What Happened This Session — TireHero Animation Improvements (2026-05-17)
+
+Implemented US-014 through US-017 on `feat-dashboard-redesign`, then merged to `main` and pushed to GitHub.
+
+### What was built
+
+| Story | File | Change |
+|---|---|---|
+| US-014 | TireRings.tsx | `createTimeline` entrance — outer/middle/inner rings draw via `createDrawable`, staggered +300ms each. Spokes stagger `translateX`, ticks stagger `translateY` (clockwork). Rotations resume after `.then()`. |
+| US-015 | TireTread.tsx | Replaced CSS `transition: d` with `animate(pathRef, { d: morphTo('#tread-ref-N'), ease: spring({stiffness:180,damping:16}) })`. Hidden `<defs>` paths already in DOM. |
+| US-016 | TireParticles.tsx | Added stagger spring entrance (`spring({stiffness:280,damping:14})`) on mount/severity change. Added `composition:'blend'` on ejecting particles. 60-frame orbit loop kept (function-based `[cos(θ), cos(θ+2π)]` approach is a no-op — see below). |
+| US-017 | TireHero.tsx | Spring counter (`spring({stiffness:300,damping:22})`), `createAnimatable` scroll rotation (eased lag), entrance timeline, glow crossfade with race-condition fix. |
+
+### Execution approach: parallel frontend-developer subagents
+
+Agent worktree isolation (`isolation: "worktree"`) creates branches from `main`, not the current feature branch. Workers that needed `feat-dashboard-redesign` files found empty directories. Re-dispatched without isolation, working directly on `feat-dashboard-redesign`.
+
+### Code review findings (adversarial pass — all fixed before merge)
+
+| ID | Issue | Fix |
+|---|---|---|
+| C1 | Glow crossfade race condition — severity change during 200ms fade leaves stale styles | `fadeOutRef`/`fadeInRef` pause in-flight anims; `latestGlowState` ref read inside async callback |
+| I1 | `duration: 0` with spring ease kills the spring — duration 0 = snap to end in one tick | Remove `duration: 0`; let spring drive timing naturally |
+| I2 | TireRings rotations ran under `reducedMotion` — violates WCAG 2.3.3 | Removed `startRotations()` call from the reducedMotion branch |
+| I3 | `as unknown as string` cast on `spring()` — Spring is already a valid `EasingParam` | Removed cast |
+| I4 | `'-=600'` on first timeline add is a no-op (no previous sibling) | Changed to `0` (absolute start) |
+
+### Commits (all on `feat-dashboard-redesign`, merged via `0cdaeca`)
+
+```
+9bb6cd0  feat: [US-014] TireRings entrance timeline
+d81b48f  feat: [US-015] TireTread spring morph
+7d391d6  feat: [US-017] TireHero spring counter + createAnimatable + entrance + glow crossfade
+50133e5  feat: [US-016] TireParticles stagger spring entrance + blend ejection
+a116900  fix: replace deprecated createSpring with spring()
+84c318e  fix: code review C1+I1+I2+I3+I4
+8317a00  chore: mark US-015, US-016, US-017 passes=true, append progress
+```
+
+---
+
+## What Happened This Session — Dashboard Redesign Execution Start (2026-05-16/17)
+
+### Execution approach: Ralph autonomous loop
+
+Codex MCP was the intended builder but caused multi-hour stalls (tool approval prompts + network timeouts). Switched to Ralph loop: `scripts/ralph/ralph.sh --tool claude 20` — runs `claude --dangerously-skip-permissions --print < CLAUDE.md` iteratively, one story per context window.
+
+### PRD created: `scripts/ralph/prd.json`
+
+13 user stories (US-001–US-013), ordered by dependency. Each story has verifiable acceptance criteria derived from the plan. Ralph reads this file, picks highest-priority `passes: false` story, implements it, commits, sets `passes: true`.
+
+### Stories completed this session
+
+| Story | Commit | Key learnings |
+|---|---|---|
+| US-001 | `83f541a` | gsap installed, circuitSvg.ts created, CSS vars added, isTechnicalMode in RaceContext |
+| US-002 | `06af83d` | TireRings: `rotate: 360` (number, not string), `style={{ transformOrigin: '200px 200px' }}`, counter-CW = `-360` |
+| US-003 | `fa82418` | TireTread: `morphTo(pathString)` returns FunctionValue valid as AnimationParams value; all paths need identical command count |
+
+### Rate limit behavior
+
+Ralph's `claude` subprocess hits Claude usage limits. After ~3 stories, output becomes `"You've hit your limit · resets HH:MMpm"`. Re-run the loop after the reset time — PRD state is preserved, loop resumes from next `passes: false` story.
+
+### Files created this session
+
+```
+scripts/ralph/                 ← NEW — Ralph autonomous loop
+├── ralph.sh                   ← Loop runner (--tool claude 20)
+├── CLAUDE.md                  ← Per-iteration prompt for ralph claude subprocess
+├── prd.json                   ← 13-story PRD (source of truth for progress)
+└── progress.txt               ← Per-iteration learnings log
+
+dashboard/
+├── lib/circuitSvg.ts          ← NEW — Silverstone 2D waypoints + buildCircuitPath()
+├── app/RaceContext.tsx        ← MODIFIED — added isTechnicalMode state
+├── styles/globals.css         ← MODIFIED — added compound/severity CSS vars + keyframes
+├── app/components/
+│   ├── TireRings.tsx          ← NEW — 3 concentric SVG rings, independent anime.js rotation
+│   └── TireTread.tsx          ← NEW — morphing SVG tread, animejs morphTo on severity change
+```
+
+---
+
+## What Happened This Session — Dashboard Redesign Brainstorm + Plan (2026-05-16)
+
+Complete redesign of the Phase 6 dashboard. Original multi-panel layout replaced with anime.js-inspired cinematic experience.
+
+### Design decisions
+| Decision | Detail |
+|---|---|
+| Hero object | Large F1 tire (SVG, ~50vmin) — not a top-down car. Three concurrent animation layers. |
+| Animation reference | animejs.com homepage — central animated object, data text floats left/right |
+| Navigation | Arrow nav + progress dots (option B). No scroll-snap — GSAP ScrollTrigger scrub |
+| Chapters | 5: Hero, Severity+Mode, Predictors, Race Arc, Pit Strategy |
+| Audience | Dual: plain English always visible; `[ + Technical ]` expander per chapter |
+| Tire ring color | **Pirelli compound system** — Soft=#E8002D, Medium=#FFC906, Hard=#FFFFFF |
+| Severity colors | Glow + particles only (NOT rings): sev0=#00E676, sev1=#FFD600, sev2=#FF6D00, sev3=#FF1744 |
+| Scroll | Free scroll + GSAP ScrollTrigger `scrub:true`, 500vh pinned stage |
+| Circuit | Silverstone SVG background, `createDrawable` draw-in, `createMotionPath` car |
+| Speedometer | Fixed top-left, scroll velocity → needle, 0–300 km/h, decay via anime.js outExpo |
+| No WebGL | Track3D.tsx deleted entirely — SVG-only for load speed and headless testability |
+
+### Artifacts
+- Spec: `docs/superpowers/specs/2026-05-16-dashboard-redesign-design.md` (committed)
+- Plan: `docs/superpowers/plans/2026-05-16-dashboard-redesign.md` (13 tasks, ready to execute)
 
 ---
 
@@ -470,37 +557,41 @@ Carries forward from prior session, plus new entries:
 | NaN `severity_pred` propagating silently through polyfit | NaN in any lap's severity_pred passed through `np.polyfit` → `np.poly1d` → `np.clip` without error; output JSON contained NaN literals (invalid strict JSON) | Added NaN guard in `generate_strategy_json`; contaminated records skipped with WARNING print |
 | Missing schema validation on predictions.json | Bare `KeyError: 'laps'` with no path or record context if predictions.json had schema drift | Added `_validate_predictions_payload(raw, source)` that checks `laps` key and all required per-record fields with named error messages |
 | `int \| None` syntax on Python 3.9 | PEP 604 union syntax requires Python 3.10+; project runs Python 3.9.23 | Add `from __future__ import annotations` at top of any file using modern union syntax |
+| Codex MCP tool stalls | `mcp__codex__codex` calls blocked on tool-approval prompts; when approval was skipped by user, subsequent calls caused multi-hour silent hangs | Use Ralph loop (`scripts/ralph/ralph.sh --tool claude`) or Agent tool (subagent_type=claude) instead |
+| Ralph loop hits Claude rate limits | After ~3 iterations the `claude` subprocess returns `"You've hit your limit · resets HH:MMpm"` — loop keeps cycling but does nothing | Wait for reset time (shown in output), then re-run `./scripts/ralph/ralph.sh --tool claude 20`; PRD state is preserved |
+| animejs rotate string vs number | `rotate: '360deg'` caused type errors in v4 — `rotate` expects a number | Use `rotate: 360` (number). Counter-clockwise: `rotate: -360` |
+| morphTo path command count mismatch | morphTo silently produces broken animation if paths have different command counts | All TREAD_PATHS must have identical structure: M + 11L + Z (13 commands each) |
+| Next.js version assumption | Plan spec says "Next.js 15" but `dashboard/package.json` shows `14.2.35` — App Router works identically | Trust `package.json`, not plan spec — no behavioral difference for this project |
+| `createSpring()` deprecated in animejs 4.4.1 | `createSpring()` emits `console.warn('createSpring() is deprecated use spring() instead')` — violates "no console errors" acceptance criterion | Use `spring({stiffness, damping})` — same parameters, no warning. Both exported from `'animejs'`. |
+| `spring()` with `duration: 0` | Explicitly providing `duration: 0` causes the tween to snap to end value in one tick; spring physics never run. Passes tsc + build but produces invisible animation. | Omit `duration` entirely — spring drives its own timing from stiffness/damping. |
+| Agent worktree isolation creates from `main` | `isolation: "worktree"` in Agent tool creates branches from `main`, not the current feature branch. Workers can't find files that only exist on the feature branch. | Dispatch workers **without** `isolation: "worktree"` when they need to read/write files only on the current branch. Use worktree isolation only when branching from main is intentional. |
+| Orbit stagger math no-op | Spec-suggested orbit: `translateX: [cos(θ)*r, cos(θ+2π)*r]`. `cos(θ+2π) === cos(θ)` — start equals end, particles sit still. | Keep 60-frame keyframe orbit (traces 60 distinct positions). Use `stagger` only for entrance/delay, not to encode position. |
+| Glow crossfade async race condition | On rapid severity changes, the `.then()` callback from the first fade fires after the second fade has already applied, overwriting styles with stale closure values. | Store `fadeOutRef`/`fadeInRef`; pause both on re-entry. Read current severity/color from a `useRef` inside the callback (not from the closure). |
+| `'-=600'` on first `createTimeline().add()` | `parseTimelinePosition` looks for a previous sibling to offset from; with no sibling, `-600` clamps to `0`. The glow's intended pre-entry effect becomes coincident with t=0. | Use `0` (absolute) on the first add. Only use relative offsets (`'+=300'`, `'-=200'`) when a sibling exists. |
+| `'+300'` vs `'+=300'` in createTimeline | `'+300'` is parsed as **absolute** timestamp 300ms from start. `'+=300'` means "300ms after previous sibling ends". Easy to confuse. | Use `'+=N'` for relative (after prev), bare number `N` for absolute. Never `'+N'` — the leading `+` is ignored. |
 
 ---
 
 ## Immediate Next Steps
 
-### Step 1 — Build Phase 6 dashboard + StrategyAdvisor.tsx
-Branch: `phase-6-dashboard`
-Plan: `docs/superpowers/plans/2026-05-15-phase6-dashboard.md`
-Spec: `docs/superpowers/specs/2026-05-14-phase6-dashboard-design.md`
-Strategy spec: `docs/superpowers/specs/2026-05-15-phase7-strategy-design.md`
+### Phase 6 — COMPLETE ✅
 
-Use `frontend-developer` + `nextjs-architecture-expert` agents via subagent-driven-development.
+All 17 stories pass. Branch `feat-dashboard-redesign` merged to `main` on 2026-05-17 and pushed to GitHub. Vercel redeploys automatically on push.
 
-**Phase 6 includes StrategyAdvisor.tsx** — new panel replacing the old `Comparison` component:
-- Reads `strategy_recommendations.json` (Phase 7 output)
-- Pre-race: table + chart of 5 pit strategies vs finish severity
-- Live-race: pit window highlight, anomaly alerts, updates per lap
-- Threshold tuning: collapsible sliders for ideal/acceptable/anomaly thresholds, stored in localStorage
+**PRD final state:** `scripts/ralph/prd.json` — all 17 stories `passes: true`.
 
-Pre-requisites:
-- `outputs/` artifacts must exist (generated by Phase 5 ✅)
-- `outputs/strategy_recommendations.json` must exist (generated by Phase 7 ✅)
-- Generate Higgsfield assets (see spec Task 19) before building Track3D
+**Vercel deployment:** Push to `main` triggers auto-deploy. Check status at the Vercel dashboard or via `gh run list`.
 
-### Step 2 — Deploy to Vercel
+### Step 1 — Optional: browser QA on deployed build
+
 ```bash
-cd dashboard && npm run build   # static export
+cd dashboard && npm run dev   # localhost:3000
 ```
-Then deploy via Vercel CLI or GitHub integration.
+Verify: tire centered, ring entrance animation plays, tread morphs with spring on lap scrub, particles orbit with spring entrance, scroll → tire lags behind (createAnimatable), chapter callouts update, speedometer top-left, circuit SVG visible.
 
-### Step 3 — Optional: ingest multi-year data to improve model
+**Reduced-motion check:** Enable `prefers-reduced-motion` in OS settings → rings should appear static (no rotation, no entrance). Tread should snap (no spring). All JS animations skipped.
+
+### Step 2 — Optional: ingest multi-year data to improve model
 ```bash
 ~/.venv/bin/python evaluate.py --ingest   # expand to 2021/2023/2024/2025 (network required)
 ~/.venv/bin/python train_model.py         # retrain on multi-year data
@@ -590,17 +681,16 @@ LAPVAR_GRAIN          = 0.50
 | matplotlib | 3.10.9 | Static chart generation |
 | pyarrow | installed | Parquet I/O |
 
-### JavaScript (frontend — Phase 6)
+### JavaScript (frontend — Phase 6 redesign)
 | Tool | Version | Purpose |
 |---|---|---|
-| Next.js | 14 | React framework, static export |
-| @react-three/fiber | latest | WebGL 3D track (React wrapper for Three.js) |
-| @react-three/drei | latest | OrbitControls, Html overlays, Stars |
-| three | latest | CatmullRomCurve3, TubeGeometry, MeshStandardMaterial |
-| animejs | v4 | Counters, stagger, SVG draw-on, replay timeline |
-| framer-motion | latest | Panel entrance/exit, spring transitions in React |
-| recharts | latest | Race timeline bar chart, stint comparison |
+| Next.js | 15 | React framework, Vercel native (no static export) |
+| animejs | v4 | Tire rings, morphTo tread, particles, createDrawable circuit, stagger callouts |
+| gsap + ScrollTrigger | 3 | Scroll-driven pin (500vh), chapter progress scrub |
+| recharts | latest | Race Arc lap bands (chapter 4 background) |
 | Tailwind CSS | 3 | Layout, utility classes |
+| ~~@react-three/fiber~~ | — | **Deleted** — replaced by SVG (no WebGL in redesign) |
+| ~~framer-motion~~ | — | Unused in redesign — all animation via anime.js + GSAP |
 
 ### AI/Media tools
 | Tool | Purpose |
@@ -640,19 +730,32 @@ LatentLap-AI-main/
 ├── CLAUDE.md                  ← Mandatory agent workflow rules
 ├── HANDOFF.md                 ← this file
 ├── .agents/skills/            ← Installed: animejs, gsap-*, deploy-to-vercel, web-design-guidelines
-├── dashboard/                 ← Phase 6, TO CREATE (Next.js app)
-│   └── prototype/
-│       └── track_styles.html  ← SVG Anime.js prototype (4 visual styles, tested)
+├── dashboard/                 ← Phase 6, EXISTS (Next.js 15 App Router)
+│   ├── app/
+│   │   ├── page.tsx           ← WILL BE REWRITTEN by redesign Task 11
+│   │   ├── RaceContext.tsx    ← WILL ADD isTechnicalMode state (Task 1)
+│   │   ├── layout.tsx
+│   │   └── components/        ← existing panels (to be deleted in Task 11)
+│   ├── lib/
+│   │   ├── data.ts            ← UNCHANGED (getLap, getAllLapsForDriver, getSHAP)
+│   │   ├── severityColors.ts  ← UNCHANGED (getSeverityHex, getSeverityLabel)
+│   │   └── circuitSvg.ts      ← NEW (Task 1): 2D Silverstone waypoints for SVG
+│   ├── styles/globals.css     ← WILL ADD compound/severity CSS vars (Task 1)
+│   └── public/data/           ← UNCHANGED JSON artifacts
+│       └── prototype/
+│           └── track_styles.html  ← old prototype (can be deleted)
 ├── docs/
 │   └── superpowers/
 │       ├── specs/
 │       │   ├── 2026-05-14-phase5-evaluate-design.md   ← APPROVED
-│       │   ├── 2026-05-14-phase6-dashboard-design.md  ← APPROVED (v2 + StrategyAdvisor)
-│       │   └── 2026-05-15-phase7-strategy-design.md   ← APPROVED
+│       │   ├── 2026-05-14-phase6-dashboard-design.md  ← superseded by redesign
+│       │   ├── 2026-05-15-phase7-strategy-design.md   ← APPROVED
+│       │   └── 2026-05-16-dashboard-redesign-design.md ← ACTIVE SPEC (Pirelli colors updated)
 │       └── plans/
 │           ├── 2026-05-15-phase5-evaluate.md    ← Phase 5 plan
-│           ├── 2026-05-15-phase6-dashboard.md   ← Phase 6 plan (22 tasks)
-│           └── 2026-05-15-phase7-strategy.md    ← Phase 7 plan
+│           ├── 2026-05-15-phase6-dashboard.md   ← superseded by redesign
+│           ├── 2026-05-15-phase7-strategy.md    ← Phase 7 plan
+│           └── 2026-05-16-dashboard-redesign.md ← ACTIVE PLAN (13 tasks)
 ├── models/                    ← gitignored; regenerate with train_model.py
 │   ├── severity_model.ubj
 │   ├── mode_model.ubj
