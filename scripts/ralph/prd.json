@@ -8,7 +8,7 @@
       "title": "Setup: GSAP install, circuitSvg.ts, CSS vars, isTechnicalMode",
       "description": "As a developer, I need the project infrastructure ready (GSAP installed, Silverstone SVG utils, new CSS vars, isTechnicalMode context state) so all animation components can be built.",
       "acceptanceCriteria": [
-        "Run: cd /Users/hussianaltufayli/Downloads/LatentLap-AI-main/dashboard && npm install gsap — no errors",
+        "Run: cd /Users/hussianaltufayli/Downloads/LatentLap-AI-main/dashboard && npm install gsap \u2014 no errors",
         "File dashboard/lib/circuitSvg.ts exists with exports: CIRCUIT_POINTS (14 Point2D), buildCircuitPath(), CORNER_SVG (MB/Copse/Stowe/Club), lapToCircuitProgress()",
         "dashboard/styles/globals.css :root has --compound-soft:#E8002D, --compound-medium:#FFC906, --compound-hard:#FFFFFF, --shap-pos:#FF8000, --shap-neg:#2979FF, --speedometer-size:120px",
         "dashboard/styles/globals.css --sev-2 is #FF6D00 (was #FF4500)",
@@ -25,7 +25,7 @@
     },
     {
       "id": "US-002",
-      "title": "TireRings.tsx — 3 concentric SVG rings with independent anime.js rotation",
+      "title": "TireRings.tsx \u2014 3 concentric SVG rings with independent anime.js rotation",
       "description": "As a developer, I need the TireRings component so the tire hero has three independently rotating concentric rings driven by anime.js continuous loops.",
       "acceptanceCriteria": [
         "File dashboard/app/components/TireRings.tsx exists with 'use client' directive",
@@ -33,9 +33,9 @@
         "Outer ring: circle cx=200 cy=200 r=170, strokeWidth=20, stroke=severityColor, clockwise 8s loop via animejs animate()",
         "Middle ring: circle r=140, strokeWidth=12, stroke=severityColor opacity=0.5, counter-clockwise 14s loop with 6 spoke paths",
         "Inner ring: circle r=110, strokeWidth=6, stroke=severityColor opacity=0.7, clockwise 22s loop with 8 tick marks",
-        "Center hub: circle r=80, fill=#0a0a0a — this is where severity number renders",
-        "Uses useReducedMotion hook from ../../lib/useReducedMotion — if true, skip all animate() calls",
-        "All animate() calls use animejs v4 API: import { animate } from 'animejs' — NOT anime({targets})",
+        "Center hub: circle r=80, fill=#0a0a0a \u2014 this is where severity number renders",
+        "Uses useReducedMotion hook from ../../lib/useReducedMotion \u2014 if true, skip all animate() calls",
+        "All animate() calls use animejs v4 API: import { animate } from 'animejs' \u2014 NOT anime({targets})",
         "Animations use loop: true and ease: 'linear'",
         "style={{ transformOrigin: '200px 200px' }} on each rotating <g>",
         "Typecheck passes"
@@ -46,8 +46,8 @@
     },
     {
       "id": "US-003",
-      "title": "TireTread.tsx — morphing SVG tread path via animejs morphTo",
-      "description": "As a developer, I need TireTread to render and morph between 4 tread geometries (fresh→worn→slick) as severity changes using anime.js morphTo.",
+      "title": "TireTread.tsx \u2014 morphing SVG tread path via animejs morphTo",
+      "description": "As a developer, I need TireTread to render and morph between 4 tread geometries (fresh\u2192worn\u2192slick) as severity changes using anime.js morphTo.",
       "acceptanceCriteria": [
         "File dashboard/app/components/TireTread.tsx exists with 'use client' directive",
         "Accepts prop severity: number (0-3)",
@@ -64,7 +64,7 @@
     },
     {
       "id": "US-004",
-      "title": "TireParticles.tsx — orbiting/ejecting severity-scaled particles",
+      "title": "TireParticles.tsx \u2014 orbiting/ejecting severity-scaled particles",
       "description": "As a developer, I need TireParticles to render orbiting SVG circles around the inner ring, with count and speed scaling with severity (4 at sev0, 20 at sev3), and some particles ejecting at sev3.",
       "acceptanceCriteria": [
         "File dashboard/app/components/TireParticles.tsx exists with 'use client' directive",
@@ -72,9 +72,9 @@
         "PARTICLE_CONFIG constant: { 0:{count:4,orbitR:90,speed:6000,eject:0}, 1:{count:8,orbitR:90,speed:4000,eject:0}, 2:{count:14,orbitR:92,speed:2800,eject:0}, 3:{count:20,orbitR:94,speed:1800,eject:4} }",
         "Particles rendered as SVG <circle> elements inside a <g ref={groupRef}>",
         "Orbiting particles animate using animejs keyframes array (60 frames of cx/cy positions around the orbit circle), loop:true",
-        "Ejecting particles (i < cfg.eject) at sev3 animate from orbit radius outward to 200px and fade opacity 1→0, loop:true",
-        "Uses import { animate } from 'animejs' — v4 API only",
-        "Uses useReducedMotion — if true, skip all animate() calls",
+        "Ejecting particles (i < cfg.eject) at sev3 animate from orbit radius outward to 200px and fade opacity 1\u21920, loop:true",
+        "Uses import { animate } from 'animejs' \u2014 v4 API only",
+        "Uses useReducedMotion \u2014 if true, skip all animate() calls",
         "Typecheck passes"
       ],
       "priority": 4,
@@ -83,7 +83,7 @@
     },
     {
       "id": "US-005",
-      "title": "Speedometer.tsx — fixed top-left scroll-velocity gauge",
+      "title": "Speedometer.tsx \u2014 fixed top-left scroll-velocity gauge",
       "description": "As a user, I want to see a fixed top-left F1 speedometer whose needle reacts to my scroll speed, so the experience feels dynamic.",
       "acceptanceCriteria": [
         "File dashboard/app/components/Speedometer.tsx exists with 'use client' directive",
@@ -95,7 +95,7 @@
         "Updates needle via animejs animate(needleRef.current, { rotate: deg, duration: 80, ease: 'outQuad' })",
         "After 100ms of no scroll, decays needle back to -135deg via animate with outExpo ease, 1200ms duration",
         "Speed label text updates in km/h (0-300 range)",
-        "Uses useReducedMotion — if true, skip animate calls",
+        "Uses useReducedMotion \u2014 if true, skip animate calls",
         "Typecheck passes"
       ],
       "priority": 5,
@@ -104,7 +104,7 @@
     },
     {
       "id": "US-006",
-      "title": "SilverstoneCircuit.tsx — background SVG circuit with createDrawable and car",
+      "title": "SilverstoneCircuit.tsx \u2014 background SVG circuit with createDrawable and car",
       "description": "As a user, I want a faint Silverstone circuit SVG in the background that draws itself on load and has a small car following the track at the current lap position.",
       "acceptanceCriteria": [
         "File dashboard/app/components/SilverstoneCircuit.tsx exists with 'use client' directive",
@@ -113,10 +113,10 @@
         "Full-size SVG (position:absolute inset:0 width:100% height:100%) with opacity:0.10 and pointer-events:none, viewBox='0 0 200 200'",
         "Circuit <path> drawn via animejs createDrawable on mount: animate(createDrawable(circuitRef.current), { draw: ['0 0','0 1'], duration:2000, ease:'outCubic' })",
         "Accepts props: activeChapter: number, topFeature?: string|null",
-        "Small <g> car (orange rect 6x10px) positioned using createMotionPath on the circuit path — or if createMotionPath API unavailable, use SVGPathElement.getPointAtLength(progress*totalLength) to position the car",
+        "Small <g> car (orange rect 6x10px) positioned using createMotionPath on the circuit path \u2014 or if createMotionPath API unavailable, use SVGPathElement.getPointAtLength(progress*totalLength) to position the car",
         "Car position updates when currentLap changes",
-        "Corner glow circles visible only when activeChapter===2 (predictors chapter) — 4 circles at MB/Copse/Stowe/Club positions from CORNER_SVG",
-        "Uses useReducedMotion — if true, skip animate calls and position car statically",
+        "Corner glow circles visible only when activeChapter===2 (predictors chapter) \u2014 4 circles at MB/Copse/Stowe/Club positions from CORNER_SVG",
+        "Uses useReducedMotion \u2014 if true, skip animate calls and position car statically",
         "Typecheck passes"
       ],
       "priority": 6,
@@ -125,7 +125,7 @@
     },
     {
       "id": "US-007",
-      "title": "CalloutLeft.tsx and CalloutRight.tsx — floating anime.js side text",
+      "title": "CalloutLeft.tsx and CalloutRight.tsx \u2014 floating anime.js side text",
       "description": "As a user, I want data to float on the left and right of the tire as clean text that slides in with anime.js stagger when chapters change.",
       "acceptanceCriteria": [
         "File dashboard/app/components/CalloutLeft.tsx exists with 'use client' directive",
@@ -149,7 +149,7 @@
     },
     {
       "id": "US-008",
-      "title": "LapScrubberFixed + ChapterDots + SettingsPopover — persistent nav UI",
+      "title": "LapScrubberFixed + ChapterDots + SettingsPopover \u2014 persistent nav UI",
       "description": "As a user, I want a fixed bottom lap scrubber, fixed right-side chapter dots, and a gear settings popover so I can navigate the experience.",
       "acceptanceCriteria": [
         "File dashboard/app/components/LapScrubberFixed.tsx exists with 'use client' directive",
@@ -162,7 +162,7 @@
         "Fixed right:16px top:50% transform translateY(-50%), 5 dots, active=#FF8000 scaled 1.3x",
         "Each dot has aria-label='Chapter N of 5: [name]'",
         "File dashboard/app/components/SettingsPopover.tsx exists with 'use client' directive",
-        "Fixed top:20px right:20px, gear icon button (⚙), opens popover with year pills (2021-2025) and driver pills",
+        "Fixed top:20px right:20px, gear icon button (\u2699), opens popover with year pills (2021-2025) and driver pills",
         "Driver pills from getDriversForYear(currentYear) from ../../lib/data",
         "Active year/driver pill shows #FF8000 background",
         "Typecheck passes"
@@ -173,8 +173,8 @@
     },
     {
       "id": "US-009",
-      "title": "TireHero.tsx — orchestrator: rings + tread + particles + scroll rotation + glow",
-      "description": "As a user, I want the central F1 tire SVG to combine rotating rings, morphing tread, orbiting particles, a severity counter, and a glow layer — all driven by scroll progress and lap data.",
+      "title": "TireHero.tsx \u2014 orchestrator: rings + tread + particles + scroll rotation + glow",
+      "description": "As a user, I want the central F1 tire SVG to combine rotating rings, morphing tread, orbiting particles, a severity counter, and a glow layer \u2014 all driven by scroll progress and lap data.",
       "acceptanceCriteria": [
         "File dashboard/app/components/TireHero.tsx exists with 'use client' directive",
         "Imports and renders TireRings, TireTread, TireParticles as children inside an SVG viewBox='0 0 400 400'",
@@ -184,11 +184,11 @@
         "Severity counter in SVG center: Rajdhani 900 font, 72px, counts up/down with animejs animate(counterRef, { value: severity, modifier: utils.round(0), ease: 'outExpo', duration: 600 })",
         "Glow layer: absolute div behind SVG with radial gradient using severityColor, animation uses glow-pulse-sev{N} keyframe at correct duration (3s/2s/1.5s/1.2s for sev 0-3)",
         "Compound color for ring stroke: read getLap().compound ('SOFT'/'MEDIUM'/'HARD'), map to CSS var (--compound-soft/medium/hard)",
-        "Pass compound color to TireRings as severityColor prop — NOT the severity glow color",
+        "Pass compound color to TireRings as severityColor prop \u2014 NOT the severity glow color",
         "Pass severity to TireTread and TireParticles; pass severity glow color to TireParticles as severityColor",
         "Width/height: 50vmin container div",
         "aria-label on SVG, aria-live='polite' on severity text element",
-        "Uses useReducedMotion — skip rotate and counter animation if true",
+        "Uses useReducedMotion \u2014 skip rotate and counter animation if true",
         "Typecheck passes"
       ],
       "priority": 9,
@@ -197,7 +197,7 @@
     },
     {
       "id": "US-010",
-      "title": "ScrollStage.tsx — GSAP ScrollTrigger pin + 5 chapter content orchestration",
+      "title": "ScrollStage.tsx \u2014 GSAP ScrollTrigger pin + 5 chapter content orchestration",
       "description": "As a user, I want a 500vh scroll stage that pins the tire and swaps chapter content (left/right callouts) as I scroll through 5 chapters.",
       "acceptanceCriteria": [
         "File dashboard/app/components/ScrollStage.tsx exists with 'use client' directive",
@@ -214,7 +214,7 @@
         "Chapter 2 (Predictors): left shows top predictor feature, right shows top3 SHAP rows from getSHAP()",
         "Chapter 3 (Race Arc): left shows total laps/explanation, right shows current lap stats",
         "Chapter 4 (Strategy): left shows pit strategy explanation, right shows recommendation description",
-        "SHAP rows built from getSHAP(currentYear, currentDriver, currentLap) — sorted by abs value, top 3",
+        "SHAP rows built from getSHAP(currentYear, currentDriver, currentLap) \u2014 sorted by abs value, top 3",
         "Keyboard PageDown/PageUp chapter navigation via useEffect",
         "Typecheck passes"
       ],
@@ -237,7 +237,7 @@
         "dashboard/app/components/Header.tsx deleted",
         "dashboard/app/components/LapScrubber.tsx deleted",
         "dashboard/lib/trackPath.ts deleted",
-        "No broken imports anywhere — run: cd dashboard && npx tsc --noEmit and confirm 0 errors",
+        "No broken imports anywhere \u2014 run: cd dashboard && npx tsc --noEmit and confirm 0 errors",
         "Run cd dashboard && npm run dev (in background if needed) and verify page loads without runtime errors in console",
         "Typecheck passes"
       ],
@@ -286,6 +286,78 @@
       "priority": 13,
       "passes": true,
       "notes": "Build passes, tsc 0 errors. Browser QA: all UI elements render. Benign hydration warning for floating-point SVG path diff in TireRings (non-breaking). Fixed TireTread morphTo bug (pass CSS selector, not path string)."
+    },
+    {
+      "id": "US-014",
+      "title": "TireRings: createTimeline entrance + createDrawable stroke draw-in + clockwork spoke stagger",
+      "description": "Inspired by animejs.com clockwork + line-drawing demos. Replace 3 independent animate() loops with a coordinated entrance via createTimeline(). Rings draw in via createDrawable() on mount (outer\u2192middle\u2192inner, stagger +300ms). Spoke paths stagger in with translateX, tick marks with translateY like the clock demo. Continuous rotation resumes after entrance. All disabled under reducedMotion.",
+      "acceptanceCriteria": [
+        "On mount, outer ring strokes draw from '0 0' to '0 1' via createDrawable(), 900ms inOutExpo",
+        "Middle ring draws in 300ms after outer, inner ring 300ms after middle",
+        "Spoke paths stagger in: translateX [-4,0], opacity [0,1], stagger(40)",
+        "Tick paths stagger in: translateY [-6,0], stagger(20) (clockwork effect)",
+        "After entrance, rings resume constant rotation: outer 8s CW, middle 14s CCW, inner 22s CW",
+        "All entrance animations disabled when useReducedMotion() returns true",
+        "cd dashboard && npx tsc --noEmit passes (0 errors)",
+        "npm run build passes",
+        "No new browser console errors or warnings"
+      ],
+      "priority": 14,
+      "passes": true,
+      "notes": "Implemented in dashboard/app/components/TireRings.tsx. Typecheck passes: cd dashboard && npx tsc --noEmit. Build passes: npm run build. createDrawable targets DOM SVGCircleElement refs, not selectors/groups; entrance uses createTimeline and cleanup pauses/reverts timeline plus pauses rotations."
+    },
+    {
+      "id": "US-015",
+      "title": "TireTread: Replace CSS transition:d with animejs morphTo + createSpring ease",
+      "description": "Inspired by animejs.com SVG shape morphing demo. Current code uses CSS transition: d 0.8s cubic-bezier \u2014 replace with animejs animate(pathRef, {d: morphTo('#tread-ref-N'), ease: createSpring({stiffness:180, damping:16})}). Hidden <defs> paths (#tread-ref-0 to #tread-ref-3) already exist in DOM from US-012. Remove the inline style transition.",
+      "acceptanceCriteria": [
+        "CSS 'transition: d ...' style removed from the <path> element",
+        "On severity change, animejs animate() call with d: morphTo('#tread-ref-N') fires",
+        "Ease uses createSpring({stiffness: 180, damping: 16}) \u2014 not outExpo or cubic-bezier",
+        "morphTo argument is '#tread-ref-N' (CSS selector with #) NOT a raw SVG path string",
+        "Tread visibly morphs with spring bounce when switching between severity 0-3",
+        "reducedMotion: skip animate call, set d attribute directly via setAttribute",
+        "cd dashboard && npx tsc --noEmit passes",
+        "npm run build passes"
+      ],
+      "priority": 15,
+      "passes": true,
+      "notes": "Implemented in dashboard/app/components/TireTread.tsx. Uses spring({stiffness:180,damping:16}) (not deprecated createSpring). duration omitted so spring drives timing. morphTo('#tread-ref-N') resolves via document.querySelectorAll \u2014 hidden defs paths exist in same SVG. Code-review fix: removed duration:0 (was killing spring animation). tsc + build pass."
+    },
+    {
+      "id": "US-016",
+      "title": "TireParticles: stagger() orbit + blend composition + spring appearance on count change",
+      "description": "Inspired by animejs.com advanced staggering demo. Replace the manual 60-frame keyframe loop per particle with stagger() and function-based values. New particles entering (severity change increases count) spring into view with createSpring. Ejecting particles (sev 3) use composition:'blend' so they layer over orbit animations.",
+      "acceptanceCriteria": [
+        "Orbit animation uses animate(particleEls, {...}) with function-based translateX/translateY rather than per-particle loops",
+        "delay: stagger(orbitSpeed / count) staggers each particle's start angle",
+        "On severity increase, new particles enter with scale:[0,1] opacity:[0,1] ease:createSpring({stiffness:280,damping:14}) delay:stagger(60)",
+        "Ejecting particles (sev===3) retain keyframe approach but add composition:'blend'",
+        "reducedMotion guard present \u2014 skip all animate calls",
+        "cd dashboard && npx tsc --noEmit passes",
+        "npm run build passes"
+      ],
+      "priority": 16,
+      "passes": true,
+      "notes": "Implemented in dashboard/app/components/TireParticles.tsx. stagger spring entrance added (spring stiffness:280 damping:14, no duration). composition:'blend' on ejecting particles. 60-frame orbit keyframe loop kept (function-based translateX/Y approach was no-op — cos(angle+2π)===cos(angle)). Code-review fix: removed duration:0. tsc + build pass."
+    },
+    {
+      "id": "US-017",
+      "title": "TireHero: spring counter + createAnimatable scroll rotation + entrance timeline",
+      "description": "Inspired by animejs.com spring physics + timeline demos. Three improvements: (1) counter ease becomes createSpring({stiffness:300,damping:22}) replacing outExpo; (2) scroll rotation uses createAnimatable on svgRef for eased follow instead of linear scrollProgress*720; (3) mount entrance timeline sequences glow\u2192rings\u2192tread\u2192particles\u2192counter with staggered delays. Glow crossfades on severity change instead of instant color swap.",
+      "acceptanceCriteria": [
+        "Counter animation ease is createSpring({stiffness:300, damping:22}) \u2014 no outExpo",
+        "SVG rotation uses createAnimatable(svgRef, {rotate:{duration:400,ease:'outExpo'}}) updated on scrollProgress change",
+        "Entrance timeline on mount: glow opacity 0\u21921 (400ms) \u2192 rings scale 0.85\u21921 (500ms outBack) \u2192 tread opacity 0\u21921 (300ms) \u2192 particles scale+opacity 0\u21921 (400ms outBack) \u2192 counter 0\u2192severity (spring)",
+        "On severity change, glow div fades opacity 0\u21921 (crossfade, not instant swap)",
+        "reducedMotion: all entrance/spring skipped, instant initial values set",
+        "cd dashboard && npx tsc --noEmit passes",
+        "npm run build passes",
+        "No new browser console errors or warnings"
+      ],
+      "priority": 17,
+      "passes": true,
+      "notes": "Implemented in dashboard/app/components/TireHero.tsx. spring() (not createSpring), createAnimatable scroll rotation, entrance timeline (glow+svg scale+counter), glow crossfade with race-condition fix (fadeOutRef/fadeInRef + latestGlowState ref). Code-review fixes applied: C1 race condition, I3 type casts, I4 timeline offset. tsc + build pass."
     }
   ]
 }

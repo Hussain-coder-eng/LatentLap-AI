@@ -203,3 +203,49 @@ Started: Sat May 16 20:16:52 EDT 2026
   - React hydration warning for SSR/client floating-point SVG diffs is benign — ignore
   - `npm run build` and `npx tsc --noEmit` are separate checks; build may pass while tsc fails if skipLibCheck covers it
 ---
+
+## 2026-05-17 - US-013 (follow-up fix)
+- Fixed TireRings hydration error that was causing Full Refresh on every load
+- Root cause: spoke/tick path coords used raw Math.cos/sin — no rounding applied (r2() was defined but not called in committed code)
+- Fix: apply r2() to all 8 path coord values + add suppressHydrationWarning on path elements
+- Zero console errors confirmed via browse tool after fix
+- All 13 user stories now passes: true — PRD COMPLETE
+- Files changed: dashboard/app/components/TireRings.tsx
+- **Learnings for future iterations:**
+  - React hydration errors (not warnings) cause Full Refresh — must be fixed, not ignored
+  - suppressHydrationWarning silences React's check but does NOT prevent the initial SSR/client diff; rounding the computed values is the correct fix
+  - When r2() or similar rounding helpers exist in a file, verify they are actually called in all relevant computations
+---
+
+## 2026-05-17 - US-014
+- Implemented TireRings createTimeline entrance: outer, middle, inner draw in with createDrawable from '0 0' to '0 1', 900ms inOutExpo, +300ms sequencing
+- Added DOM SVGCircleElement refs for createDrawable targets; no selector strings or group targets used
+- Added spoke/tick path refs for clockwork stagger: spokes translateX [-4,0] opacity [0,1] with stagger(40), ticks translateY [-6,0] with stagger(20)
+- Continuous rotations start after timeline.then(): outer 8s CW, middle 14s CCW, inner 22s CW; reducedMotion skips entrance and starts rotations immediately
+- Cleanup pauses/reverts the entrance timeline and pauses all rotation animations
+- Preserved r2() rounded path math and suppressHydrationWarning on spoke/tick paths
+- TypeScript: `cd dashboard && npx tsc --noEmit` → 0 errors
+- Build: `npm run build` → 0 errors, static export, 423kB first load JS
+- Files changed: dashboard/app/components/TireRings.tsx, scripts/ralph/prd.json, scripts/ralph/progress.txt
+- **Learnings for future iterations:**
+  - createDrawable should receive actual SVG geometry DOM refs like SVGCircleElement, not selectors or wrapping groups
+  - When a group starts with opacity 0, the timeline must also fade the group to 1 or drawable stroke animation remains hidden
+  - reducedMotion paths still need to restore group opacity to 1 before starting non-entrance rotation loops
+---
+
+## 2026-05-17 - US-014 through US-017 (TireHero Animation Improvements)
+- Implemented: TireRings entrance timeline (createTimeline + createDrawable + stagger), TireTread spring morph (morphTo + spring()), TireParticles stagger spring entrance + blend ejection, TireHero spring counter + createAnimatable scroll rotation + entrance timeline + glow crossfade
+- Files changed: dashboard/app/components/TireRings.tsx, TireTread.tsx, TireParticles.tsx, TireHero.tsx
+- Commits: 9bb6cd0 (US-014), d81b48f (US-015), 7d391d6 (US-017), 50133e5 (US-016), a116900 (spring fix), 84c318e (review fixes)
+- **Learnings for future iterations:**
+  - animejs 4.4.1: `createSpring()` is DEPRECATED — emits console.warn. Use `spring()` (same params, no warning). Both are exported.
+  - `spring()` returns a Spring object which IS a valid EasingParam — no type cast needed. Double-cast `as unknown as string` compiles but is incorrect.
+  - `duration: 0` with a spring ease kills the spring animation — spring drives duration internally. Omit `duration` or let spring control it.
+  - `createAnimatable(el, {rotate: {duration:400, ease:'outExpo'}})` — call `animRot.rotate(deg)` in a scrollProgress useEffect. Revert in cleanup.
+  - createTimeline `'-=600'` on the FIRST `.add()` child is a no-op (no previous sibling to offset from). Use `0` or positive absolute value.
+  - `'+300'` in createTimeline is parsed as absolute timestamp 300ms. Use `'+=300'` for "300ms after previous sibling ends".
+  - Glow crossfade race condition: if severity changes during a 200ms fade, the async `.then()` callback fires with stale closure values. Fix: store handles in refs (fadeOutRef/fadeInRef), pause on re-entry, read latest values from a ref inside the callback.
+  - reducedMotion + TireRings: skipping entrance is correct, but also skip continuous rotations for full WCAG 2.3.3 compliance.
+  - Worktree isolation (Agent tool) creates worktrees from main, NOT current branch. For feat-branch work, dispatch agents WITHOUT worktree isolation.
+  - morphTo orbit stagger no-op: [cos(θ)*r, cos(θ+2π)*r] = [cos(θ)*r, cos(θ)*r] — start===end, particles don't move. Keep 60-frame keyframe approach for orbit.
+---
