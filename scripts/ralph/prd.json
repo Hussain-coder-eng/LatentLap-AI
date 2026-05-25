@@ -1,100 +1,41 @@
 {
-  "project": "LatentLap-AI Dashboard",
-  "branchName": "ralph/ekg-thermal-tirehero",
-  "description": "Replace TireRings + TireTread with EKGPulse (heartbeat waveform behind severity number) and ThermalRings (radar-ping outer rings). Both are severity-color and severity-speed driven. Spec: docs/superpowers/specs/2026-05-18-ekg-thermal-center-design.md. Plan: docs/superpowers/plans/2026-05-18-ekg-thermal-tirehero.md. Read both before implementing any story.",
+  "project": "LatentLap-AI Dashboard — Circuit Car Animation Fixes",
+  "branchName": "fix/circuit-car-animation",
+  "description": "Two bug fixes to SilverstoneCircuit.tsx. Bug 1: car stops moving at lap 29 because totalLaps uses allLaps.length (count of predicted laps, e.g. 29) instead of the max lap number (52). At lap == count the progress formula clamps to 1.0 and the car freezes. Bug 2: car is always drawn vertical regardless of track direction — the transform only translates, never rotates. Fix by computing the path tangent and rotating the car to face its direction of travel. File to edit: dashboard/app/components/SilverstoneCircuit.tsx",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Create EKGPulse.tsx — heartbeat waveform behind severity number",
-      "description": "As a user I want a two-beat EKG waveform drawn inside the tire hub that pulses faster and with taller spikes as severity rises.",
+      "title": "Fix circuit car stops moving at lap 29",
+      "description": "As a user scrubbing through a race, I want the car marker to keep moving along the Silverstone circuit for every lap until the final lap of the race, not freeze partway through.",
       "acceptanceCriteria": [
-        "File dashboard/app/components/EKGPulse.tsx exists with 'use client' directive",
-        "Exports named EKGPulse component and EKGPulseProps interface",
-        "Props: { severity: number; severityColor: string }",
-        "PULSE_DURATION const: { 0: 2000, 1: 1500, 2: 1100, 3: 800 }",
-        "AMPLITUDE const: { 0: 28, 1: 40, 2: 55, 3: 70 }",
-        "buildPath(amplitude: number): string function builds 13-point two-beat EKG path (M + 12 L commands) with baseline y=200, spikes at x~163 and x~223, all points within r=80 of center (200,200)",
-        "Component renders a <clipPath id='ekg-hub-clip'> with <circle cx=200 cy=200 r=78/> and applies it to the EKG path",
-        "Subtle grid lines rendered inside clip: horizontal at y=200 (stroke #1a1a1a), y=185 and y=215 (stroke #131313)",
-        "useEffect: creates createDrawable(pathRef.current), animates draw:['0 0','0 1'] duration=PULSE_DURATION[clamped] ease='linear' loop:true",
-        "useEffect dependency array: [clamped, duration, reducedMotion]",
-        "useEffect cleanup: anim.pause() and drawable.revert()",
-        "clamped = Math.max(0, Math.min(3, Math.round(severity)))",
-        "useReducedMotion: if true, skip animate call, render path at opacity 0.65 statically",
-        "suppressHydrationWarning on the animated <path> element",
-        "Imports: animate and createDrawable from 'animejs' (v4 API)",
-        "Imports useReducedMotion from '../../lib/useReducedMotion'",
-        "cd /Users/hussianaltufayli/Downloads/LatentLap-AI-main/dashboard && npx tsc --noEmit shows 0 errors"
+        "In dashboard/app/components/SilverstoneCircuit.tsx, replace 'const totalLaps = Math.max(allLaps.length, 1)' with a variable that holds the MAX lap number in allLaps, e.g. 'const maxLapNum = allLaps.length > 0 ? allLaps[allLaps.length - 1].lap_number : 1'",
+        "Pass maxLapNum (not allLaps.length) to lapToCircuitProgress(currentLap, maxLapNum)",
+        "Update the useEffect dependency array to reference maxLapNum instead of totalLaps if needed",
+        "For 2025_NOR data (allLaps.length=29 but max lap_number=52): at currentLap=30 progress should be (30-1)/(52-1) ≈ 0.569, NOT clamped to 1.0",
+        "cd /Users/hussianaltufayli/Downloads/LatentLap-AI-main/dashboard && npx tsc --noEmit shows 0 errors",
+        "Commit with message: 'fix: US-001 - SilverstoneCircuit car stops at lap 29 — use max lap_number not allLaps.length'"
       ],
       "priority": 1,
       "passes": true,
-      "notes": "createDrawable returns Array<DrawableSVGGeometry> with no revert() method; used anim.pause() + forEach setAttribute reset for cleanup"
+      "notes": "Root cause: allLaps is the subset of laps that have predictions (e.g. 29 for 2025 NOR), but lap numbers go up to 52. Formula (lap-1)/(count-1) reaches 1.0 at lap==count, then clamps. Fix: use Math.max(...allLaps.map(l => l.lap_number)) or allLaps[allLaps.length-1].lap_number (already sorted) as the denominator."
     },
     {
       "id": "US-002",
-      "title": "Create ThermalRings.tsx — radar-ping rings driven by severity",
-      "description": "As a user I want three staggered rings that pulse outward from the tire center like heat signatures, faster and in severity color as degradation rises.",
+      "title": "Car faces forward along the track at every position",
+      "description": "As a user I want the F1 car marker to always face the direction it is driving along the Silverstone circuit, not always point straight up regardless of the track direction.",
       "acceptanceCriteria": [
-        "File dashboard/app/components/ThermalRings.tsx exists with 'use client' directive",
-        "Exports named ThermalRings component and ThermalRingsProps interface",
-        "Props: { severity: number; severityColor: string }",
-        "RING_DURATION const: { 0: 2200, 1: 1700, 2: 1300, 3: 1000 }",
-        "Three SVGCircleElement refs: ring1Ref, ring2Ref, ring3Ref",
-        "Each circle: cx=200 cy=200 r=170 fill=none stroke={severityColor} initial opacity=0",
-        "Inline style on each circle: { transformBox: 'fill-box', transformOrigin: '50% 50%' }",
-        "useEffect: animates each ring with scale:[0.06,1] opacity:[0.75,0] duration=RING_DURATION[clamped] loop:true delay=(duration/3)*i for i=0,1,2",
-        "useEffect dependency array: [clamped, reducedMotion]",
-        "useEffect cleanup: pause all 3 animations, reset ring.style.transform='' and ring.style.opacity='0' on each ring",
-        "clamped = Math.max(0, Math.min(3, Math.round(severity)))",
-        "useReducedMotion: if true, set each ring opacity to String(0.15 - i*0.04) without animate",
-        "suppressHydrationWarning on each animated <circle> element",
-        "Imports: animate from 'animejs'",
-        "Imports useReducedMotion from '../../lib/useReducedMotion'",
-        "cd /Users/hussianaltufayli/Downloads/LatentLap-AI-main/dashboard && npx tsc --noEmit shows 0 errors"
+        "In dashboard/app/components/SilverstoneCircuit.tsx, inside the useEffect that moves the car, compute the path tangent direction after getting the current point",
+        "Introduce 'const dist = progress * totalLength' and use 'pathEl.getPointAtLength(dist)' for the current point",
+        "Sample a second point slightly ahead: 'const delta = Math.min(2, totalLength * 0.01); const point2 = pathEl.getPointAtLength(Math.min(dist + delta, totalLength - 0.001))'",
+        "Compute direction vector: 'const dx = point2.x - point.x; const dy = point2.y - point.y'",
+        "Compute angle: 'const angleDeg = Math.atan2(dx, -dy) * (180 / Math.PI)' — this formula is correct because the car SVG is drawn nose-up (pointing toward lower y), so 0 degrees = nose up = -Y direction",
+        "Replace the existing carEl.setAttribute transform with: carEl.setAttribute('transform', `translate(${point.x.toFixed(2)}, ${point.y.toFixed(2)}) rotate(${angleDeg.toFixed(1)}) translate(-6, -11)`) — this centers on the path point, rotates, then offsets by car center",
+        "cd /Users/hussianaltufayli/Downloads/LatentLap-AI-main/dashboard && npx tsc --noEmit shows 0 errors",
+        "Commit with message: 'fix: US-002 - SilverstoneCircuit car faces forward along track — compute path tangent rotation'"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": ""
-    },
-    {
-      "id": "US-003",
-      "title": "Update TireHero.tsx — swap components + delete old files + remove unused consts",
-      "description": "As a developer I need TireHero to use the new EKGPulse and ThermalRings and to have the old TireTread and TireRings files deleted along with their now-unused constants.",
-      "acceptanceCriteria": [
-        "dashboard/app/components/TireHero.tsx imports ThermalRings from './ThermalRings' (NOT TireRings)",
-        "dashboard/app/components/TireHero.tsx imports EKGPulse from './EKGPulse' (NOT TireTread)",
-        "TireHero JSX renders <ThermalRings severity={severity} severityColor={severityColor} /> in the position TireRings previously occupied",
-        "TireHero JSX renders <EKGPulse severity={severity} severityColor={severityColor} /> in the position TireTread previously occupied",
-        "TireHero.tsx does NOT import TireRings or TireTread",
-        "TireHero.tsx does NOT contain COMPOUND_COLOR constant",
-        "TireHero.tsx does NOT contain 'const compound' variable",
-        "TireHero.tsx does NOT contain 'const compoundColor' variable",
-        "dashboard/app/components/TireTread.tsx has been deleted (git rm)",
-        "dashboard/app/components/TireRings.tsx has been deleted (git rm)",
-        "cd /Users/hussianaltufayli/Downloads/LatentLap-AI-main/dashboard && npx tsc --noEmit shows 0 errors",
-        "cd /Users/hussianaltufayli/Downloads/LatentLap-AI-main/dashboard && npm run build completes with 0 errors"
-      ],
-      "priority": 3,
-      "passes": true,
-      "notes": "TireHero already had correct imports/JSX from prior session; only needed staging+commit of TireRings/TireTread deletions. tsc + build both 0 errors."
-    },
-    {
-      "id": "US-004",
-      "title": "Visual verification — dev server, all severities, reduced-motion",
-      "description": "As a developer I need to confirm the dashboard renders correctly at all severity levels and respects reduced-motion preferences.",
-      "acceptanceCriteria": [
-        "cd /Users/hussianaltufayli/Downloads/LatentLap-AI-main/dashboard && npm run dev starts without errors",
-        "Browser at http://localhost:3000 shows EKG waveform drawing itself inside the hub area behind the severity number",
-        "Thermal rings pulse outward from center with severity color",
-        "TireParticles still render and orbit (unchanged component)",
-        "Changing lap to severity 0 shows slow green EKG + slow green rings",
-        "Changing lap to severity 3 shows fast red EKG with taller spikes + fast red rings",
-        "No console errors in browser DevTools",
-        "Typecheck passes"
-      ],
-      "priority": 4,
       "passes": false,
-      "notes": ""
+      "notes": "The car SVG is drawn with nose at y~0 and tail at y~21, center at ~(6,11). The SVG 'up' direction (-Y) is the car's forward direction. Math.atan2(dx, -dy) gives the rotation angle such that the car nose points in the direction (dx,dy) of travel. SVG transform 'translate(px,py) rotate(angle) translate(-6,-11)' applies: first shift car center to origin, then rotate, then move to path point."
     }
   ]
 }

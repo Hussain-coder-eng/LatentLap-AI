@@ -1,26 +1,18 @@
 # Ralph Progress Log
-Started: Mon May 18 08:54:11 EDT 2026
+## Codebase Patterns
+- SilverstoneCircuit: allLaps from getAllLapsForDriver is a SUBSET of race laps (only predicted laps). Always use allLaps[last].lap_number for denominator, not allLaps.length.
+- lapToCircuitProgress(lap, total) uses formula (lap-1)/(total-1) — passing count instead of max lap_number causes premature clamping to 1.0.
+- dashboard typecheck: `cd dashboard && npx tsc --noEmit` — zero output = zero errors.
+
+Started: Sun May 24 21:46:51 EDT 2026
 ---
 
-## 2026-05-18 - US-002
-- Created ThermalRings.tsx: three staggered radar-ping circles pulsing outward from center
-- RING_DURATION: {0:2200, 1:1700, 2:1300, 3:1000}; each ring scale:[0.06,1] opacity:[0.75,0]; stagger delay=(duration/3)*i
-- reducedMotion path: ring.style.opacity = String(0.15 - i*0.04), no animate
-- cleanup: anim.pause() + reset transform='' and opacity='0' on each ring
-- Files: dashboard/app/components/ThermalRings.tsx (created)
+## 2026-05-24 - US-001
+- Fixed car freezing at lap 29: replaced `allLaps.length` denominator with `allLaps[allLaps.length-1].lap_number` (max lap number in race)
+- Files changed: `dashboard/app/components/SilverstoneCircuit.tsx`
 - **Learnings for future iterations:**
-  - Spreading shared SVG props object works fine — keep circleProps pattern for identical sibling elements
-  - `transformBox: 'fill-box' as const` required for TypeScript satisfaction on CSSStyleDeclaration
-  - animate(element, {scale, opacity, loop, delay}) works cleanly for expand-fade loops
----
-
-## 2026-05-18 - US-003
-- TireHero.tsx already imported ThermalRings + EKGPulse, rendered both correctly — prior session had done the swap
-- TireRings.tsx + TireTread.tsx were already staged for deletion (git rm) from prior session
-- Only action needed: git add TireHero.tsx + commit all three staged changes
-- tsc --noEmit: 0 errors; npm run build: 0 errors
-- Files changed: dashboard/app/components/TireHero.tsx (staged), dashboard/app/components/TireRings.tsx (deleted), dashboard/app/components/TireTread.tsx (deleted)
-- **Learnings for future iterations:**
-  - When git status shows `D ` (staged deletion) + ` M` (unstaged modification), need to `git add` the modified file before committing
-  - US-003 was nearly complete from previous session — check git status carefully before re-implementing
+  - `getAllLapsForDriver` returns sorted subset (predicted laps only), NOT full race lap count. For 2025 NOR: 29 predicted laps but race goes to lap 52.
+  - `lapToCircuitProgress` clamps at 1.0 when lap==denominator; wrong denominator = car freezes early
+  - Dependency array updated: `totalLaps` → `maxLapNum` to match renamed variable
+  - tsc --noEmit: no output = pass
 ---
