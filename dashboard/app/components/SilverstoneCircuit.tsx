@@ -42,9 +42,15 @@ export function SilverstoneCircuit({ activeChapter, topFeature: _topFeature }: S
 
     const progress = lapToCircuitProgress(currentLap, maxLapNum)
     const totalLength = pathEl.getTotalLength()
-    const point = pathEl.getPointAtLength(progress * totalLength)
-    // Offset by half car size so the car center lands on the path
-    carEl.setAttribute('transform', `translate(${(point.x - 6).toFixed(2)}, ${(point.y - 11).toFixed(2)})`)
+    const dist = progress * totalLength
+    const point = pathEl.getPointAtLength(dist)
+    const delta = Math.min(2, totalLength * 0.01)
+    const point2 = pathEl.getPointAtLength(Math.min(dist + delta, totalLength - 0.001))
+    const dx = point2.x - point.x
+    const dy = point2.y - point.y
+    // Car SVG nose points -Y (up), so Math.atan2(dx, -dy) gives correct forward rotation
+    const angleDeg = Math.atan2(dx, -dy) * (180 / Math.PI)
+    carEl.setAttribute('transform', `translate(${point.x.toFixed(2)}, ${point.y.toFixed(2)}) rotate(${angleDeg.toFixed(1)}) translate(-6, -11)`)
   }, [currentLap, maxLapNum])
 
   const showCornerGlow = activeChapter === 2
