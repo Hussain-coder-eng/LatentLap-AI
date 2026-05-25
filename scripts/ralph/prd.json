@@ -34,7 +34,7 @@
         "Commit with message: 'fix: US-002 - SilverstoneCircuit car faces forward along track — compute path tangent rotation'"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "The car SVG is drawn with nose at y~0 and tail at y~21, center at ~(6,11). The SVG 'up' direction (-Y) is the car's forward direction. Math.atan2(dx, -dy) gives the rotation angle such that the car nose points in the direction (dx,dy) of travel. SVG transform 'translate(px,py) rotate(angle) translate(-6,-11)' applies: first shift car center to origin, then rotate, then move to path point."
     }
   ]

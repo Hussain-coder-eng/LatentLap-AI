@@ -3,6 +3,7 @@
 - SilverstoneCircuit: allLaps from getAllLapsForDriver is a SUBSET of race laps (only predicted laps). Always use allLaps[last].lap_number for denominator, not allLaps.length.
 - lapToCircuitProgress(lap, total) uses formula (lap-1)/(total-1) — passing count instead of max lap_number causes premature clamping to 1.0.
 - dashboard typecheck: `cd dashboard && npx tsc --noEmit` — zero output = zero errors.
+- Car tangent rotation: compute `dist = progress * totalLength`, sample `point2` at `dist + delta` (delta = min(2, totalLength*0.01)), then `angleDeg = Math.atan2(dx, -dy) * 180/PI`. SVG transform order: translate(pathPoint) rotate(angle) translate(-carCenter).
 
 Started: Sun May 24 21:46:51 EDT 2026
 ---
@@ -14,5 +15,16 @@ Started: Sun May 24 21:46:51 EDT 2026
   - `getAllLapsForDriver` returns sorted subset (predicted laps only), NOT full race lap count. For 2025 NOR: 29 predicted laps but race goes to lap 52.
   - `lapToCircuitProgress` clamps at 1.0 when lap==denominator; wrong denominator = car freezes early
   - Dependency array updated: `totalLaps` → `maxLapNum` to match renamed variable
+  - tsc --noEmit: no output = pass
+---
+
+## 2026-05-24 - US-002
+- Implemented car tangent rotation: car now faces direction of travel along Silverstone circuit
+- Files changed: `dashboard/app/components/SilverstoneCircuit.tsx`
+- **Learnings for future iterations:**
+  - SVG car nose points toward -Y (lower y values), so `Math.atan2(dx, -dy)` gives correct forward angle
+  - Transform order matters: `translate(pathPoint) rotate(angle) translate(-carCenter)` — center first, rotate, then place on path
+  - Use `Math.min(dist + delta, totalLength - 0.001)` to prevent sampling past path end
+  - `delta = Math.min(2, totalLength * 0.01)` scales with path length, works for all zoom levels
   - tsc --noEmit: no output = pass
 ---
