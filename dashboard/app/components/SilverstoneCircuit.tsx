@@ -21,7 +21,8 @@ export function SilverstoneCircuit({ activeChapter, topFeature: _topFeature }: S
   const { currentLap, currentYear, currentDriver } = useRaceContext()
 
   const allLaps = getAllLapsForDriver(currentYear, currentDriver)
-  const totalLaps = Math.max(allLaps.length, 1)
+  // Use max lap_number (not allLaps.length) — predicted laps are a subset of actual race laps
+  const maxLapNum = allLaps.length > 0 ? allLaps[allLaps.length - 1].lap_number : 1
 
   // Draw circuit in on mount; skip if reduced motion
   useEffect(() => {
@@ -39,12 +40,19 @@ export function SilverstoneCircuit({ activeChapter, topFeature: _topFeature }: S
     const carEl = carRef.current
     if (!pathEl || !carEl) return
 
-    const progress = lapToCircuitProgress(currentLap, totalLaps)
+    const progress = lapToCircuitProgress(currentLap, maxLapNum)
     const totalLength = pathEl.getTotalLength()
-    const point = pathEl.getPointAtLength(progress * totalLength)
-    // Offset by half car size so the car center lands on the path
-    carEl.setAttribute('transform', `translate(${(point.x - 6).toFixed(2)}, ${(point.y - 11).toFixed(2)})`)
-  }, [currentLap, totalLaps])
+    const dist = progress * totalLength
+    const point = pathEl.getPointAtLength(dist)
+    const half = Math.min(1, totalLength * 0.005)
+    const p1 = pathEl.getPointAtLength(Math.max(0, dist - half))
+    const p2 = pathEl.getPointAtLength(Math.min(totalLength, dist + half))
+    const dx = p2.x - p1.x
+    const dy = p2.y - p1.y
+    // Car SVG nose points -Y (up), so Math.atan2(dx, -dy) gives correct forward rotation
+    const angleDeg = Math.atan2(dx, -dy) * (180 / Math.PI)
+    carEl.setAttribute('transform', `translate(${point.x.toFixed(2)}, ${point.y.toFixed(2)}) rotate(${angleDeg.toFixed(1)}) translate(-6, -11)`)
+  }, [currentLap, maxLapNum])
 
   const showCornerGlow = activeChapter === 2
 
