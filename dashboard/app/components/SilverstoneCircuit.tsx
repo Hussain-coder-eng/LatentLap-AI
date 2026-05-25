@@ -44,10 +44,11 @@ export function SilverstoneCircuit({ activeChapter, topFeature: _topFeature }: S
     const totalLength = pathEl.getTotalLength()
     const dist = progress * totalLength
     const point = pathEl.getPointAtLength(dist)
-    const delta = Math.min(2, totalLength * 0.01)
-    const point2 = pathEl.getPointAtLength(Math.min(dist + delta, totalLength - 0.001))
-    const dx = point2.x - point.x
-    const dy = point2.y - point.y
+    const half = Math.min(1, totalLength * 0.005)
+    const p1 = pathEl.getPointAtLength(Math.max(0, dist - half))
+    const p2 = pathEl.getPointAtLength(Math.min(totalLength, dist + half))
+    const dx = p2.x - p1.x
+    const dy = p2.y - p1.y
     // Car SVG nose points -Y (up), so Math.atan2(dx, -dy) gives correct forward rotation
     const angleDeg = Math.atan2(dx, -dy) * (180 / Math.PI)
     carEl.setAttribute('transform', `translate(${point.x.toFixed(2)}, ${point.y.toFixed(2)}) rotate(${angleDeg.toFixed(1)}) translate(-6, -11)`)

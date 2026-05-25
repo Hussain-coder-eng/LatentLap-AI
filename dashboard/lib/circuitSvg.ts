@@ -45,6 +45,7 @@ export const CORNER_SVG: Record<string, Point2D> = {
 }
 
 // Maps a lap number to a progress ratio (0–1) along the circuit path
-export function lapToCircuitProgress(lap: number, totalLaps: number): number {
-  return Math.min(1, Math.max(0, (lap - 1) / (totalLaps - 1)))
+export function lapToCircuitProgress(lap: number, maxLap: number): number {
+  if (maxLap <= 1) return 0
+  return Math.min(1, Math.max(0, (lap - 1) / (maxLap - 1)))
 }
