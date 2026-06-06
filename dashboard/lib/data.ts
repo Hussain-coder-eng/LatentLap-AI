@@ -76,6 +76,8 @@ const SUFFIX_TYPE: Record<string, DegType> = {
   BrakeFraction: 'wear',
   EntrySpeed:    'wear',
 }
+// AvgThrottle, MinSpeed, ExitThrottle, PreBrakeLatG/Speed/Time intentionally
+// omitted — no clean mapping to a single deg type; their SHAP weight falls into 'other'.
 
 export interface CornerBreakdown {
   total:    number
@@ -104,9 +106,9 @@ export function getCornerBreakdowns(shap: SHAPEntry): Record<string, CornerBreak
     }
     const total = blister + thermal + wear + other
     const scores: Record<DegType, number> = { blister, thermal, wear, other }
-    const dominant = (Object.keys(scores) as DegType[]).reduce((a, b) =>
-      scores[a] >= scores[b] ? a : b
-    )
+    const dominant: DegType = total === 0
+      ? 'other'
+      : (Object.keys(scores) as DegType[]).reduce((a, b) => scores[a] >= scores[b] ? a : b)
     result[corner] = { total, blister, thermal, wear, other, dominant }
   }
   return result

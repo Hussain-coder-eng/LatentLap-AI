@@ -111,7 +111,7 @@ test.describe('SilverstoneCircuit', () => {
     })
     await page.waitForTimeout(1200)
     const glowGroup = page.getByTestId('corner-glow-group')
-    await expect(glowGroup).toBeAttached()
+    await expect(glowGroup).toBeVisible()
   })
 })
 

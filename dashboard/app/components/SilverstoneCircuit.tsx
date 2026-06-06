@@ -67,17 +67,19 @@ export function SilverstoneCircuit({ activeChapter }: SilverstoneCircuitProps) {
     const carEl  = carRef.current
     if (!pathEl || !carEl) return
 
+    let cancelled = false
     let tween: { kill: () => void } | null = null
 
     import('gsap').then(({ default: gsap }) => {
+      if (cancelled) return
       const proxy = { t: 0 }
+      const totalLength = pathEl.getTotalLength()
       tween = gsap.to(proxy, {
         t: 1,
         duration: 8,
         ease: 'none',
         repeat: -1,
         onUpdate() {
-          const totalLength = pathEl.getTotalLength()
           const dist  = proxy.t * totalLength
           const point = pathEl.getPointAtLength(dist)
           const half  = Math.min(1, totalLength * 0.005)
@@ -94,7 +96,10 @@ export function SilverstoneCircuit({ activeChapter }: SilverstoneCircuitProps) {
       })
     })
 
-    return () => { tween?.kill() }
+    return () => {
+      cancelled = true
+      tween?.kill()
+    }
   }, [reducedMotion])
 
   const showCornerGlow = activeChapter === 2
@@ -168,7 +173,7 @@ export function SilverstoneCircuit({ activeChapter }: SilverstoneCircuitProps) {
             for (const type of ['blister', 'thermal', 'wear', 'other'] as DegType[]) {
               const share = total > 0 ? (bd[type] / total) * 360 : 0
               if (share > 1) {
-                arcs.push({ type, startAngle: angle, endAngle: angle + share })
+                arcs.push({ type, startAngle: angle, endAngle: Math.min(angle + share, angle + 359.9) })
               }
               angle += share
             }
