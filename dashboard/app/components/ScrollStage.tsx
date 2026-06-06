@@ -271,7 +271,7 @@ export default function ScrollStage() {
           background: 'var(--bg)',
         }}>
           {/* Background circuit */}
-          <SilverstoneCircuit activeChapter={activeChapter} topFeature={topFeatureKey} />
+          <SilverstoneCircuit activeChapter={activeChapter} />
 
           {/* Chapter 3 (Race Arc): compact lap severity timeline */}
           {activeChapter === 3 && (
