@@ -244,7 +244,12 @@ export default function ScrollStage() {
         heading: 'Reading the arc',
         customLines: [
           `Current: Lap ${currentLap} · Severity ${severity}`,
-          `Dominant mode: ${lap?.mode_probs ? Object.entries(lap.mode_probs).sort((a, b) => b[1] - a[1])[0][0] : '—'}`,
+          `Dominant mode: ${(() => {
+            if (!lap?.mode_probs) return '—'
+            const top = Object.entries(lap.mode_probs).filter(([k]) => k !== 'none').sort((a, b) => b[1] - a[1])[0]
+            if (!top) return 'NOMINAL'
+            return top[0].toUpperCase() + (top[1] < 0.1 ? ' (trace)' : '')
+          })()}`,
           'Drag the scrubber below to move through the race.',
         ],
         technicalDetail: `lapDelta and severity per lap from features_${currentYear}_${currentDriver}.json. Stint boundaries inferred from stint_id column.`,
