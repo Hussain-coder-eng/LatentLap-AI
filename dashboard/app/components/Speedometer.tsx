@@ -2,6 +2,8 @@
 import { useEffect, useRef } from 'react'
 import { animate } from 'animejs'
 import { useReducedMotion } from '../../lib/useReducedMotion'
+import { useRaceContext } from '../RaceContext'
+import { getLap } from '../../lib/data'
 
 const GAUGE_CENTER = 60
 const GAUGE_RADIUS = 45
@@ -35,7 +37,13 @@ const TICK_DEFS = [
   { deg: 135, label: '300' },
 ] as const
 
+const SEVERITY_PROB_COLORS = ['#22c55e', '#eab308', '#f97316', '#ef4444'] as const
+
 export function Speedometer() {
+  const { currentYear, currentDriver, currentLap } = useRaceContext()
+  const lap = getLap(currentYear, currentDriver, currentLap)
+  const severityProbs = lap?.severity_probs ?? null
+
   const needleRef = useRef<SVGGElement>(null)
   const speedTextRef = useRef<SVGTextElement>(null)
   const reducedMotion = useReducedMotion()
@@ -98,7 +106,7 @@ export function Speedometer() {
 
   return (
     <div
-      style={{ position: 'fixed', top: 24, left: 24, zIndex: 60, width: 120, height: 120 }}
+      style={{ position: 'fixed', top: 24, left: 24, zIndex: 60, width: 120 }}
       aria-label="Scroll speed gauge"
     >
       <svg width={120} height={120} viewBox="0 0 120 120">
@@ -172,6 +180,35 @@ export function Speedometer() {
           km/h
         </text>
       </svg>
+      {severityProbs && (
+        <>
+          <div style={{ fontSize: 7, color: '#666', letterSpacing: 0.5, textAlign: 'center', marginBottom: 2, fontFamily: "'Fira Code', monospace" }}>
+            CONFIDENCE
+          </div>
+          <div style={{ display: 'flex', width: 120, height: 10 }}>
+            {severityProbs.map((prob, i) => (
+              <div
+                key={i}
+                style={{
+                  width: prob * 120,
+                  height: 10,
+                  background: SEVERITY_PROB_COLORS[i],
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                }}
+              >
+                {prob >= 0.10 && (
+                  <span style={{ fontSize: 8, color: 'white', textAlign: 'center', lineHeight: 1 }}>
+                    {Math.round(prob * 100)}%
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }
