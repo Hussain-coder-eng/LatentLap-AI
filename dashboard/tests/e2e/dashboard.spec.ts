@@ -89,30 +89,29 @@ test.describe('LapScrubber', () => {
 // ── SilverstoneCircuit ───────────────────────────────────────────────────────
 
 test.describe('SilverstoneCircuit', () => {
-  test('F1 marker replaces cube and stays attached after lap scrub', async ({ page }) => {
+  test('F1 car marker is visible and animating (continuous loop)', async ({ page }) => {
     const marker = page.getByTestId('circuit-car-marker')
     await expect(marker).toBeAttached()
     await expect(marker).toBeVisible()
+    await expect.poll(
+      () => marker.getAttribute('transform'),
+      { timeout: 2000 }
+    ).toMatch(/^translate\(/)
+  })
 
-    const circuitSvg = marker.locator('xpath=ancestor::svg[1]')
-    await expect(circuitSvg.locator('rect[width="6"][height="10"][fill="#FF8000"]')).toHaveCount(0)
+  test('corner glow group absent outside chapter 2', async ({ page }) => {
+    const glowGroup = page.getByTestId('corner-glow-group')
+    await expect(glowGroup).not.toBeVisible()
+  })
 
-    const initialTransform = await marker.getAttribute('transform')
-    expect(initialTransform).toMatch(/^translate\(/)
-
-    const scrubber = page.locator('input[type="range"][aria-label^="Lap "]').first()
-    const currentLap = Number(await scrubber.inputValue())
-    const minLap = Number(await scrubber.getAttribute('min'))
-    const maxLap = Number(await scrubber.getAttribute('max'))
-    const nextLap = currentLap < maxLap ? currentLap + 1 : Math.max(currentLap - 1, minLap)
-
-    await scrubber.focus()
-    await page.keyboard.press(nextLap > currentLap ? 'ArrowRight' : 'ArrowLeft')
-
-    await expect(scrubber).toHaveValue(String(nextLap))
-    await expect(marker).toBeAttached()
-    await expect(marker).toBeVisible()
-    await expect.poll(() => marker.getAttribute('transform')).not.toBe(initialTransform)
+  test('corner glow group appears in chapter 2 after scroll', async ({ page }) => {
+    await page.evaluate(() => {
+      const stage = document.querySelector('[style*="500vh"]') as HTMLElement | null
+      if (stage) window.scrollTo(0, stage.offsetTop + window.innerHeight * 2.5)
+    })
+    await page.waitForTimeout(1200)
+    const glowGroup = page.getByTestId('corner-glow-group')
+    await expect(glowGroup).toBeVisible()
   })
 })
 

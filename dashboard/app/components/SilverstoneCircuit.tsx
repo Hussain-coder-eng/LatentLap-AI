@@ -1,28 +1,54 @@
 'use client'
 import { useEffect, useRef } from 'react'
 import { animate, createDrawable } from 'animejs'
-import { buildCircuitPath, lapToCircuitProgress, CORNER_SVG } from '../../lib/circuitSvg'
-import { getAllLapsForDriver } from '../../lib/data'
+import { buildCircuitPath, CORNER_SVG } from '../../lib/circuitSvg'
+import { getSHAP, getCornerBreakdowns, normalizeCornerScores, type CornerBreakdown, type DegType } from '../../lib/data'
 import { useRaceContext } from '../RaceContext'
 import { useReducedMotion } from '../../lib/useReducedMotion'
 
 interface SilverstoneCircuitProps {
   activeChapter: number
-  topFeature?: string | null
 }
 
 // Build path once at module level — stable across renders
 const CIRCUIT_PATH_D = buildCircuitPath()
 
-export function SilverstoneCircuit({ activeChapter, topFeature: _topFeature }: SilverstoneCircuitProps) {
+function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
+  const rad = ((angleDeg - 90) * Math.PI) / 180
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
+}
+
+function describeArc(cx: number, cy: number, r: number, startAngle: number, endAngle: number): string {
+  if (Math.abs(endAngle - startAngle) < 0.5) return ''
+  const s = polarToCartesian(cx, cy, r, startAngle)
+  const e = polarToCartesian(cx, cy, r, endAngle)
+  const large = endAngle - startAngle > 180 ? '1' : '0'
+  return `M ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${e.x.toFixed(2)} ${e.y.toFixed(2)}`
+}
+
+const DEG_COLORS: Record<DegType, string> = {
+  blister: '#FF1744',
+  thermal: '#FF8000',
+  wear:    '#FFD600',
+  other:   '#888888',
+}
+
+const CORNER_LABELS: Record<string, string> = {
+  MB:    'MB',
+  Copse: 'COPSE',
+  Stowe: 'STOWE',
+  Club:  'CLUB',
+}
+
+export function SilverstoneCircuit({ activeChapter }: SilverstoneCircuitProps) {
   const circuitRef = useRef<SVGPathElement>(null)
   const carRef = useRef<SVGGElement>(null)
   const reducedMotion = useReducedMotion()
   const { currentLap, currentYear, currentDriver } = useRaceContext()
 
-  const allLaps = getAllLapsForDriver(currentYear, currentDriver)
-  // Use max lap_number (not allLaps.length) — predicted laps are a subset of actual race laps
-  const maxLapNum = allLaps.length > 0 ? allLaps[allLaps.length - 1].lap_number : 1
+  const shapEntry  = getSHAP(currentYear, currentDriver, currentLap)
+  const breakdowns = shapEntry ? getCornerBreakdowns(shapEntry) : null
+  const scores     = breakdowns ? normalizeCornerScores(breakdowns) : null
 
   // Draw circuit in on mount; skip if reduced motion
   useEffect(() => {
@@ -34,25 +60,47 @@ export function SilverstoneCircuit({ activeChapter, topFeature: _topFeature }: S
     })
   }, [reducedMotion])
 
-  // Move car to current lap position along the path
+  // Continuous GSAP loop — car drives full circuit in 8s, repeat forever
   useEffect(() => {
+    if (reducedMotion) return
     const pathEl = circuitRef.current
-    const carEl = carRef.current
+    const carEl  = carRef.current
     if (!pathEl || !carEl) return
 
-    const progress = lapToCircuitProgress(currentLap, maxLapNum)
-    const totalLength = pathEl.getTotalLength()
-    const dist = progress * totalLength
-    const point = pathEl.getPointAtLength(dist)
-    const half = Math.min(1, totalLength * 0.005)
-    const p1 = pathEl.getPointAtLength(Math.max(0, dist - half))
-    const p2 = pathEl.getPointAtLength(Math.min(totalLength, dist + half))
-    const dx = p2.x - p1.x
-    const dy = p2.y - p1.y
-    // Car SVG nose points -Y (up), so Math.atan2(dx, -dy) gives correct forward rotation
-    const angleDeg = Math.atan2(dx, -dy) * (180 / Math.PI)
-    carEl.setAttribute('transform', `translate(${point.x.toFixed(2)}, ${point.y.toFixed(2)}) rotate(${angleDeg.toFixed(1)}) translate(-6, -11)`)
-  }, [currentLap, maxLapNum])
+    let cancelled = false
+    let tween: { kill: () => void } | null = null
+
+    import('gsap').then(({ default: gsap }) => {
+      if (cancelled) return
+      const proxy = { t: 0 }
+      const totalLength = pathEl.getTotalLength()
+      tween = gsap.to(proxy, {
+        t: 1,
+        duration: 8,
+        ease: 'none',
+        repeat: -1,
+        onUpdate() {
+          const dist  = proxy.t * totalLength
+          const point = pathEl.getPointAtLength(dist)
+          const half  = Math.min(1, totalLength * 0.005)
+          const p1    = pathEl.getPointAtLength(Math.max(0, dist - half))
+          const p2    = pathEl.getPointAtLength(Math.min(totalLength, dist + half))
+          const dx    = p2.x - p1.x
+          const dy    = p2.y - p1.y
+          const angleDeg = Math.atan2(dx, -dy) * (180 / Math.PI)
+          carEl.setAttribute(
+            'transform',
+            `translate(${point.x.toFixed(2)}, ${point.y.toFixed(2)}) rotate(${angleDeg.toFixed(1)}) translate(-6, -11)`
+          )
+        },
+      })
+    })
+
+    return () => {
+      cancelled = true
+      tween?.kill()
+    }
+  }, [reducedMotion])
 
   const showCornerGlow = activeChapter === 2
 
@@ -93,19 +141,84 @@ export function SilverstoneCircuit({ activeChapter, topFeature: _topFeature }: S
       />
 
       {/* Corner glow circles — Chapter 2 (Predictors) only */}
-      {showCornerGlow &&
-        Object.entries(CORNER_SVG).map(([name, pos]) => (
-          <circle
-            key={name}
-            cx={pos.x}
-            cy={pos.y}
-            r={8}
-            fill="none"
-            stroke="#FF8000"
-            strokeWidth={2}
-            opacity={0.45}
-          />
-        ))}
+      {showCornerGlow && breakdowns && scores && (
+        <g data-testid="corner-glow-group">
+          <defs>
+            <style>{`
+              @keyframes cornerPulse {
+                0%, 100% { transform: scale(1);    opacity: 0.95; }
+                50%       { transform: scale(1.18); opacity: 0.6;  }
+              }
+              .corner-pulse {
+                animation: cornerPulse 0.9s ease-in-out infinite;
+                transform-box: fill-box;
+                transform-origin: center;
+              }
+            `}</style>
+          </defs>
+          {Object.entries(CORNER_SVG).map(([name, pos]) => {
+            const score = scores[name] ?? 0
+            const bd    = breakdowns[name]
+            if (!bd) return null
+
+            const r       = 8 + score * 6
+            const opacity = 0.35 + score * 0.6
+            const color   = score > 0.6 ? '#FF1744' : '#FF8000'
+            const isPrimary = score === Math.max(...Object.values(scores))
+
+            const arcR = r + 3
+            const total = bd.blister + bd.thermal + bd.wear + bd.other
+            const arcs: Array<{ type: DegType; startAngle: number; endAngle: number }> = []
+            let angle = 0
+            for (const type of ['blister', 'thermal', 'wear', 'other'] as DegType[]) {
+              const share = total > 0 ? (bd[type] / total) * 360 : 0
+              if (share > 1) {
+                arcs.push({ type, startAngle: angle, endAngle: Math.min(angle + share, angle + 359.9) })
+              }
+              angle += share
+            }
+
+            const labelY = pos.y - r - 6
+
+            return (
+              <g key={name}>
+                <circle
+                  cx={pos.x} cy={pos.y} r={r}
+                  fill="none"
+                  stroke={color}
+                  strokeWidth={2}
+                  opacity={opacity}
+                  className={score > 0.7 ? 'corner-pulse' : undefined}
+                />
+                {arcs.map(arc => (
+                  <path
+                    key={arc.type}
+                    d={describeArc(pos.x, pos.y, arcR, arc.startAngle, arc.endAngle)}
+                    fill="none"
+                    stroke={DEG_COLORS[arc.type]}
+                    strokeWidth={2.5}
+                    strokeLinecap="round"
+                    opacity={0.85}
+                  />
+                ))}
+                <text
+                  x={pos.x} y={labelY}
+                  textAnchor="middle"
+                  fontSize={isPrimary ? 5.5 : 4.5}
+                  fill={isPrimary ? '#ffffff' : '#aaaaaa'}
+                  fontFamily="monospace"
+                  opacity={isPrimary ? 0.9 : 0.55}
+                >
+                  {isPrimary
+                    ? `${CORNER_LABELS[name]} · ${bd.dominant.toUpperCase()}`
+                    : CORNER_LABELS[name]
+                  }
+                </text>
+              </g>
+            )
+          })}
+        </g>
+      )}
 
       {/* Car marker — compact top-down F1 silhouette, positioned via transform */}
       <g ref={carRef} data-testid="circuit-car-marker">
