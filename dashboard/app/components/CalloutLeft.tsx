@@ -44,6 +44,8 @@ export function CalloutLeft({ content, visible }: CalloutLeftProps) {
 
   return (
     <div
+      className="stage-callout stage-callout-left"
+      data-testid="stage-callout-left"
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -62,7 +64,8 @@ export function CalloutLeft({ content, visible }: CalloutLeftProps) {
           flexDirection: 'column',
           gap: 8,
           minWidth: 0,
-          overflowWrap: 'anywhere',
+          overflowWrap: 'normal',
+          wordBreak: 'normal',
         }}
       >
         <div
@@ -83,7 +86,8 @@ export function CalloutLeft({ content, visible }: CalloutLeftProps) {
             fontSize: 'clamp(24px, 4.5vw, 36px)',
             lineHeight: 1,
             color: content.valueColor ?? '#ffffff',
-            overflowWrap: 'anywhere',
+            overflowWrap: 'normal',
+            wordBreak: 'normal',
           }}
         >
           {content.value}
@@ -94,7 +98,8 @@ export function CalloutLeft({ content, visible }: CalloutLeftProps) {
             fontSize: 13,
             color: '#aaaaaa',
             lineHeight: 1.5,
-            overflowWrap: 'anywhere',
+            overflowWrap: 'normal',
+            wordBreak: 'normal',
           }}
         >
           {content.explanation}

@@ -107,3 +107,63 @@ input[type='range']:focus-visible::-webkit-slider-thumb {
     transition-duration: 0.01ms !important;
   }
 }
+
+@media (max-width: 640px) {
+  .scroll-stage-pin {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: auto auto !important;
+    align-content: start !important;
+    justify-items: stretch !important;
+    row-gap: 14px !important;
+    padding: 154px 24px 92px !important;
+  }
+
+  .stage-callout {
+    position: relative;
+    z-index: 4;
+    width: min(100%, 345px) !important;
+    max-width: none !important;
+    justify-self: start !important;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.88);
+  }
+
+  .stage-callout-left {
+    grid-row: 1;
+  }
+
+  .stage-callout-right {
+    grid-row: 2;
+    margin-left: auto;
+  }
+
+  .stage-callout-left [style*="font-size: clamp"] {
+    font-size: 29px !important;
+    line-height: 0.96 !important;
+  }
+
+  .stage-callout [style*="font-size: 13px"] {
+    font-size: 11px !important;
+    line-height: 1.34 !important;
+  }
+
+  .stage-callout-right [style*="font-size: 13px"] {
+    font-size: 11px !important;
+    line-height: 1.3 !important;
+  }
+
+  .stage-callout [style*="font-size: 11px"] {
+    font-size: 10px !important;
+  }
+
+  .tire-hero-shell {
+    position: absolute !important;
+    left: 50%;
+    top: 52%;
+    transform: translate(-50%, -50%);
+    width: 156px !important;
+    height: 156px !important;
+    opacity: 0.78;
+    z-index: 1;
+  }
+}

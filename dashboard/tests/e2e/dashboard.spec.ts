@@ -110,6 +110,14 @@ test.describe('Mobile layout', () => {
 
     expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1)
     expect(metrics.offscreenText).toEqual([])
+
+    const heroTitleBox = await page.getByText('McLaren · Silverstone · 2025').boundingBox()
+    const heroCopyBox = await page.getByText(/Following NOR in the 2025 British Grand Prix/).boundingBox()
+    const rightCalloutBox = await page.getByText('XGBoost model trained on FastF1 telemetry.').boundingBox()
+    expect(heroTitleBox?.width ?? 0).toBeGreaterThan(240)
+    expect(heroCopyBox?.width ?? 0).toBeGreaterThan(240)
+    expect(rightCalloutBox?.width ?? 0).toBeGreaterThan(240)
+
     await expect(page.getByRole('button', { name: 'Open settings' })).toBeVisible()
     await expect(page.getByTestId('sim-fab')).toBeVisible()
     await expect(page.locator('[aria-label="Lap scrubber"]')).toBeVisible()

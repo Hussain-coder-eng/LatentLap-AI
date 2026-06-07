@@ -64,6 +64,8 @@ export function CalloutRight({ content, visible }: CalloutRightProps) {
 
   return (
     <div
+      className="stage-callout stage-callout-right"
+      data-testid="stage-callout-right"
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -82,7 +84,8 @@ export function CalloutRight({ content, visible }: CalloutRightProps) {
           flexDirection: 'column',
           gap: 8,
           minWidth: 0,
-          overflowWrap: 'anywhere',
+          overflowWrap: 'normal',
+          wordBreak: 'normal',
         }}
       >
         {/* Heading */}
@@ -108,7 +111,8 @@ export function CalloutRight({ content, visible }: CalloutRightProps) {
                   fontSize: 12,
                   color: '#cccccc',
                   minWidth: 0,
-                  overflowWrap: 'anywhere',
+                  overflowWrap: 'normal',
+                  wordBreak: 'normal',
                 }}
               >
                 {row.label}
@@ -145,7 +149,8 @@ export function CalloutRight({ content, visible }: CalloutRightProps) {
               fontSize: 13,
               color: '#aaaaaa',
               lineHeight: 1.5,
-              overflowWrap: 'anywhere',
+              overflowWrap: 'normal',
+              wordBreak: 'normal',
             }}
           >
             {line}

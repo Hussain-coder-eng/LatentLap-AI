@@ -117,6 +117,7 @@ export default function TireHero({ scrollProgress }: TireHeroProps) {
 
   return (
     <div
+      className="tire-hero-shell"
       style={{
         position: 'relative',
         width: 'clamp(112px, 32vmin, 320px)',

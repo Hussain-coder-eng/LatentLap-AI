@@ -12,6 +12,11 @@ Goal: fix deployed dashboard QA issues from `https://dashboard-ten-lac-46.vercel
   - Files: `dashboard/app/components/ScrollStage.tsx`, `dashboard/app/components/CalloutLeft.tsx`, `dashboard/app/components/CalloutRight.tsx`, `dashboard/app/components/TireHero.tsx`, `dashboard/tests/e2e/dashboard.spec.ts`.
   - Verification: `cd dashboard && PLAYWRIGHT_BASE_URL=http://localhost:3001 npx playwright test --config=playwright.config.ts tests/e2e/dashboard.spec.ts --project=mobile-chrome`.
 
+- [x] Fix mobile hero readability after overflow-only test missed narrow text strips.
+  - Issue: Pixel 5 had no horizontal overflow but rendered hero title/copy in unusably narrow columns.
+  - Files: `dashboard/styles/globals.css`, `dashboard/app/components/ScrollStage.tsx`, `dashboard/app/components/CalloutLeft.tsx`, `dashboard/app/components/CalloutRight.tsx`, `dashboard/app/components/TireHero.tsx`, `dashboard/tests/e2e/dashboard.spec.ts`.
+  - Verification: `cd dashboard && PLAYWRIGHT_BASE_URL=http://localhost:3001 npx playwright test --config=playwright.config.ts tests/e2e/dashboard.spec.ts --project=mobile-chrome --grep "Pixel 5 hero"`.
+
 - [x] Update stale e2e tests for redesigned scrollytelling UI.
   - Issue: previous tests expected removed panel IDs, selects, and replay button.
   - Files: `dashboard/tests/e2e/dashboard.spec.ts`.

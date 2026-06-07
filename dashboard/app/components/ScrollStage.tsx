@@ -276,20 +276,24 @@ export default function ScrollStage() {
       <ChapterDots activeChapter={activeChapter} onSelect={scrollToChapter} />
 
       <div ref={stageRef} style={{ height: '500vh' }}>
-        <div ref={pinRef} style={{
-          position: 'relative',
-          width: '100%',
-          height: '100vh',
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) minmax(150px, 32vmin) minmax(0, 1fr)',
-          columnGap: 'clamp(10px, 2.5vw, 40px)',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 'clamp(72px, 10vh, 96px) clamp(18px, 5vw, 72px) 72px',
-          boxSizing: 'border-box',
-          overflow: 'hidden',
-          background: 'var(--bg)',
-        }}>
+        <div
+          ref={pinRef}
+          className="scroll-stage-pin"
+          style={{
+            position: 'relative',
+            width: '100%',
+            height: '100vh',
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1fr) minmax(150px, 32vmin) minmax(0, 1fr)',
+            columnGap: 'clamp(10px, 2.5vw, 40px)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 'clamp(72px, 10vh, 96px) clamp(18px, 5vw, 72px) 72px',
+            boxSizing: 'border-box',
+            overflow: 'hidden',
+            background: 'var(--bg)',
+          }}
+        >
           {/* Background circuit */}
           <SilverstoneCircuit activeChapter={activeChapter} />
 
