@@ -124,3 +124,99 @@ export function normalizeCornerScores(
   }
   return out
 }
+
+// ── Sim Drawer — compound types and calculation ──────────────────────────────
+
+export type CompoundKey = 'SOFT' | 'MEDIUM' | 'HARD' | 'INTERMEDIATE' | 'WET'
+
+export const COMPOUND_MULTIPLIERS: Record<CompoundKey, number> = {
+  SOFT:         1.3,
+  MEDIUM:       1.0,
+  HARD:         0.75,
+  INTERMEDIATE: 0.6,
+  WET:          0.4,
+}
+
+export const WET_COMPOUNDS = new Set<CompoundKey>(['INTERMEDIATE', 'WET'])
+
+export const COMPOUND_COLORS: Record<CompoundKey, string> = {
+  SOFT:         '#FF1744',
+  MEDIUM:       '#FFD600',
+  HARD:         '#e0e0e0',
+  INTERMEDIATE: '#00E676',
+  WET:          '#2979FF',
+}
+
+export function getActualStint2Compound(year: number, driver: string): CompoundKey {
+  const laps   = getAllLapsForDriver(year, driver)
+  const stint2 = laps.find(l => l.stint_id === 1)
+  const raw    = stint2?.compound ?? 'MEDIUM'
+  const valid: CompoundKey[] = ['SOFT', 'MEDIUM', 'HARD', 'INTERMEDIATE', 'WET']
+  return valid.includes(raw as CompoundKey) ? (raw as CompoundKey) : 'MEDIUM'
+}
+
+export function getActualPitLap(year: number, driver: string): number {
+  const laps = getAllLapsForDriver(year, driver)
+  for (let i = 0; i < laps.length - 1; i++) {
+    if (laps[i].stint_id !== laps[i + 1].stint_id) {
+      return laps[i + 1].lap_number
+    }
+  }
+  return Math.ceil(laps.length / 2)
+}
+
+export interface SimResult {
+  simFinishSeverity:    number
+  actualFinishSeverity: number
+  timeDeltaSec:         number
+  actualPitLap:         number
+  actualCompound:       string
+  remainingLaps:        number
+}
+
+export function computeSimResult(
+  year: number,
+  driver: string,
+  simPitLap: number,
+  simCompound: CompoundKey,
+): SimResult {
+  const laps          = getAllLapsForDriver(year, driver)
+  const actualPitLap  = getActualPitLap(year, driver)
+  const lastLap       = laps[laps.length - 1]
+  const lastLapNum    = lastLap?.lap_number ?? laps.length
+
+  const actualFinishSeverity = lastLap?.severity_pred ?? 0
+  const actualCompound       = laps.find(l => l.stint_id === 1)?.compound ?? 'MEDIUM'
+
+  const stint1Laps       = laps.filter(l => l.lap_number <= simPitLap)
+  const stintOneSevAtPit = stint1Laps[stint1Laps.length - 1]?.severity_pred ?? 0
+
+  const actualStint2Laps = laps.filter(l => l.stint_id === 1)
+  let baseDegRate = 0.05
+  if (actualStint2Laps.length >= 2) {
+    const sevDelta = actualStint2Laps[actualStint2Laps.length - 1].severity_pred
+                   - actualStint2Laps[0].severity_pred
+    baseDegRate = Math.max(0, sevDelta / actualStint2Laps.length)
+  }
+
+  const simDegRate    = baseDegRate * COMPOUND_MULTIPLIERS[simCompound]
+  const remainingLaps = Math.max(0, lastLapNum - simPitLap)
+  const simFinish     = Math.min(3, stintOneSevAtPit + simDegRate * remainingLaps)
+
+  const nonZero = laps.filter(l => l.severity_pred > 0)
+  const avgDeltaPerSev = nonZero.length > 0
+    ? nonZero.reduce((s, l) => s + Math.abs(l.lap_delta) / l.severity_pred, 0) / nonZero.length
+    : 0.3
+
+  const severityDiff = actualFinishSeverity - simFinish
+  const timeDeltaSec = severityDiff * avgDeltaPerSev * remainingLaps
+
+  return {
+    simFinishSeverity:    Math.round(simFinish * 1000) / 1000,
+    actualFinishSeverity: Math.round(actualFinishSeverity * 1000) / 1000,
+    timeDeltaSec:         Math.round(timeDeltaSec * 10) / 10,
+    actualPitLap,
+    actualCompound,
+    remainingLaps,
+  }
+}

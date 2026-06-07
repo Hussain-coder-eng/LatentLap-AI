@@ -262,3 +262,62 @@ test.describe('Mobile layout', () => {
     await expect(page.locator('input[type="range"]').first()).toBeVisible()
   })
 })
+
+// ── SimDrawer ─────────────────────────────────────────────────────────────────
+
+test.describe('SimDrawer', () => {
+  test('SIM FAB is visible', async ({ page }) => {
+    const fab = page.getByTestId('sim-fab')
+    await expect(fab).toBeVisible()
+  })
+
+  test('drawer is hidden by default', async ({ page }) => {
+    const drawer = page.getByTestId('sim-drawer')
+    await expect(drawer).not.toBeAttached()
+  })
+
+  test('drawer opens on FAB click', async ({ page }) => {
+    await page.getByTestId('sim-fab').click()
+    const drawer = page.getByTestId('sim-drawer')
+    await expect(drawer).toBeVisible()
+    await expect(drawer).toContainText('LATENTLAP SIM')
+  })
+
+  test('drawer closes via close button', async ({ page }) => {
+    await page.getByTestId('sim-fab').click()
+    await expect(page.getByTestId('sim-drawer')).toBeVisible()
+    await page.getByRole('button', { name: 'Close simulator' }).click()
+    await expect(page.getByTestId('sim-drawer')).not.toBeAttached()
+  })
+
+  test('compound chips are selectable', async ({ page }) => {
+    await page.getByTestId('sim-fab').click()
+    const drawer = page.getByTestId('sim-drawer')
+    await drawer.getByRole('button', { name: 'H' }).click()
+    await expect(drawer.getByRole('button', { name: 'H' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  test('pit lap slider is present', async ({ page }) => {
+    await page.getByTestId('sim-fab').click()
+    const slider = page.getByLabel('Sim pit lap')
+    await expect(slider).toBeVisible()
+    const min = Number(await slider.getAttribute('min'))
+    const max = Number(await slider.getAttribute('max'))
+    expect(min).toBeGreaterThanOrEqual(2)
+    expect(max).toBeGreaterThan(min)
+  })
+
+  test('verdict chip renders', async ({ page }) => {
+    await page.getByTestId('sim-fab').click()
+    const drawer = page.getByTestId('sim-drawer')
+    const text = await drawer.textContent()
+    expect(text).toMatch(/SAVED|LOST/)
+  })
+
+  test('INT compound shows hypothetical warning', async ({ page }) => {
+    await page.getByTestId('sim-fab').click()
+    const drawer = page.getByTestId('sim-drawer')
+    await drawer.getByRole('button', { name: 'INT' }).click()
+    await expect(drawer).toContainText('hypothetical')
+  })
+})
