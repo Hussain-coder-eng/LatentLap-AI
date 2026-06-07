@@ -22,14 +22,15 @@ export default function SimDrawer() {
   const laps    = getAllLapsForDriver(currentYear, currentDriver)
   const lapNums = laps.map(l => l.lap_number)
   const minLap  = lapNums.length > 0 ? Math.min(...lapNums) + 1 : 2
-  const maxLap  = lapNums.length > 0 ? Math.max(...lapNums) - 1 : 50
+  const maxLap  = lapNums.length > 0 ? Math.max(minLap, Math.max(...lapNums) - 1) : 50
 
   const result = useMemo(
     () => computeSimResult(currentYear, currentDriver, simPitLap, simCompound),
     [currentYear, currentDriver, simPitLap, simCompound]
   )
 
-  const isWet      = WET_COMPOUNDS.has(simCompound)
+  const actualIsWet = WET_COMPOUNDS.has(result.actualCompound as CompoundKey)
+  const isWet       = WET_COMPOUNDS.has(simCompound) && !actualIsWet
   const timeSaved  = result.timeDeltaSec
   const verdictPos = timeSaved > 0
   const verdictLabel = verdictPos
@@ -160,7 +161,11 @@ export default function SimDrawer() {
             value={result.simFinishSeverity.toFixed(2)}
             highlight={result.simFinishSeverity < result.actualFinishSeverity ? '#00E676' : '#FF1744'}
           />
-          <Cell label="Multiplier" value="×1.00" isLeft />
+          <Cell
+            label="Multiplier"
+            value={`×${(COMPOUND_MULTIPLIERS[result.actualCompound as CompoundKey] ?? 1.0).toFixed(2)}`}
+            isLeft
+          />
           <Cell label="Multiplier" value={`×${COMPOUND_MULTIPLIERS[simCompound].toFixed(2)}`} />
         </div>
       </div>

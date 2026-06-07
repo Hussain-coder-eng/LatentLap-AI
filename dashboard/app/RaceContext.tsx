@@ -1,6 +1,6 @@
 // app/RaceContext.tsx
 'use client'
-import { createContext, useContext, useState, useMemo, ReactNode } from 'react'
+import { createContext, useContext, useState, useMemo, useEffect, ReactNode } from 'react'
 import { getLapRange, getActualPitLap, getActualStint2Compound, type CompoundKey } from '../lib/data'
 
 export interface RaceContextValue {
@@ -42,6 +42,11 @@ export function RaceProvider({ children }: { children: ReactNode }) {
   const [simCompound, setSimCompound]         = useState<CompoundKey>(() => getActualStint2Compound(DEFAULT_YEAR, DEFAULT_DRIVER))
   const [simPitLap, setSimPitLap]             = useState(() => getActualPitLap(DEFAULT_YEAR, DEFAULT_DRIVER))
   const [simDrawerOpen, setSimDrawerOpen]     = useState(false)
+
+  useEffect(() => {
+    setSimPitLap(getActualPitLap(currentYear, currentDriver))
+    setSimCompound(getActualStint2Compound(currentYear, currentDriver))
+  }, [currentYear, currentDriver])
 
   const value = useMemo<RaceContextValue>(() => ({
     currentLap, currentYear, currentDriver, activePanelId, topSHAPFeature,
