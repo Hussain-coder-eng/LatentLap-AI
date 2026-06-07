@@ -15,7 +15,7 @@ export default function ChapterDots({ activeChapter, onSelect }: ChapterDotsProp
         right: 16,
         top: '50%',
         transform: 'translateY(-50%)',
-        zIndex: 60,
+        zIndex: 300,
         display: 'flex',
         flexDirection: 'column',
         gap: 12,

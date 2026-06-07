@@ -34,7 +34,7 @@ export default function SettingsPopover() {
   return (
     <div
       ref={popoverRef}
-      style={{ position: 'fixed', top: 20, right: 20, zIndex: 70 }}
+      style={{ position: 'fixed', top: 20, right: 20, zIndex: 300 }}
     >
       <button
         onClick={() => setOpen(v => !v)}
