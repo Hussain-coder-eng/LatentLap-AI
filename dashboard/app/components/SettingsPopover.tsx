@@ -9,13 +9,14 @@ export default function SettingsPopover() {
   const { currentYear, currentDriver, setCurrentYear, setCurrentDriver } = useRaceContext()
   const [open, setOpen] = useState(false)
   const popoverRef = useRef<HTMLDivElement>(null)
+  const pillRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     if (!open) return
     const handler = (e: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
+      const inPopover = popoverRef.current?.contains(e.target as Node)
+      const inPill = pillRef.current?.contains(e.target as Node)
+      if (!inPopover && !inPill) setOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -32,6 +33,28 @@ export default function SettingsPopover() {
   }
 
   return (
+    <>
+    <button
+      ref={pillRef}
+      onClick={() => setOpen(v => !v)}
+      aria-label="Select year and driver"
+      style={{
+        position: 'fixed',
+        top: 16,
+        left: 16,
+        zIndex: 300,
+        background: 'rgba(255,128,0,0.15)',
+        border: '1px solid rgba(255,128,0,0.4)',
+        borderRadius: 12,
+        padding: '4px 10px',
+        fontFamily: 'monospace',
+        fontSize: 11,
+        color: '#FF8000',
+        cursor: 'pointer',
+      }}
+    >
+      {currentDriver} · {currentYear}
+    </button>
     <div
       ref={popoverRef}
       style={{ position: 'fixed', top: 20, right: 20, zIndex: 300 }}
@@ -139,5 +162,6 @@ export default function SettingsPopover() {
         </div>
       )}
     </div>
+    </>
   )
 }
