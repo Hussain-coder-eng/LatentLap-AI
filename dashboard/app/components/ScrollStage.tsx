@@ -38,6 +38,20 @@ function progressToChapter(progress: number): number {
   return 0
 }
 
+const SHAP_LABELS: Record<string, string> = {
+  CumLatEnergy: 'Lateral Load Energy', LapVariance: 'Lap Time Variance',
+  SpeedFL: 'FL Corner Exit Speed', StintEnergyFraction: 'Stint Energy Fraction',
+  FuelEstKg: 'Fuel Load (est.)', LapNumber: 'Lap Number',
+  FreshTyre: 'Fresh Tyre Bonus', HighSpeedCornerSec: 'High-Speed Corner Time',
+  SLEI: 'Lateral Energy Index', EffectivePushFactor: 'Push Factor',
+  MB_TimeSec: 'Maggots-Becketts Time', MB_PeakLatG: 'M-B Peak Lateral G',
+  Copse_EntrySpeed: 'Copse Entry Speed', Copse_TimeSec: 'Copse Corner Time',
+  Club_TimeSec: 'Club Corner Time', Club_EntrySpeed: 'Club Entry Speed',
+  Stowe_AvgLatG: 'Stowe Lateral G', AvgYawRate: 'Avg Yaw Rate',
+  BrakeDecel: 'Brake Deceleration', MaxLatG: 'Peak Lateral G',
+  DirtyAirRatio: 'Dirty Air Exposure', MeanGapAhead: 'Gap to Car Ahead',
+}
+
 const FEATURE_LABELS: Record<string, string> = {
   MB_PeakLatG: 'Maggotts-Becketts G-Force', MB_TimeSec: 'Maggotts-Becketts Sector Time',
   Copse_PeakLatG: 'Copse Peak G-Force', Copse_TimeSec: 'Copse Sector Time',
@@ -176,7 +190,7 @@ export default function ScrollStage() {
         .map(([feat, val]) => {
           const maxAbs = Math.max(...Object.values(shapData).map(Math.abs))
           return {
-            label: FEATURE_LABELS[feat] ?? feat,
+            label: SHAP_LABELS[feat] ?? FEATURE_LABELS[feat] ?? feat,
             value: val,
             barPct: maxAbs > 0 ? (Math.abs(val) / maxAbs) * 100 : 0,
           }
@@ -227,7 +241,7 @@ export default function ScrollStage() {
         value: `Lap ${currentLap}`,
         valueColor: '#FF8000',
         explanation: top3Shap[0]
-          ? `${FEATURE_LABELS[topFeatureKey ?? ''] ?? topFeatureKey} is the primary driver of this lap's prediction. Positive values push severity up; negative pull it down.`
+          ? `${SHAP_LABELS[topFeatureKey ?? ''] ?? FEATURE_LABELS[topFeatureKey ?? ''] ?? topFeatureKey} is the primary driver of this lap's prediction. Positive values push severity up; negative pull it down.`
           : 'No SHAP data for this lap.',
       },
       right: {
