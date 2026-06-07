@@ -73,31 +73,38 @@ function StrategyBars({ currentYear, currentDriver, currentLap }: {
   if (!strategy) return null
   const { pit_strategies, primary_pit_window } = strategy
   const maxSev = Math.max(...pit_strategies.map(s => s.finish_severity))
+  const fallback = maxSev === 0
 
   return (
     <div style={{
       position: 'absolute', bottom: 60, left: '50%', transform: 'translateX(-50%)',
-      width: '60%', display: 'flex', alignItems: 'flex-end', gap: 4, height: 80,
-      pointerEvents: 'none', zIndex: 10,
+      width: '60%', pointerEvents: 'none', zIndex: 10,
     }}>
-      {pit_strategies.map(s => {
-        const inWindow = s.pit_lap >= primary_pit_window.start && s.pit_lap <= primary_pit_window.end
-        const barH = maxSev > 0 ? (s.finish_severity / maxSev) * 70 : 0
-        return (
-          <div key={s.pit_lap} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{
-              width: '100%', height: barH,
-              background: REC_COLORS[s.recommendation] ?? '#666',
-              borderRadius: '2px 2px 0 0',
-              opacity: inWindow ? 1 : 0.5,
-              outline: s.pit_lap === currentLap ? '1px solid white' : undefined,
-            }} />
-            <span style={{ fontSize: 7, color: '#555', fontFamily: 'monospace', marginTop: 2 }}>
-              L{s.pit_lap}
-            </span>
-          </div>
-        )
-      })}
+      {fallback && (
+        <div style={{ textAlign: 'center', color: '#FF8000', fontSize: 8, fontFamily: 'monospace', marginBottom: 4 }}>
+          OPTIMAL WINDOW
+        </div>
+      )}
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 80 }}>
+        {pit_strategies.map(s => {
+          const inWindow = s.pit_lap >= primary_pit_window.start && s.pit_lap <= primary_pit_window.end
+          const barH = fallback ? 40 : (s.finish_severity / maxSev) * 70
+          return (
+            <div key={s.pit_lap} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{
+                width: '100%', height: barH,
+                background: REC_COLORS[s.recommendation] ?? '#666',
+                borderRadius: '2px 2px 0 0',
+                opacity: inWindow ? 1 : 0.5,
+                outline: s.pit_lap === currentLap ? '1px solid white' : undefined,
+              }} />
+              <span style={{ fontSize: 7, color: '#555', fontFamily: 'monospace', marginTop: 2 }}>
+                L{s.pit_lap}
+              </span>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
