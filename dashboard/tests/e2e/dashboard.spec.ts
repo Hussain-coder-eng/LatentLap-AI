@@ -63,22 +63,35 @@ test.describe('Scrollytelling dashboard shell', () => {
 
   test('Vercel preview toolbar elements are hidden and non-interactive', async ({ page }) => {
     await page.evaluate(() => {
+      const existingLiveFeedback = document.createElement('vercel-live-feedback')
+      const existingToolbar = document.createElement('vercel-toolbar')
       const liveFeedback = document.createElement('vercel-live-feedback')
       const toolbar = document.createElement('vercel-toolbar')
+      existingLiveFeedback.textContent = 'Existing preview feedback'
+      existingToolbar.textContent = 'Existing preview toolbar'
       liveFeedback.textContent = 'Preview feedback'
       toolbar.textContent = 'Preview toolbar'
-      document.body.append(liveFeedback, toolbar)
+      document.body.append(existingLiveFeedback, existingToolbar, liveFeedback, toolbar)
     })
 
     for (const selector of ['vercel-live-feedback', 'vercel-toolbar']) {
-      const styles = await page.locator(selector).evaluate((el) => {
-        const computed = window.getComputedStyle(el)
-        return {
-          display: computed.display,
-          pointerEvents: computed.pointerEvents,
-        }
+      const styles = await page.locator(selector).evaluateAll((elements) => {
+        return elements.map((el) => {
+          const computed = window.getComputedStyle(el)
+          return {
+            display: computed.display,
+            pointerEvents: computed.pointerEvents,
+          }
+        })
       })
-      expect(styles).toEqual({ display: 'none', pointerEvents: 'none' })
+      expect(styles.length).toBeGreaterThanOrEqual(2)
+      expect(styles).toEqual(
+        expect.arrayContaining([
+          { display: 'none', pointerEvents: 'none' },
+          { display: 'none', pointerEvents: 'none' },
+        ])
+      )
+      expect(styles.every(style => style.display === 'none' && style.pointerEvents === 'none')).toBe(true)
     }
   })
 })
