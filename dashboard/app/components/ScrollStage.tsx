@@ -78,7 +78,7 @@ function StrategyBars({ currentYear, currentDriver, currentLap }: {
     <div style={{
       position: 'absolute', bottom: 60, left: '50%', transform: 'translateX(-50%)',
       width: '60%', display: 'flex', alignItems: 'flex-end', gap: 4, height: 80,
-      pointerEvents: 'none',
+      pointerEvents: 'none', zIndex: 10,
     }}>
       {pit_strategies.map(s => {
         const inWindow = s.pit_lap >= primary_pit_window.start && s.pit_lap <= primary_pit_window.end
