@@ -16,6 +16,21 @@ const RACE_ARC_TIMELINE_HEIGHT_PX = 18
 const RACE_ARC_TIMELINE_MIN_SEGMENT_PX = 2
 const RACE_ARC_TIMELINE_SIDE_INSET = 'clamp(16px, 12vw, 180px)'
 
+const SILVERSTONE_RACE_META: Record<number, { name: string; date: string }> = {
+  2021: { name: '2021 British Grand Prix', date: 'July 18, 2021' },
+  2022: { name: '2022 British Grand Prix', date: 'July 3, 2022' },
+  2023: { name: '2023 British Grand Prix', date: 'July 9, 2023' },
+  2024: { name: '2024 British Grand Prix', date: 'July 7, 2024' },
+  2025: { name: '2025 British Grand Prix', date: 'July 6, 2025' },
+}
+
+function getSilverstoneRaceMeta(year: number): { name: string; date: string } {
+  return SILVERSTONE_RACE_META[year] ?? {
+    name: `${year} British Grand Prix`,
+    date: 'unknown race date',
+  }
+}
+
 function progressToChapter(progress: number): number {
   for (let i = CHAPTER_THRESHOLDS.length - 1; i >= 0; i--) {
     if (progress >= CHAPTER_THRESHOLDS[i]) return i
@@ -98,6 +113,7 @@ export default function ScrollStage() {
   const shapData = getSHAP(currentYear, currentDriver, currentLap)
   const laps     = getAllLapsForDriver(currentYear, currentDriver)
   const totalLaps = laps.length || 52
+  const raceMeta = getSilverstoneRaceMeta(currentYear)
 
   const severity  = lap?.severity_pred ?? 0
   const sevColor  = getSeverityHex(severity)
@@ -170,7 +186,7 @@ export default function ScrollStage() {
         label: 'LatentLap-AI',
         value: `McLaren · Silverstone · ${currentYear}`,
         valueColor: '#FF8000',
-        explanation: `Following ${currentDriver} in the 2025 British Grand Prix. Race date: July 6, 2025. This dashboard reconstructs what happened inside McLaren's tires during a race — lap by lap — using AI trained on public F1 telemetry. Scroll to explore.`,
+        explanation: `Following ${currentDriver} in the ${raceMeta.name}. Race date: ${raceMeta.date}. This dashboard reconstructs what happened inside McLaren's tires during a race — lap by lap — using AI trained on public F1 telemetry. Scroll to explore.`,
       },
       right: {
         heading: 'What is this?',
@@ -264,9 +280,13 @@ export default function ScrollStage() {
           position: 'relative',
           width: '100%',
           height: '100vh',
-          display: 'flex',
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 1fr) minmax(150px, 32vmin) minmax(0, 1fr)',
+          columnGap: 'clamp(10px, 2.5vw, 40px)',
           alignItems: 'center',
           justifyContent: 'center',
+          padding: 'clamp(72px, 10vh, 96px) clamp(18px, 5vw, 72px) 72px',
+          boxSizing: 'border-box',
           overflow: 'hidden',
           background: 'var(--bg)',
         }}>

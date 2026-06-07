@@ -48,19 +48,30 @@ export function CalloutLeft({ content, visible }: CalloutLeftProps) {
         display: 'flex',
         flexDirection: 'column',
         gap: 8,
-        minWidth: 180,
-        maxWidth: 240,
+        width: '100%',
+        minWidth: 0,
+        maxWidth: 260,
+        justifySelf: 'end',
         opacity: visible ? undefined : 0,
       }}
     >
-      <div ref={linesRef} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div
+        ref={linesRef}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          minWidth: 0,
+          overflowWrap: 'anywhere',
+        }}
+      >
         <div
           style={{
             fontFamily: "'Fira Code', monospace",
             fontSize: 11,
             color: '#888',
             textTransform: 'uppercase',
-            letterSpacing: '0.1em',
+            letterSpacing: '0.08em',
           }}
         >
           {content.label}
@@ -69,9 +80,10 @@ export function CalloutLeft({ content, visible }: CalloutLeftProps) {
           style={{
             fontFamily: "'Rajdhani', sans-serif",
             fontWeight: 700,
-            fontSize: 36,
+            fontSize: 'clamp(24px, 4.5vw, 36px)',
             lineHeight: 1,
             color: content.valueColor ?? '#ffffff',
+            overflowWrap: 'anywhere',
           }}
         >
           {content.value}
@@ -82,6 +94,7 @@ export function CalloutLeft({ content, visible }: CalloutLeftProps) {
             fontSize: 13,
             color: '#aaaaaa',
             lineHeight: 1.5,
+            overflowWrap: 'anywhere',
           }}
         >
           {content.explanation}

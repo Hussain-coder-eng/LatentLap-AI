@@ -68,12 +68,23 @@ export function CalloutRight({ content, visible }: CalloutRightProps) {
         display: 'flex',
         flexDirection: 'column',
         gap: 8,
-        minWidth: 200,
+        width: '100%',
+        minWidth: 0,
         maxWidth: 280,
+        justifySelf: 'start',
         opacity: visible ? undefined : 0,
       }}
     >
-      <div ref={linesRef} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div
+        ref={linesRef}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          minWidth: 0,
+          overflowWrap: 'anywhere',
+        }}
+      >
         {/* Heading */}
         <div
           style={{
@@ -81,7 +92,7 @@ export function CalloutRight({ content, visible }: CalloutRightProps) {
             fontSize: 11,
             color: '#888',
             textTransform: 'uppercase',
-            letterSpacing: '0.1em',
+            letterSpacing: '0.08em',
           }}
         >
           {content.heading}
@@ -90,12 +101,14 @@ export function CalloutRight({ content, visible }: CalloutRightProps) {
         {/* SHAP rows */}
         {content.rows?.map((row) => (
           <div key={row.label} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, minWidth: 0 }}>
               <span
                 style={{
                   fontFamily: "'DM Sans', sans-serif",
                   fontSize: 12,
                   color: '#cccccc',
+                  minWidth: 0,
+                  overflowWrap: 'anywhere',
                 }}
               >
                 {row.label}
@@ -132,6 +145,7 @@ export function CalloutRight({ content, visible }: CalloutRightProps) {
               fontSize: 13,
               color: '#aaaaaa',
               lineHeight: 1.5,
+              overflowWrap: 'anywhere',
             }}
           >
             {line}
@@ -169,6 +183,7 @@ export function CalloutRight({ content, visible }: CalloutRightProps) {
               borderLeft: '2px solid #333',
               paddingLeft: 8,
               marginTop: 2,
+              overflowWrap: 'anywhere',
             }}
           >
             {content.technicalDetail}

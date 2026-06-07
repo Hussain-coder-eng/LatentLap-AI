@@ -116,7 +116,14 @@ export default function TireHero({ scrollProgress }: TireHeroProps) {
   }, [severity, severityColor, reducedMotion])
 
   return (
-    <div style={{ position: 'relative', width: '50vmin', height: '50vmin' }}>
+    <div
+      style={{
+        position: 'relative',
+        width: 'clamp(112px, 32vmin, 320px)',
+        height: 'clamp(112px, 32vmin, 320px)',
+        justifySelf: 'center',
+      }}
+    >
       {/* Glow layer — crossfade handled by animejs effect */}
       <div
         ref={glowRef}
