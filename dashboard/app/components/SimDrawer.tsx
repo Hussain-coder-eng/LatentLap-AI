@@ -1,5 +1,5 @@
 'use client'
-import { useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { useRaceContext } from '../RaceContext'
 import {
   computeSimResult,
@@ -11,6 +11,14 @@ import {
 } from '../../lib/data'
 
 const ALL_COMPOUNDS: CompoundKey[] = ['SOFT', 'MEDIUM', 'HARD', 'INTERMEDIATE', 'WET']
+
+function CompoundChip({ compound }: { compound: string }) {
+  const color = COMPOUND_COLORS[compound as CompoundKey] ?? '#888'
+  const border = compound === 'HARD' ? '1px solid #999' : undefined
+  return (
+    <span style={{ borderRadius: '50%', width: 10, height: 10, display: 'inline-block', background: color, marginRight: 4, verticalAlign: 'middle', border }} />
+  )
+}
 
 export default function SimDrawer() {
   const {
@@ -100,7 +108,7 @@ export default function SimDrawer() {
                   fontWeight: simCompound === c ? 700 : 400,
                 }}
               >
-                {c === 'INTERMEDIATE' ? 'INT' : c === 'SOFT' ? 'S' : c === 'MEDIUM' ? 'M' : c === 'HARD' ? 'H' : 'W'}
+                <CompoundChip compound={c} />{c === 'INTERMEDIATE' ? 'INT' : c === 'SOFT' ? 'S' : c === 'MEDIUM' ? 'M' : c === 'HARD' ? 'H' : 'W'}
               </button>
             ))}
           </div>
@@ -151,8 +159,8 @@ export default function SimDrawer() {
               {label}
             </div>
           ))}
-          <Cell label="Compound" value={result.actualCompound} isLeft />
-          <Cell label="Compound" value={simCompound === 'INTERMEDIATE' ? 'INT' : simCompound} />
+          <Cell label="Compound" value={<><CompoundChip compound={result.actualCompound} />{result.actualCompound}</>} isLeft />
+          <Cell label="Compound" value={<><CompoundChip compound={simCompound} />{simCompound === 'INTERMEDIATE' ? 'INT' : simCompound}</>} />
           <Cell label="Pit Lap" value={`L${result.actualPitLap}`} isLeft />
           <Cell label="Pit Lap" value={`L${simPitLap}`} />
           <Cell label="Finish Sev" value={result.actualFinishSeverity.toFixed(2)} isLeft />
@@ -195,7 +203,7 @@ function Cell({
   label, value, isLeft = false, highlight,
 }: {
   label: string
-  value: string
+  value: React.ReactNode
   isLeft?: boolean
   highlight?: string
 }) {
