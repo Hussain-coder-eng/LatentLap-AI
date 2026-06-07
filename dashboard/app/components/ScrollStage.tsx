@@ -89,11 +89,23 @@ function StrategyBars({ currentYear, currentDriver, currentLap }: {
   const maxSev = Math.max(...pit_strategies.map(s => s.finish_severity))
   const fallback = maxSev === 0
 
+  const windowLabel = currentLap >= primary_pit_window.end
+    ? { text: 'OVERCUT WINDOW OPEN', color: '#FF1801' }
+    : currentLap < primary_pit_window.start - 3
+      ? { text: 'UNDERCUT OPPORTUNITY', color: '#22c55e' }
+      : { text: 'IN PIT WINDOW', color: '#FF8000' }
+
   return (
     <div style={{
       position: 'absolute', bottom: 60, left: '50%', transform: 'translateX(-50%)',
       width: '60%', pointerEvents: 'none', zIndex: 10,
     }}>
+      <div style={{ fontSize: 9, fontFamily: 'monospace', letterSpacing: 1, textAlign: 'center', color: windowLabel.color, marginBottom: 2 }}>
+        {windowLabel.text}
+      </div>
+      <div style={{ fontSize: 7, color: '#888', textAlign: 'center', fontFamily: 'monospace', marginBottom: 4 }}>
+        Window: L{primary_pit_window.start}–L{primary_pit_window.end}
+      </div>
       {fallback && (
         <div style={{ textAlign: 'center', color: '#FF8000', fontSize: 8, fontFamily: 'monospace', marginBottom: 4 }}>
           OPTIMAL WINDOW
