@@ -27,6 +27,11 @@ Goal: fix deployed dashboard QA issues from `https://dashboard-ten-lac-46.vercel
   - Files: `dashboard/app/components/ChapterDots.tsx`, `dashboard/app/components/ScrollStage.tsx`, `dashboard/tests/e2e/dashboard.spec.ts`.
   - Verification: `cd dashboard && PLAYWRIGHT_BASE_URL=http://localhost:3001 npx playwright test --config=playwright.config.ts tests/e2e/dashboard.spec.ts --project=chromium --project=mobile-chrome`.
 
+- [x] Hide Vercel preview feedback overlays.
+  - Issue: Vercel preview injects `vercel-live-feedback` / `vercel-toolbar` custom elements that can intercept pointer events over chapter dots.
+  - Files: `dashboard/styles/globals.css`, `dashboard/tests/e2e/dashboard.spec.ts`.
+  - Verification: `cd dashboard && PLAYWRIGHT_BASE_URL=http://localhost:3001 npx playwright test --config=playwright.config.ts tests/e2e/dashboard.spec.ts --project=chromium --grep "Vercel preview"`.
+
 - [x] Update stale e2e tests for redesigned scrollytelling UI.
   - Issue: previous tests expected removed panel IDs, selects, and replay button.
   - Files: `dashboard/tests/e2e/dashboard.spec.ts`.

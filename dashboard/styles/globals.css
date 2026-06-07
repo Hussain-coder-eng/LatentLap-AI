@@ -38,6 +38,12 @@ body {
   font-family: 'DM Sans', sans-serif;
 }
 
+vercel-live-feedback,
+vercel-toolbar {
+  display: none !important;
+  pointer-events: none !important;
+}
+
 @keyframes glow-pulse {
   0%, 100% { box-shadow: var(--sev-3-glow); }
   50%       { box-shadow: 0 0 6px #FF1744, 0 0 12px #FF174433; }

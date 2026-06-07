@@ -60,6 +60,27 @@ test.describe('Scrollytelling dashboard shell', () => {
     await expect(page.getByText('Tire Severity')).toBeVisible()
     await expect(page.getByText(/Scale: 0 = healthy/)).toBeVisible()
   })
+
+  test('Vercel preview toolbar elements are hidden and non-interactive', async ({ page }) => {
+    await page.evaluate(() => {
+      const liveFeedback = document.createElement('vercel-live-feedback')
+      const toolbar = document.createElement('vercel-toolbar')
+      liveFeedback.textContent = 'Preview feedback'
+      toolbar.textContent = 'Preview toolbar'
+      document.body.append(liveFeedback, toolbar)
+    })
+
+    for (const selector of ['vercel-live-feedback', 'vercel-toolbar']) {
+      const styles = await page.locator(selector).evaluate((el) => {
+        const computed = window.getComputedStyle(el)
+        return {
+          display: computed.display,
+          pointerEvents: computed.pointerEvents,
+        }
+      })
+      expect(styles).toEqual({ display: 'none', pointerEvents: 'none' })
+    }
+  })
 })
 
 test.describe('SIM drawer', () => {
