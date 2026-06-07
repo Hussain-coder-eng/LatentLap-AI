@@ -134,6 +134,12 @@ export default function ScrollStage() {
   const shapData = getSHAP(currentYear, currentDriver, currentLap)
   const laps     = getAllLapsForDriver(currentYear, currentDriver)
   const totalLaps = laps.length || 52
+  const tickLaps: number[] = (() => {
+    const ticks = [1]
+    for (let l = 5; l < totalLaps; l += 5) ticks.push(l)
+    if (ticks[ticks.length - 1] !== totalLaps) ticks.push(totalLaps)
+    return ticks
+  })()
   const raceMeta = getSilverstoneRaceMeta(currentYear)
 
   const severity  = lap?.severity_pred ?? 0
@@ -356,6 +362,37 @@ export default function ScrollStage() {
                   outline: l.lap_number === currentLap ? '1px solid rgba(255,255,255,0.75)' : undefined,
                   outlineOffset: -1,
                 }} />
+              ))}
+            </div>
+          )}
+
+          {/* Chapter 3 (Race Arc): lap number tick labels below timeline */}
+          {activeChapter === 3 && (
+            <div
+              style={{
+                position: 'absolute',
+                left: RACE_ARC_TIMELINE_SIDE_INSET,
+                right: RACE_ARC_TIMELINE_SIDE_INSET,
+                bottom: RACE_ARC_TIMELINE_BOTTOM_PX - 14,
+                height: 12,
+                pointerEvents: 'none',
+              }}
+            >
+              {tickLaps.map(lapNum => (
+                <span
+                  key={lapNum}
+                  style={{
+                    position: 'absolute',
+                    left: `${((lapNum - 1) / Math.max(totalLaps - 1, 1)) * 100}%`,
+                    fontSize: 7,
+                    color: '#555',
+                    fontFamily: 'monospace',
+                    transform: 'translateX(-50%)',
+                    userSelect: 'none',
+                  }}
+                >
+                  {lapNum}
+                </span>
               ))}
             </div>
           )}
