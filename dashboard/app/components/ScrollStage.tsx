@@ -236,8 +236,9 @@ export default function ScrollStage() {
     {
       left: {
         label: 'Race Arc',
-        value: `${totalLaps} Laps`,
+        value: `${totalLaps} Predicted Laps`,
         valueColor: '#4a7a4a',
+        subAnnotation: '(of 52 race laps)',
         explanation: 'This is the full tire story across the race. Scroll down to drive through each lap. Green = fresh, red = critical. The pit stop divides the two stints.',
       },
       right: {
