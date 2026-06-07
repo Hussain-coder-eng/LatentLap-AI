@@ -128,6 +128,10 @@ input[type='range']:focus-visible::-webkit-slider-thumb {
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.88);
   }
 
+  .stage-callout > * {
+    transform: none !important;
+  }
+
   .stage-callout-left {
     grid-row: 1;
   }

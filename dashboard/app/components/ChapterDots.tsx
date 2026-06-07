@@ -27,6 +27,7 @@ export default function ChapterDots({ activeChapter, onSelect }: ChapterDotsProp
           key={i}
           onClick={() => onSelect(i)}
           aria-label={`Chapter ${i + 1} of 5: ${name}`}
+          aria-current={activeChapter === i ? 'true' : undefined}
           style={{
             width: activeChapter === i ? 13 : 10,
             height: activeChapter === i ? 13 : 10,

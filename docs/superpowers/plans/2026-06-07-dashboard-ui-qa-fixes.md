@@ -17,6 +17,16 @@ Goal: fix deployed dashboard QA issues from `https://dashboard-ten-lac-46.vercel
   - Files: `dashboard/styles/globals.css`, `dashboard/app/components/ScrollStage.tsx`, `dashboard/app/components/CalloutLeft.tsx`, `dashboard/app/components/CalloutRight.tsx`, `dashboard/app/components/TireHero.tsx`, `dashboard/tests/e2e/dashboard.spec.ts`.
   - Verification: `cd dashboard && PLAYWRIGHT_BASE_URL=http://localhost:3001 npx playwright test --config=playwright.config.ts tests/e2e/dashboard.spec.ts --project=mobile-chrome --grep "Pixel 5 hero"`.
 
+- [x] Fix mobile entrance animation offscreen risk.
+  - Issue: narrow viewport callout blocks could become temporarily offscreen during horizontal translate entrance animation.
+  - Files: `dashboard/app/components/CalloutLeft.tsx`, `dashboard/app/components/CalloutRight.tsx`, `dashboard/lib/useNarrowViewport.ts`, `dashboard/styles/globals.css`, `dashboard/tests/e2e/dashboard.spec.ts`.
+  - Verification: `cd dashboard && PLAYWRIGHT_BASE_URL=http://localhost:3001 npx playwright test --config=playwright.config.ts tests/e2e/dashboard.spec.ts --project=mobile-chrome --grep "entrance animation"`.
+
+- [x] Fix chapter dot navigation flake.
+  - Issue: parallel e2e run could click chapter dot before smooth scroll/ScrollTrigger had updated chapter content.
+  - Files: `dashboard/app/components/ChapterDots.tsx`, `dashboard/app/components/ScrollStage.tsx`, `dashboard/tests/e2e/dashboard.spec.ts`.
+  - Verification: `cd dashboard && PLAYWRIGHT_BASE_URL=http://localhost:3001 npx playwright test --config=playwright.config.ts tests/e2e/dashboard.spec.ts --project=chromium --project=mobile-chrome`.
+
 - [x] Update stale e2e tests for redesigned scrollytelling UI.
   - Issue: previous tests expected removed panel IDs, selects, and replay button.
   - Files: `dashboard/tests/e2e/dashboard.spec.ts`.

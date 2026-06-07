@@ -54,7 +54,9 @@ test.describe('Scrollytelling dashboard shell', () => {
   })
 
   test('chapter dots navigate to severity chapter', async ({ page }) => {
-    await page.getByRole('button', { name: 'Chapter 2 of 5: Severity' }).click()
+    const severityDot = page.getByRole('button', { name: 'Chapter 2 of 5: Severity' })
+    await severityDot.click()
+    await expect(severityDot).toHaveAttribute('aria-current', 'true')
     await expect(page.getByText('Tire Severity')).toBeVisible()
     await expect(page.getByText(/Scale: 0 = healthy/)).toBeVisible()
   })
@@ -121,5 +123,42 @@ test.describe('Mobile layout', () => {
     await expect(page.getByRole('button', { name: 'Open settings' })).toBeVisible()
     await expect(page.getByTestId('sim-fab')).toBeVisible()
     await expect(page.locator('[aria-label="Lap scrubber"]')).toBeVisible()
+  })
+
+  test('Pixel 5 callouts stay within viewport during entrance animation', async ({ page, isMobile }) => {
+    if (!isMobile) return
+
+    await page.goto(process.env.PLAYWRIGHT_BASE_URL ?? '/', { waitUntil: 'commit' })
+    await page.waitForSelector('.stage-callout-right', { state: 'attached', timeout: 15_000 })
+    await expect(page.getByTestId('stage-callout-left')).toHaveAttribute('data-motion', 'fade')
+    await expect(page.getByTestId('stage-callout-right')).toHaveAttribute('data-motion', 'fade')
+
+    const samples = await page.evaluate(async () => {
+      const frames: Array<{ left: number; right: number; text: string }> = []
+      for (let i = 0; i < 12; i++) {
+        await new Promise<void>(requestAnimationFrame)
+        const items = Array.from(document.querySelectorAll('.stage-callout *'))
+          .filter((el) => {
+            const rect = el.getBoundingClientRect()
+            const text = el.textContent?.trim() ?? ''
+            return text.length > 0 && rect.width > 0 && rect.height > 0
+          })
+          .map((el) => {
+            const rect = el.getBoundingClientRect()
+            return {
+              left: rect.left,
+              right: rect.right,
+              text: el.textContent?.trim() ?? '',
+            }
+          })
+        frames.push(...items)
+      }
+      return {
+        viewportWidth: window.innerWidth,
+        offscreen: frames.filter(item => item.left < -1 || item.right > window.innerWidth + 1),
+      }
+    })
+
+    expect(samples.offscreen, `viewport width ${samples.viewportWidth}`).toEqual([])
   })
 })

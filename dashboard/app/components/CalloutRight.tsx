@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { animate, stagger } from 'animejs'
 import { useRaceContext } from '../RaceContext'
 import { useReducedMotion } from '../../lib/useReducedMotion'
+import { NARROW_VIEWPORT_QUERY, useNarrowViewport } from '../../lib/useNarrowViewport'
 
 export interface ShapRow {
   label: string
@@ -25,6 +26,7 @@ interface CalloutRightProps {
 export function CalloutRight({ content, visible }: CalloutRightProps) {
   const linesRef = useRef<HTMLDivElement>(null)
   const reducedMotion = useReducedMotion()
+  const isNarrowViewport = useNarrowViewport()
   const { isTechnicalMode, setIsTechnicalMode } = useRaceContext()
   const [expanded, setExpanded] = useState(false)
 
@@ -33,9 +35,10 @@ export function CalloutRight({ content, visible }: CalloutRightProps) {
     if (!el || reducedMotion) return
 
     const children = Array.from(el.children) as HTMLElement[]
+    const useFadeOnly = window.matchMedia(NARROW_VIEWPORT_QUERY).matches
     if (visible) {
       animate(children, {
-        translateX: [40, 0],
+        ...(useFadeOnly ? {} : { translateX: [40, 0] }),
         opacity: [0, 1],
         delay: stagger(40),
         duration: 360,
@@ -43,13 +46,13 @@ export function CalloutRight({ content, visible }: CalloutRightProps) {
       })
     } else {
       animate(children, {
-        translateX: [0, -40],
+        ...(useFadeOnly ? {} : { translateX: [0, -40] }),
         opacity: [1, 0],
         duration: 240,
         ease: 'outQuart',
       })
     }
-  }, [visible, reducedMotion])
+  }, [visible, reducedMotion, isNarrowViewport])
 
   // Sync local expanded state with isTechnicalMode context
   useEffect(() => {
@@ -66,6 +69,7 @@ export function CalloutRight({ content, visible }: CalloutRightProps) {
     <div
       className="stage-callout stage-callout-right"
       data-testid="stage-callout-right"
+      data-motion={isNarrowViewport ? 'fade' : 'slide'}
       style={{
         display: 'flex',
         flexDirection: 'column',

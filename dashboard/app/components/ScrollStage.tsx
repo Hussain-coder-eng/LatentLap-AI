@@ -153,6 +153,7 @@ export default function ScrollStage() {
   }, [activeChapter])
 
   const scrollToChapter = (ch: number) => {
+    setActiveChapter(ch)
     const el = stageRef.current
     if (!el) return
     const stageTop = el.getBoundingClientRect().top + window.scrollY
