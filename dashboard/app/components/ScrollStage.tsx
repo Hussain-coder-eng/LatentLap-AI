@@ -8,6 +8,7 @@ import { SilverstoneCircuit } from './SilverstoneCircuit'
 import { CalloutLeft, type CalloutLeftContent } from './CalloutLeft'
 import { CalloutRight, type CalloutRightContent, type ShapRow } from './CalloutRight'
 import ChapterDots from './ChapterDots'
+import LapDeltaChart from './LapDeltaChart'
 import strategyRaw from '../../public/data/strategy_recommendations.json'
 
 const CHAPTER_THRESHOLDS = [0, 0.2, 0.4, 0.6, 0.8]
@@ -409,9 +410,17 @@ export default function ScrollStage() {
             </div>
           )}
 
-          {/* Chapter 4 (Strategy): pit lane bars */}
+          {/* Chapter 4 (Strategy): pit lane bars + lap delta chart */}
           {activeChapter === 4 && (
-            <StrategyBars currentYear={currentYear} currentDriver={currentDriver} currentLap={currentLap} />
+            <>
+              <StrategyBars currentYear={currentYear} currentDriver={currentDriver} currentLap={currentLap} />
+              <div style={{
+                position: 'absolute', top: 40, left: '50%', transform: 'translateX(-50%)',
+                width: '60%', pointerEvents: 'none',
+              }}>
+                <LapDeltaChart laps={laps} currentLap={currentLap} />
+              </div>
+            </>
           )}
 
           {/* Left callout */}
