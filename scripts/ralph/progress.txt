@@ -30,3 +30,15 @@ Started: Sun Jun  7 21:58:25 EDT 2026
   - Speedometer sits at `position: fixed, top:52, left:24, zIndex:60` after this fix — below chip's bottom edge (~37px)
   - `SEVERITY_PROB_COLORS` in Speedometer.tsx already had the 4 severity colors; legend reuses same array
 ---
+
+## 2026-06-07 22:15 - US-003
+- Changed confidence bar title from "CONFIDENCE" to "Severity probability"
+- Increased bar height from 10px to 18px to fit label text
+- Switched from fixed `width: prob * 120` to `flex: prob` layout so all 4 segments always render proportionally
+- Added `title` and `aria-label` on each segment for accessibility when label is hidden
+- Show "LabelName XX%" text when prob >= 0.12; hide visually (but keep aria) below threshold
+- Files changed: `dashboard/app/components/Speedometer.tsx`
+- **Learnings for future iterations:**
+  - `flex: prob` is cleaner than `width: prob * 120` for proportional bars — handles float sums correctly
+  - Confidence bar and severity legend are both in `Speedometer.tsx` — single file for all gauge-area UI
+---
