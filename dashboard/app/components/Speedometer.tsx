@@ -39,6 +39,13 @@ const TICK_DEFS = [
 
 const SEVERITY_PROB_COLORS = ['#22c55e', '#eab308', '#f97316', '#ef4444'] as const
 
+const SEVERITY_LEGEND = [
+  { label: 'Healthy',  color: '#22c55e' },
+  { label: 'Mild',     color: '#eab308' },
+  { label: 'Moderate', color: '#f97316' },
+  { label: 'Critical', color: '#ef4444' },
+] as const
+
 export function Speedometer() {
   const { currentYear, currentDriver, currentLap } = useRaceContext()
   const lap = getLap(currentYear, currentDriver, currentLap)
@@ -106,7 +113,7 @@ export function Speedometer() {
 
   return (
     <div
-      style={{ position: 'fixed', top: 24, left: 24, zIndex: 60, width: 120 }}
+      style={{ position: 'fixed', top: 52, left: 24, zIndex: 60, width: 120 }}
       aria-label="Scroll speed gauge"
     >
       <svg width={120} height={120} viewBox="0 0 120 120">
@@ -209,6 +216,19 @@ export function Speedometer() {
           </div>
         </>
       )}
+      <div style={{ marginTop: 8 }}>
+        <div style={{ fontSize: 7, color: '#555', letterSpacing: 0.5, textAlign: 'center', marginBottom: 4, fontFamily: "'Fira Code', monospace" }}>
+          SEVERITY
+        </div>
+        {SEVERITY_LEGEND.map((item, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
+            <div style={{ width: 8, height: 8, borderRadius: 2, background: item.color, flexShrink: 0 }} />
+            <span style={{ fontSize: 8, color: '#aaa', fontFamily: "'Fira Code', monospace" }}>
+              {i} · {item.label}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
