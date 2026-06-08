@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRaceContext } from '../RaceContext'
 import { getLap, getSHAP, getAllLapsForDriver } from '../../lib/data'
-import { getSeverityHex, getSeverityLabel } from '../../lib/severityColors'
+import { getSeverityHex, getSeverityLabel, SEVERITY_LABELS } from '../../lib/severityColors'
 import TireHero from './TireHero'
 import { SilverstoneCircuit } from './SilverstoneCircuit'
 import { CalloutLeft, type CalloutLeftContent } from './CalloutLeft'
@@ -278,9 +278,9 @@ export default function ScrollStage() {
     {
       left: {
         label: 'Race Arc',
-        value: `${totalLaps} Predicted Laps`,
+        value: `${totalLaps} modeled laps from telemetry`,
         valueColor: '#4a7a4a',
-        subAnnotation: '(of 52 race laps)',
+        subAnnotation: '· 52 race laps total',
         explanation: 'This is the full tire story across the race. Scroll down to drive through each lap. Green = fresh, red = critical. The pit stop divides the two stints.',
       },
       right: {
@@ -426,6 +426,43 @@ export default function ScrollStage() {
                 >
                   {lapNum}
                 </span>
+              ))}
+            </div>
+          )}
+
+          {/* Chapter 3 (Race Arc): severity scale legend above timeline */}
+          {activeChapter === 3 && (
+            <div
+              style={{
+                position: 'absolute',
+                left: RACE_ARC_TIMELINE_SIDE_INSET,
+                right: RACE_ARC_TIMELINE_SIDE_INSET,
+                bottom: RACE_ARC_TIMELINE_BOTTOM_PX + RACE_ARC_TIMELINE_HEIGHT_PX + 8,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                pointerEvents: 'none',
+                zIndex: 2,
+              }}
+            >
+              {[0, 1, 2, 3].map(sev => (
+                <div key={sev} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: 2,
+                    background: getSeverityHex(sev),
+                    flexShrink: 0,
+                  }} />
+                  <span style={{
+                    fontSize: 9,
+                    color: 'rgba(255,255,255,0.6)',
+                    fontFamily: 'monospace',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {['Healthy', 'Mild', 'Moderate', 'Critical'][sev]}
+                  </span>
+                </div>
               ))}
             </div>
           )}
