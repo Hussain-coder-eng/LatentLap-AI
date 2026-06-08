@@ -103,3 +103,17 @@ Started: Sun Jun  7 21:58:25 EDT 2026
   - Grid column swap achieved by wrapping CalloutRight in `justifySelf:end` div (left col) and CornerHeatmap in `justifySelf:start` div (right col) — no grid structure change needed
   - CornerHeatmap renders fine inline (width:100%) — no fixed positioning required
 ---
+
+## 2026-06-08 04:06 - US-010
+- Replaced absolute-positioned `StrategyBars` overlay with three-zone grid layout for strategy chapter
+- Added `StrategyLeft`: large window-status label (UNDERCUT OPPORTUNITY / IN PIT WINDOW / OVERCUT), pit window range, one-sentence result summary with actual best pit lap + finish severity
+- Added `StrategyPitChart`: proper bar chart with Y-axis labels (0–3), Y-axis gridlines at each integer, X-axis lap number labels, bars colored by recommendation, in-window bars at full opacity vs 0.3 for out-of-window
+- Added `StrategyRight`: color legend (optimal/acceptable/late/critical), technical note, Strategy Simulator button
+- Removed `LapDeltaChart` from strategy chapter (competed with chart; no longer used in chapter 4)
+- Files changed: `dashboard/app/components/ScrollStage.tsx`
+- **Learnings for future iterations:**
+  - Chapter 4 now uses activeChapter === 4 checks in all three column slots (left/center/right), same pattern as chapter 2 override
+  - `getStrategy()` and `getWindowLabel()` are shared helper functions — reuse for any strategy-aware component
+  - For bar charts with fixed 0–3 severity scale: use `SEV_MAX=3` as denominator, not `Math.max(...severities)` — gives consistent visual scale across years
+  - `void param` pattern used in StrategyRight to satisfy lint when params passed but not used inside
+---
