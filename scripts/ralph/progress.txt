@@ -1,21 +1,22 @@
 # Ralph Progress Log
-## Codebase Patterns
-- shap_data.json import from dashboard/app/components/: use '../../public/data/shap_data.json'
-- New components go in dashboard/app/components/ as 'use client' with named export default
-- Chapter-specific UI rendered via {activeChapter === N && (...)} blocks inside ScrollStage pinRef div
-- TypeScript check: cd dashboard && npx tsc --noEmit
+Started: Sun Jun  7 21:58:25 EDT 2026
 
-Started: Sun Jun  7 21:18:15 EDT 2026
+## Codebase Patterns
+- `useNarrowViewport()` hook in `dashboard/lib/useNarrowViewport.ts` — returns boolean for < 640px, use for mobile branches in components
+- Scrubber (`LapScrubberFixed`) is `position: fixed; bottom: 0; height: 48px; zIndex: 50` — chapter nav rail must sit at `bottom: 56px` minimum to clear it
+- All dashboard components are `'use client'` and live in `dashboard/app/components/`
+- McLaren orange accent: `#FF8000`; dark bg: `rgba(8,8,8,0.x)`; code font: `'Fira Code', monospace`
+- Typecheck: `cd dashboard && npx tsc --noEmit`
+
 ---
 
-## 2026-06-07 21:30 - US-001
-- Implemented CornerHeatmap.tsx: div-based grid showing per-corner SHAP stress across laps
-- Component: 4 corners (Copse, MB, Stowe, Club) x N laps, color lerp from near-black to red
-- Integrated into ScrollStage.tsx chapter 2 (Predictors), positioned bottom-center
-- Files changed: dashboard/app/components/CornerHeatmap.tsx (new), dashboard/app/components/ScrollStage.tsx (import + chapter 2 block)
+## 2026-06-07 22:00 - US-001
+- Rewrote ChapterDots.tsx: desktop → horizontal dot rail at `bottom: 56px` centered, inside a pill-shaped backdrop container; mobile → full-width segmented control at `top: 0` with abbreviated labels and orange underline indicator
+- Added `title` attribute to each dot button for native hover tooltip
+- Added `role="tablist"` / `role="tab"` / `aria-selected` for accessibility
+- Files changed: `dashboard/app/components/ChapterDots.tsx`
 - **Learnings for future iterations:**
-  - shap_data.json already loaded via lib/data.ts for getSHAP(); importing it directly in a component also works fine
-  - Corner prefix filtering: features like 'Copse_EntrySpeed' match 'Copse_' prefix; all 4 corners present for all year/driver combos
-  - x-axis label positioning uses position:absolute inside a flex container with a 40px spacer matching corner label width (36px + 4px margin)
-  - tsc --noEmit passes with no args needed beyond cd dashboard
+  - Scrubber height is 48px at bottom: 0; rail goes at bottom: 56px to avoid overlap
+  - `useNarrowViewport` is the correct hook for mobile branching — returns false on SSR (avoids hydration flash)
+  - Short names array needed separately from full names for mobile segmented control
 ---
