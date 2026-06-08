@@ -114,6 +114,31 @@ input[type='range']:focus-visible::-webkit-slider-thumb {
   }
 }
 
+.scroll-stage-pin--mobile {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 56px 16px 64px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.scroll-stage-pin--desktop {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 32vmin) minmax(0, 1fr);
+  column-gap: clamp(10px, 2.5vw, 40px);
+  align-items: center;
+  justify-content: center;
+  padding: clamp(72px, 10vh, 96px) clamp(18px, 5vw, 72px) 72px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
 @media (max-width: 640px) {
   .scroll-stage-pin {
     display: grid !important;
@@ -123,31 +148,6 @@ input[type='range']:focus-visible::-webkit-slider-thumb {
     justify-items: stretch !important;
     row-gap: 14px !important;
     padding: 154px 24px 92px !important;
-  }
-
-  .scroll-stage-pin--mobile {
-    position: relative;
-    width: 100%;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    padding: 56px 16px 64px;
-    box-sizing: border-box;
-    overflow: hidden;
-  }
-
-  .scroll-stage-pin--desktop {
-    position: relative;
-    width: 100%;
-    height: 100vh;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(150px, 32vmin) minmax(0, 1fr);
-    column-gap: clamp(10px, 2.5vw, 40px);
-    align-items: center;
-    justify-content: center;
-    padding: clamp(72px, 10vh, 96px) clamp(18px, 5vw, 72px) 72px;
-    box-sizing: border-box;
-    overflow: hidden;
   }
 
   .stage-callout {
