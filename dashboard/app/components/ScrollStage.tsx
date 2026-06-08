@@ -443,6 +443,36 @@ export default function ScrollStage() {
 
   const ch = chapterContent[activeChapter] ?? chapterContent[0]
 
+  // Inline race-arc timeline bar (shared between desktop absolute and mobile inline)
+  const raceArcTimelineBar = (
+    <div
+      data-testid="race-arc-timeline"
+      aria-hidden="true"
+      style={{
+        display: 'flex',
+        alignItems: 'stretch',
+        height: RACE_ARC_TIMELINE_HEIGHT_PX,
+        border: '1px solid rgba(255,255,255,0.16)',
+        borderRadius: 4,
+        overflow: 'hidden',
+        boxShadow: '0 0 0 1px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.28)',
+        width: '100%',
+      }}
+    >
+      {laps.map((l, i) => (
+        <div key={l.lap_number} style={{
+          flex: 1,
+          minWidth: RACE_ARC_TIMELINE_MIN_SEGMENT_PX,
+          background: getSeverityHex(l.severity_pred),
+          borderRight: l.stint_id !== laps[i + 1]?.stint_id
+            ? '2px solid #FF8000' : undefined,
+          outline: l.lap_number === currentLap ? '1px solid rgba(255,255,255,0.75)' : undefined,
+          outlineOffset: -1,
+        }} />
+      ))}
+    </div>
+  )
+
   return (
     <>
       <ChapterDots activeChapter={activeChapter} onSelect={scrollToChapter} />
@@ -451,8 +481,18 @@ export default function ScrollStage() {
         <div
           ref={pinRef}
           className="scroll-stage-pin"
-          style={{
-            position: 'relative',
+          style={isNarrow ? {
+            position: 'relative' as const,
+            width: '100%',
+            minHeight: '100vh',
+            display: 'flex',
+            flexDirection: 'column' as const,
+            padding: '56px 16px 64px',
+            boxSizing: 'border-box' as const,
+            overflow: 'hidden',
+            background: 'var(--bg)',
+          } : {
+            position: 'relative' as const,
             width: '100%',
             height: '100vh',
             display: 'grid',
@@ -461,168 +501,208 @@ export default function ScrollStage() {
             alignItems: 'center',
             justifyContent: 'center',
             padding: 'clamp(72px, 10vh, 96px) clamp(18px, 5vw, 72px) 72px',
-            boxSizing: 'border-box',
+            boxSizing: 'border-box' as const,
             overflow: 'hidden',
             background: 'var(--bg)',
           }}
         >
-          {/* Background circuit */}
-          <SilverstoneCircuit activeChapter={activeChapter} backgroundOnly={activeChapter === 2} hideRings={isNarrow} />
+          {/* Background circuit — faint on mobile (opacity 0.06), full on desktop */}
+          <div style={{ opacity: isNarrow ? 0.06 : 1 }}>
+            <SilverstoneCircuit activeChapter={activeChapter} backgroundOnly={activeChapter === 2} hideRings={isNarrow} />
+          </div>
 
-          {/* Chapter 3 (Race Arc): compact lap severity timeline */}
-          {activeChapter === 3 && (
-            <div
-              data-testid="race-arc-timeline"
-              aria-hidden="true"
-              style={{
-                position: 'absolute',
-                left: RACE_ARC_TIMELINE_SIDE_INSET,
-                right: RACE_ARC_TIMELINE_SIDE_INSET,
-                bottom: RACE_ARC_TIMELINE_BOTTOM_PX,
-                height: RACE_ARC_TIMELINE_HEIGHT_PX,
-                pointerEvents: 'none',
-                display: 'flex',
-                alignItems: 'stretch',
-                border: '1px solid rgba(255,255,255,0.16)',
-                borderRadius: 4,
-                overflow: 'hidden',
-                boxShadow: '0 0 0 1px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.28)',
-                zIndex: 2,
-              }}
-            >
-              {laps.map((l, i) => (
-                <div key={l.lap_number} style={{
-                  flex: 1,
-                  minWidth: RACE_ARC_TIMELINE_MIN_SEGMENT_PX,
-                  background: getSeverityHex(l.severity_pred),
-                  borderRight: l.stint_id !== laps[i + 1]?.stint_id
-                    ? '2px solid #FF8000' : undefined,
-                  outline: l.lap_number === currentLap ? '1px solid rgba(255,255,255,0.75)' : undefined,
-                  outlineOffset: -1,
-                }} />
-              ))}
+          {isNarrow ? (
+            /* ── MOBILE: single-column stacked layout for all chapters ── */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24, width: '100%', paddingBottom: 64 }}>
+              <CalloutLeft content={ch.left} visible={true} />
+
+              {/* Chapter-specific center content */}
+              {activeChapter === 2 && (
+                <>
+                  <CalloutRight content={ch.right} visible={true} />
+                  <CornerHeatmap year={currentYear} driver={currentDriver} />
+                </>
+              )}
+              {activeChapter === 3 && (
+                <>
+                  {/* Inline race arc — no absolute positioning */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                    {[0, 1, 2, 3].map(sev => (
+                      <div key={sev} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <div style={{ width: 10, height: 10, borderRadius: 2, background: getSeverityHex(sev), flexShrink: 0 }} />
+                        <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.6)', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                          {(['Healthy', 'Mild', 'Moderate', 'Critical'] as const)[sev]}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  {raceArcTimelineBar}
+                  <CalloutRight content={ch.right} visible={true} />
+                </>
+              )}
+              {activeChapter === 4 && (
+                <>
+                  <StrategyLeft currentYear={currentYear} currentDriver={currentDriver} currentLap={currentLap} />
+                  <StrategyPitChart currentYear={currentYear} currentDriver={currentDriver} currentLap={currentLap} />
+                  <StrategyRight currentYear={currentYear} currentDriver={currentDriver} setSimDrawerOpen={setSimDrawerOpen} />
+                </>
+              )}
+              {activeChapter === 5 && (
+                <>
+                  <div style={{ overflowX: 'auto', width: '100%' }}>
+                    <CrossSeasonChart driver={currentDriver} />
+                  </div>
+                </>
+              )}
+              {activeChapter !== 2 && activeChapter !== 3 && activeChapter !== 4 && activeChapter !== 5 && (
+                <>
+                  <TireHero scrollProgress={scrollProgress} />
+                  <CalloutRight content={ch.right} visible={true} />
+                </>
+              )}
             </div>
-          )}
-
-          {/* Chapter 3 (Race Arc): lap number tick labels below timeline */}
-          {activeChapter === 3 && (
-            <div
-              style={{
-                position: 'absolute',
-                left: RACE_ARC_TIMELINE_SIDE_INSET,
-                right: RACE_ARC_TIMELINE_SIDE_INSET,
-                bottom: RACE_ARC_TIMELINE_BOTTOM_PX - 14,
-                height: 12,
-                pointerEvents: 'none',
-              }}
-            >
-              {tickLaps.map(lapNum => (
-                <span
-                  key={lapNum}
+          ) : (
+            /* ── DESKTOP: three-column grid layout ── */
+            <>
+              {/* Chapter 3 (Race Arc): compact lap severity timeline — absolute desktop only */}
+              {activeChapter === 3 && (
+                <div
+                  aria-hidden="true"
                   style={{
                     position: 'absolute',
-                    left: `${((lapNum - 1) / Math.max(totalLaps - 1, 1)) * 100}%`,
-                    fontSize: 7,
-                    color: '#555',
-                    fontFamily: 'monospace',
-                    transform: 'translateX(-50%)',
-                    userSelect: 'none',
+                    left: RACE_ARC_TIMELINE_SIDE_INSET,
+                    right: RACE_ARC_TIMELINE_SIDE_INSET,
+                    bottom: RACE_ARC_TIMELINE_BOTTOM_PX,
+                    height: RACE_ARC_TIMELINE_HEIGHT_PX,
+                    pointerEvents: 'none',
+                    display: 'flex',
+                    alignItems: 'stretch',
+                    border: '1px solid rgba(255,255,255,0.16)',
+                    borderRadius: 4,
+                    overflow: 'hidden',
+                    boxShadow: '0 0 0 1px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.28)',
+                    zIndex: 2,
                   }}
                 >
-                  {lapNum}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Chapter 3 (Race Arc): severity scale legend above timeline */}
-          {activeChapter === 3 && (
-            <div
-              style={{
-                position: 'absolute',
-                left: RACE_ARC_TIMELINE_SIDE_INSET,
-                right: RACE_ARC_TIMELINE_SIDE_INSET,
-                bottom: RACE_ARC_TIMELINE_BOTTOM_PX + RACE_ARC_TIMELINE_HEIGHT_PX + 8,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                pointerEvents: 'none',
-                zIndex: 2,
-              }}
-            >
-              {[0, 1, 2, 3].map(sev => (
-                <div key={sev} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <div style={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: 2,
-                    background: getSeverityHex(sev),
-                    flexShrink: 0,
-                  }} />
-                  <span style={{
-                    fontSize: 9,
-                    color: 'rgba(255,255,255,0.6)',
-                    fontFamily: 'monospace',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {['Healthy', 'Mild', 'Moderate', 'Critical'][sev]}
-                  </span>
+                  {laps.map((l, i) => (
+                    <div key={l.lap_number} style={{
+                      flex: 1,
+                      minWidth: RACE_ARC_TIMELINE_MIN_SEGMENT_PX,
+                      background: getSeverityHex(l.severity_pred),
+                      borderRight: l.stint_id !== laps[i + 1]?.stint_id
+                        ? '2px solid #FF8000' : undefined,
+                      outline: l.lap_number === currentLap ? '1px solid rgba(255,255,255,0.75)' : undefined,
+                      outlineOffset: -1,
+                    }} />
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+              )}
 
+              {/* Chapter 3 (Race Arc): lap number tick labels below timeline */}
+              {activeChapter === 3 && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: RACE_ARC_TIMELINE_SIDE_INSET,
+                    right: RACE_ARC_TIMELINE_SIDE_INSET,
+                    bottom: RACE_ARC_TIMELINE_BOTTOM_PX - 14,
+                    height: 12,
+                    pointerEvents: 'none',
+                  }}
+                >
+                  {tickLaps.map(lapNum => (
+                    <span
+                      key={lapNum}
+                      style={{
+                        position: 'absolute',
+                        left: `${((lapNum - 1) / Math.max(totalLaps - 1, 1)) * 100}%`,
+                        fontSize: 7,
+                        color: '#555',
+                        fontFamily: 'monospace',
+                        transform: 'translateX(-50%)',
+                        userSelect: 'none',
+                      }}
+                    >
+                      {lapNum}
+                    </span>
+                  ))}
+                </div>
+              )}
 
+              {/* Chapter 3 (Race Arc): severity scale legend above timeline */}
+              {activeChapter === 3 && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: RACE_ARC_TIMELINE_SIDE_INSET,
+                    right: RACE_ARC_TIMELINE_SIDE_INSET,
+                    bottom: RACE_ARC_TIMELINE_BOTTOM_PX + RACE_ARC_TIMELINE_HEIGHT_PX + 8,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    pointerEvents: 'none',
+                    zIndex: 2,
+                  }}
+                >
+                  {[0, 1, 2, 3].map(sev => (
+                    <div key={sev} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <div style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: 2,
+                        background: getSeverityHex(sev),
+                        flexShrink: 0,
+                      }} />
+                      <span style={{
+                        fontSize: 9,
+                        color: 'rgba(255,255,255,0.6)',
+                        fontFamily: 'monospace',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {(['Healthy', 'Mild', 'Moderate', 'Critical'] as const)[sev]}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
+              {/* Left callout — ch2: SHAP bars right-aligned; ch4: strategy rec; others: chapter metadata */}
+              {activeChapter === 2 ? (
+                <div style={{ justifySelf: 'end', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 280 }}>
+                  <CalloutRight content={ch.right} visible={true} />
+                </div>
+              ) : activeChapter === 4 ? (
+                <div style={{ justifySelf: 'end', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 280 }}>
+                  <StrategyLeft currentYear={currentYear} currentDriver={currentDriver} currentLap={currentLap} />
+                </div>
+              ) : (
+                <CalloutLeft content={ch.left} visible={true} />
+              )}
 
-          {/* Left callout — mobile ch2: full-width stacked; desktop ch2: SHAP bars; ch4: strategy rec; others: chapter metadata */}
-          {isNarrow && activeChapter === 2 ? (
-            <div style={{
-              gridColumn: '1 / 4',
-              display: 'flex', flexDirection: 'column', gap: 16,
-              padding: '0 16px 120px',
-              overflowY: 'auto',
-              maxHeight: 'calc(100vh - 120px)',
-              width: '100%',
-            }}>
-              <CalloutLeft content={ch.left} visible={true} />
-              <CalloutRight content={ch.right} visible={true} />
-              <CornerHeatmap year={currentYear} driver={currentDriver} />
-            </div>
-          ) : activeChapter === 2 ? (
-            <div style={{ justifySelf: 'end', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 280 }}>
-              <CalloutRight content={ch.right} visible={true} />
-            </div>
-          ) : activeChapter === 4 ? (
-            <div style={{ justifySelf: 'end', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 280 }}>
-              <StrategyLeft currentYear={currentYear} currentDriver={currentDriver} currentLap={currentLap} />
-            </div>
-          ) : (
-            <CalloutLeft content={ch.left} visible={true} />
-          )}
+              {/* Center — ch4: pit chart; ch5: season chart; others: tire */}
+              {activeChapter === 4 ? (
+                <StrategyPitChart currentYear={currentYear} currentDriver={currentDriver} currentLap={currentLap} />
+              ) : activeChapter === 5 ? (
+                <div style={{ gridColumn: '2 / 4', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <CrossSeasonChart driver={currentDriver} />
+                </div>
+              ) : (
+                <TireHero scrollProgress={scrollProgress} />
+              )}
 
-          {/* Center — mobile ch2: suppressed (stacked layout in left col spans all 3); ch4: pit chart; ch5: season chart; others: tire */}
-          {isNarrow && activeChapter === 2 ? null : activeChapter === 4 ? (
-            <StrategyPitChart currentYear={currentYear} currentDriver={currentDriver} currentLap={currentLap} />
-          ) : activeChapter === 5 ? (
-            <div style={{ gridColumn: '2 / 4', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <CrossSeasonChart driver={currentDriver} />
-            </div>
-          ) : (
-            <TireHero scrollProgress={scrollProgress} />
-          )}
-
-          {/* Right callout — mobile ch2: suppressed; desktop ch2: corner heatmap; ch4: strategy outcome; ch5: suppressed; others: SHAP/text */}
-          {isNarrow && activeChapter === 2 ? null : activeChapter === 2 ? (
-            <div style={{ justifySelf: 'start', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 280 }}>
-              <CornerHeatmap year={currentYear} driver={currentDriver} />
-            </div>
-          ) : activeChapter === 4 ? (
-            <div style={{ justifySelf: 'start', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 280 }}>
-              <StrategyRight currentYear={currentYear} currentDriver={currentDriver} setSimDrawerOpen={setSimDrawerOpen} />
-            </div>
-          ) : activeChapter === 5 ? null : (
-            <CalloutRight content={ch.right} visible={true} />
+              {/* Right callout — ch2: corner heatmap; ch4: strategy outcome; ch5: suppressed; others: SHAP/text */}
+              {activeChapter === 2 ? (
+                <div style={{ justifySelf: 'start', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 280 }}>
+                  <CornerHeatmap year={currentYear} driver={currentDriver} />
+                </div>
+              ) : activeChapter === 4 ? (
+                <div style={{ justifySelf: 'start', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 280 }}>
+                  <StrategyRight currentYear={currentYear} currentDriver={currentDriver} setSimDrawerOpen={setSimDrawerOpen} />
+                </div>
+              ) : activeChapter === 5 ? null : (
+                <CalloutRight content={ch.right} visible={true} />
+              )}
+            </>
           )}
         </div>
       </div>

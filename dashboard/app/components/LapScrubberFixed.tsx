@@ -27,13 +27,13 @@ export default function LapScrubberFixed() {
         left: 0,
         right: 0,
         zIndex: 50,
-        height: 48,
+        height: 'calc(48px + env(safe-area-inset-bottom, 0px))',
         background: 'rgba(8,8,8,0.95)',
         backdropFilter: 'blur(8px)',
         display: 'flex',
         alignItems: 'center',
         gap: 12,
-        padding: '0 20px',
+        padding: '0 20px env(safe-area-inset-bottom, 0px)',
       }}
       aria-label="Lap scrubber"
     >
