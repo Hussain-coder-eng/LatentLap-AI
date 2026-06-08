@@ -77,3 +77,17 @@ Started: Sun Jun  7 21:58:25 EDT 2026
   - `setSimDrawerOpen` exported from RaceContext — no interface changes needed
   - Pinned stage div uses `position: relative` so `position: absolute` children within Chapter 4 block are valid
 ---
+
+## 2026-06-08 04:05 - US-007
+- Added COMPOUND_FULL_NAME map (Soft/Medium/Hard/Intermediate/Wet) — replaces all abbreviation ternary chains
+- Changed compound button labels from single-letter (S/M/H/INT/W) to full names
+- Changed compound Cell display values to full names
+- Changed 'Finish Sev' cell label to 'Projected finish severity'
+- Changed 'Multiplier' cell label to 'Compound degradation multiplier'
+- Added verdictZero (|timeSaved| < 0.05) branch: shows '— No meaningful gain/loss' with neutral grey styling
+- Files changed: `dashboard/app/components/SimDrawer.tsx`
+- **Learnings for future iterations:**
+  - COMPOUND_FULL_NAME map is the single source of truth for display names — avoids scattered ternary chains
+  - Cell label is 9px at top of cell — long labels ('Compound degradation multiplier') still fit due to small size
+  - verdictZero threshold is 0.05s — renders neutral grey verdict box instead of red/green
+---
