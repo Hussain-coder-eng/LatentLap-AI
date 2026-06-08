@@ -2,6 +2,7 @@
 import { useEffect, useRef } from 'react'
 import { animate, stagger } from 'animejs'
 import { useReducedMotion } from '../../lib/useReducedMotion'
+import { NARROW_VIEWPORT_QUERY, useNarrowViewport } from '../../lib/useNarrowViewport'
 
 export interface CalloutLeftContent {
   label: string
@@ -18,15 +19,17 @@ interface CalloutLeftProps {
 export function CalloutLeft({ content, visible }: CalloutLeftProps) {
   const linesRef = useRef<HTMLDivElement>(null)
   const reducedMotion = useReducedMotion()
+  const isNarrowViewport = useNarrowViewport()
 
   useEffect(() => {
     const el = linesRef.current
     if (!el || reducedMotion) return
 
     const children = Array.from(el.children) as HTMLElement[]
+    const useFadeOnly = window.matchMedia(NARROW_VIEWPORT_QUERY).matches
     if (visible) {
       animate(children, {
-        translateX: [-40, 0],
+        ...(useFadeOnly ? {} : { translateX: [-40, 0] }),
         opacity: [0, 1],
         delay: stagger(40),
         duration: 360,
@@ -34,33 +37,48 @@ export function CalloutLeft({ content, visible }: CalloutLeftProps) {
       })
     } else {
       animate(children, {
-        translateX: [0, 40],
+        ...(useFadeOnly ? {} : { translateX: [0, 40] }),
         opacity: [1, 0],
         duration: 240,
         ease: 'outQuart',
       })
     }
-  }, [visible, reducedMotion])
+  }, [visible, reducedMotion, isNarrowViewport])
 
   return (
     <div
+      className="stage-callout stage-callout-left"
+      data-testid="stage-callout-left"
+      data-motion={isNarrowViewport ? 'fade' : 'slide'}
       style={{
         display: 'flex',
         flexDirection: 'column',
         gap: 8,
-        minWidth: 180,
-        maxWidth: 240,
+        width: '100%',
+        minWidth: 0,
+        maxWidth: 260,
+        justifySelf: 'end',
         opacity: visible ? undefined : 0,
       }}
     >
-      <div ref={linesRef} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div
+        ref={linesRef}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          minWidth: 0,
+          overflowWrap: 'normal',
+          wordBreak: 'normal',
+        }}
+      >
         <div
           style={{
             fontFamily: "'Fira Code', monospace",
             fontSize: 11,
             color: '#888',
             textTransform: 'uppercase',
-            letterSpacing: '0.1em',
+            letterSpacing: '0.08em',
           }}
         >
           {content.label}
@@ -69,9 +87,11 @@ export function CalloutLeft({ content, visible }: CalloutLeftProps) {
           style={{
             fontFamily: "'Rajdhani', sans-serif",
             fontWeight: 700,
-            fontSize: 36,
+            fontSize: 'clamp(24px, 4.5vw, 36px)',
             lineHeight: 1,
             color: content.valueColor ?? '#ffffff',
+            overflowWrap: 'normal',
+            wordBreak: 'normal',
           }}
         >
           {content.value}
@@ -82,6 +102,8 @@ export function CalloutLeft({ content, visible }: CalloutLeftProps) {
             fontSize: 13,
             color: '#aaaaaa',
             lineHeight: 1.5,
+            overflowWrap: 'normal',
+            wordBreak: 'normal',
           }}
         >
           {content.explanation}
