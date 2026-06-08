@@ -11,6 +11,9 @@ import {
 } from '../../lib/data'
 
 const ALL_COMPOUNDS: CompoundKey[] = ['SOFT', 'MEDIUM', 'HARD', 'INTERMEDIATE', 'WET']
+const COMPOUND_FULL_NAME: Record<CompoundKey, string> = {
+  SOFT: 'Soft', MEDIUM: 'Medium', HARD: 'Hard', INTERMEDIATE: 'Intermediate', WET: 'Wet',
+}
 
 function CompoundChip({ compound }: { compound: string }) {
   const color = COMPOUND_COLORS[compound as CompoundKey] ?? '#888'
@@ -41,9 +44,12 @@ export default function SimDrawer() {
   const isWet       = WET_COMPOUNDS.has(simCompound) && !actualIsWet
   const timeSaved  = result.timeDeltaSec
   const verdictPos = timeSaved > 0
-  const verdictLabel = verdictPos
-    ? `SAVED ${timeSaved.toFixed(1)}s`
-    : `LOST ${Math.abs(timeSaved).toFixed(1)}s`
+  const verdictZero = Math.abs(timeSaved) < 0.05
+  const verdictLabel = verdictZero
+    ? 'No meaningful gain/loss'
+    : verdictPos
+      ? `SAVED ${timeSaved.toFixed(1)}s`
+      : `LOST ${Math.abs(timeSaved).toFixed(1)}s`
 
   if (!simDrawerOpen) return null
 
@@ -108,7 +114,7 @@ export default function SimDrawer() {
                   fontWeight: simCompound === c ? 700 : 400,
                 }}
               >
-                <CompoundChip compound={c} />{c === 'INTERMEDIATE' ? 'INT' : c === 'SOFT' ? 'S' : c === 'MEDIUM' ? 'M' : c === 'HARD' ? 'H' : 'W'}
+                <CompoundChip compound={c} />{COMPOUND_FULL_NAME[c]}
               </button>
             ))}
           </div>
@@ -159,36 +165,36 @@ export default function SimDrawer() {
               {label}
             </div>
           ))}
-          <Cell label="Compound" value={<><CompoundChip compound={result.actualCompound} />{result.actualCompound}</>} isLeft />
-          <Cell label="Compound" value={<><CompoundChip compound={simCompound} />{simCompound === 'INTERMEDIATE' ? 'INT' : simCompound}</>} />
+          <Cell label="Compound" value={<><CompoundChip compound={result.actualCompound} />{COMPOUND_FULL_NAME[result.actualCompound as CompoundKey] ?? result.actualCompound}</>} isLeft />
+          <Cell label="Compound" value={<><CompoundChip compound={simCompound} />{COMPOUND_FULL_NAME[simCompound]}</>} />
           <Cell label="Pit Lap" value={`L${result.actualPitLap}`} isLeft />
           <Cell label="Pit Lap" value={`L${simPitLap}`} />
-          <Cell label="Finish Sev" value={result.actualFinishSeverity.toFixed(2)} isLeft />
+          <Cell label="Projected finish severity" value={result.actualFinishSeverity.toFixed(2)} isLeft />
           <Cell
-            label="Finish Sev"
+            label="Projected finish severity"
             value={result.simFinishSeverity.toFixed(2)}
             highlight={result.simFinishSeverity < result.actualFinishSeverity ? '#00E676' : '#FF1744'}
           />
           <Cell
-            label="Multiplier"
+            label="Compound degradation multiplier"
             value={`×${(COMPOUND_MULTIPLIERS[result.actualCompound as CompoundKey] ?? 1.0).toFixed(2)}`}
             isLeft
           />
-          <Cell label="Multiplier" value={`×${COMPOUND_MULTIPLIERS[simCompound].toFixed(2)}`} />
+          <Cell label="Compound degradation multiplier" value={`×${COMPOUND_MULTIPLIERS[simCompound].toFixed(2)}`} />
         </div>
       </div>
 
       {/* Verdict */}
       <div style={{ padding: 16 }}>
         <div style={{
-          border: `1px solid ${verdictPos ? '#00E676' : '#FF1744'}`,
+          border: `1px solid ${verdictZero ? '#888' : verdictPos ? '#00E676' : '#FF1744'}`,
           borderRadius: 6,
           padding: '12px 16px',
           textAlign: 'center',
-          background: verdictPos ? 'rgba(0,230,118,0.08)' : 'rgba(255,23,68,0.08)',
+          background: verdictZero ? 'rgba(255,255,255,0.04)' : verdictPos ? 'rgba(0,230,118,0.08)' : 'rgba(255,23,68,0.08)',
         }}>
-          <div style={{ fontSize: 18, fontWeight: 700, color: verdictPos ? '#00E676' : '#FF1744', letterSpacing: 1 }}>
-            {verdictPos ? '✓' : '✗'} {verdictLabel}
+          <div style={{ fontSize: 18, fontWeight: 700, color: verdictZero ? '#888' : verdictPos ? '#00E676' : '#FF1744', letterSpacing: 1 }}>
+            {verdictZero ? '—' : verdictPos ? '✓' : '✗'} {verdictLabel}
           </div>
           <div style={{ fontSize: 10, color: '#555', marginTop: 4 }}>
             vs actual strategy · {result.remainingLaps} laps projected
