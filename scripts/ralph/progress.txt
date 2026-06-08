@@ -137,3 +137,14 @@ Started: Sun Jun  7 21:58:25 EDT 2026
 - Files changed: dashboard/app/components/SilverstoneCircuit.tsx, dashboard/app/components/ScrollStage.tsx
 - Learnings: hideRings pattern on SilverstoneCircuit is clean toggle for mobile — no opacity hack needed
 ---
+
+## 2026-06-08 18:35 - US-013
+- Refactored ScrollStage return into two top-level branches: isNarrow (mobile) and desktop — eliminates double-render risk from scattered isNarrow guards
+- Mobile branch: flex-column pinRef (minHeight:100vh, padding 56px top / 16px sides / 64px bottom), SilverstoneCircuit wrapped in opacity:0.06 div as faint background, single stacked content div per chapter
+- Per-chapter mobile content: ch0/ch1 → CalloutLeft+TireHero+CalloutRight; ch2 → CalloutLeft+CalloutRight+CornerHeatmap; ch3 → CalloutLeft+inline severity legend+inline race arc bar+CalloutRight; ch4 → CalloutLeft+StrategyLeft+StrategyPitChart+StrategyRight; ch5 → CalloutLeft+CrossSeasonChart (overflowX:auto)
+- Race arc timeline extracted as raceArcTimelineBar JSX variable — reused in mobile inline path; desktop still uses the absolute-positioned version
+- LapScrubberFixed: height changed to calc(48px + env(safe-area-inset-bottom, 0px)), padding-bottom env(safe-area-inset-bottom, 0px) — safe on desktop (env resolves to 0)
+- Desktop branch: all three absolute ch3 timeline/tick/legend divs remain, three-column grid logic unchanged, US-009/010/011 chapter overrides preserved
+- Files changed: dashboard/app/components/ScrollStage.tsx, dashboard/app/components/LapScrubberFixed.tsx
+- Learnings: mobile must be ONE top-level isNarrow branch — sibling conditionals cause double renders on mobile; all absolute overlays must live exclusively in the desktop branch
+---
