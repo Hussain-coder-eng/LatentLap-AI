@@ -129,3 +129,11 @@ Started: Sun Jun  7 21:58:25 EDT 2026
   - Y-axis categorical labels (Healthy/Mild/Moderate/Critical) at gridline positions are more readable than numeric 0–3 for severity scale
   - Rotated SVG text for Y-axis: `transform="rotate(-90, cx, cy)"` with `textAnchor="middle"` — cx=10, cy=PAD_T+plotH/2
 ---
+
+## 2026-06-08 18:30 - US-012
+- Added hideRings prop to SilverstoneCircuit — suppresses corner glow on mobile (isNarrow)
+- Mobile chapter 2 stacked layout: gridColumn 1/4 full-width flex-col with CalloutLeft + CalloutRight + CornerHeatmap, 16px padding, 120px bottom pad to clear scrubber
+- Center and right columns suppressed (null) when isNarrow && activeChapter === 2
+- Files changed: dashboard/app/components/SilverstoneCircuit.tsx, dashboard/app/components/ScrollStage.tsx
+- Learnings: hideRings pattern on SilverstoneCircuit is clean toggle for mobile — no opacity hack needed
+---
