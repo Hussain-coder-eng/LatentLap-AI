@@ -56,62 +56,79 @@ export default function CornerHeatmap({ year, driver }: CornerHeatmapProps) {
   const cellH = 16
 
   return (
-    <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
-      <div style={{ fontSize: 8, color: '#888', letterSpacing: 1, fontFamily: 'monospace', marginBottom: 4 }}>
-        CORNER STRESS HEATMAP
+    <div style={{ width: '100%', boxSizing: 'border-box' as const, padding: '6px 12px 4px' }}>
+      {/* Title */}
+      <div style={{ fontSize: 11, color: '#aaa', letterSpacing: 1, fontFamily: 'monospace', marginBottom: 6, fontWeight: 600 }}>
+        Corner Stress by Lap
       </div>
 
-      {/* Grid rows */}
-      {CORNERS.map((corner, ci) => (
-        <div key={corner} style={{ display: 'flex', alignItems: 'center', marginBottom: 1 }}>
-          <span style={{
-            fontSize: 8, color: '#888', fontFamily: 'monospace',
-            width: 36, textAlign: 'right', marginRight: 4, lineHeight: `${cellH}px`,
-            flexShrink: 0,
-          }}>
-            {corner}
-          </span>
-          {stress[ci].map((s, li) => (
-            <div
-              key={lapEntries[li].lapNum}
-              style={{
-                width: cellW,
-                height: cellH,
-                background: interpolateColor(s / globalMax),
-                flexShrink: 0,
-              }}
-            />
-          ))}
-        </div>
-      ))}
+      <div style={{ overflowX: 'auto', maxWidth: '100%' }}>
+        {/* Grid rows */}
+        {CORNERS.map((corner, ci) => (
+          <div key={corner} style={{ display: 'flex', alignItems: 'center', marginBottom: 1 }}>
+            <span style={{
+              fontSize: 10, color: '#aaa', fontFamily: 'monospace',
+              width: 38, textAlign: 'right', marginRight: 4, lineHeight: `${cellH}px`,
+              flexShrink: 0,
+            }}>
+              {corner}
+            </span>
+            {stress[ci].map((s, li) => (
+              <div
+                key={lapEntries[li].lapNum}
+                style={{
+                  width: cellW,
+                  height: cellH,
+                  background: interpolateColor(s / globalMax),
+                  flexShrink: 0,
+                }}
+              />
+            ))}
+          </div>
+        ))}
 
-      {/* X-axis lap labels */}
-      <div style={{ display: 'flex', alignItems: 'center', marginTop: 2 }}>
-        <div style={{ width: 40, flexShrink: 0 }} />
-        <div style={{ position: 'relative', height: 10, flexGrow: 1 }}>
-          {lapEntries
-            .filter((_, i) => i === 0 || lapEntries[i].lapNum % 5 === 0)
-            .map(({ lapNum }, _, arr) => {
-              const idx = lapEntries.findIndex(e => e.lapNum === lapNum)
-              return (
-                <span
-                  key={lapNum}
-                  style={{
-                    position: 'absolute',
-                    left: idx * cellW,
-                    fontSize: 7,
-                    color: '#555',
-                    fontFamily: 'monospace',
-                    transform: 'translateX(-50%)',
-                    userSelect: 'none' as const,
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {lapNum}
-                </span>
-              )
-            })}
+        {/* X-axis lap labels */}
+        <div style={{ display: 'flex', alignItems: 'center', marginTop: 2 }}>
+          <div style={{ width: 42, flexShrink: 0 }} />
+          <div style={{ position: 'relative', height: 10, flexGrow: 1 }}>
+            {lapEntries
+              .filter((_, i) => i === 0 || lapEntries[i].lapNum % 5 === 0)
+              .map(({ lapNum }) => {
+                const idx = lapEntries.findIndex(e => e.lapNum === lapNum)
+                return (
+                  <span
+                    key={lapNum}
+                    style={{
+                      position: 'absolute',
+                      left: idx * cellW,
+                      fontSize: 9,
+                      color: '#555',
+                      fontFamily: 'monospace',
+                      transform: 'translateX(-50%)',
+                      userSelect: 'none' as const,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {lapNum}
+                  </span>
+                )
+              })}
+          </div>
         </div>
+      </div>
+
+      {/* Legend */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+        <span style={{ fontSize: 10, color: '#666', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>Low stress</span>
+        <div style={{
+          flex: 1,
+          height: 8,
+          background: 'linear-gradient(to right, rgb(13,17,23), rgb(80,10,5), rgb(255,24,1))',
+          borderRadius: 2,
+          maxWidth: 120,
+        }} />
+        <span style={{ fontSize: 10, color: '#aaa', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>High stress</span>
+        <span style={{ fontSize: 9, color: '#555', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>· Darker red = higher corner stress proxy</span>
       </div>
     </div>
   )

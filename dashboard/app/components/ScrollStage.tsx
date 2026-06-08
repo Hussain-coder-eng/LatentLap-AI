@@ -430,9 +430,19 @@ export default function ScrollStage() {
             </div>
           )}
 
-          {/* Chapter 2 (Predictors): corner stress heatmap */}
+          {/* Chapter 2 (Predictors): corner stress heatmap — fixed lower panel above scrubber */}
           {activeChapter === 2 && (
-            <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', width: '80%', pointerEvents: 'none' }}>
+            <div style={{
+              position: 'fixed',
+              bottom: 48,
+              left: 0,
+              right: 0,
+              height: 120,
+              background: 'rgba(8,8,8,0.92)',
+              borderTop: '1px solid rgba(255,128,0,0.15)',
+              zIndex: 40,
+              overflow: 'hidden',
+            }}>
               <CornerHeatmap year={currentYear} driver={currentDriver} />
             </div>
           )}
