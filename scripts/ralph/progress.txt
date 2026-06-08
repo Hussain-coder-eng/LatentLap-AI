@@ -65,3 +65,15 @@ Started: Sun Jun  7 21:58:25 EDT 2026
   - RACE_ARC_TIMELINE constants at top of ScrollStage: BOTTOM_PX=64, HEIGHT_PX=18 — legend at `bottom: 64+18+8=90`
   - SEVERITY_LABELS exported from severityColors.ts but short labels ['Healthy','Mild','Moderate','Critical'] used inline for compactness
 ---
+
+## 2026-06-08 04:00 - US-006
+- Removed floating SimFAB ("SIM" circle button at fixed bottom:88 right:16) from page.tsx entirely
+- Added "Strategy Simulator" button inside Chapter 4 block in ScrollStage.tsx — positioned absolute bottom:12 right:16 within pinned stage div
+- Added `setSimDrawerOpen` to useRaceContext() destructure in ScrollStage
+- Removed unused `useRaceContext` import from page.tsx
+- Files changed: `dashboard/app/page.tsx`, `dashboard/app/components/ScrollStage.tsx`
+- **Learnings for future iterations:**
+  - SimDrawer trigger now in ScrollStage Chapter 4 block — button only visible when user is on Strategy chapter
+  - `setSimDrawerOpen` exported from RaceContext — no interface changes needed
+  - Pinned stage div uses `position: relative` so `position: absolute` children within Chapter 4 block are valid
+---
