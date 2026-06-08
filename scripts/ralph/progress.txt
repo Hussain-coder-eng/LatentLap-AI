@@ -52,3 +52,16 @@ Started: Sun Jun  7 21:58:25 EDT 2026
   - Gradient CSS for the legend: `linear-gradient(to right, rgb(13,17,23), rgb(80,10,5), rgb(255,24,1))` matches `interpolateColor()` function range
   - When moving overlays to fixed panels, ensure zIndex is below scrubber (50) and above main content (30–39)
 ---
+
+## 2026-06-08 03:51 - US-005
+- Changed `value` from `${totalLaps} Predicted Laps` to `${totalLaps} modeled laps from telemetry`
+- Changed `subAnnotation` from `(of 52 race laps)` to `· 52 race laps total`
+- Added severity scale legend row above race arc timeline bar: 4 colored swatches (Healthy/Mild/Moderate/Critical) positioned at `bottom: RACE_ARC_TIMELINE_BOTTOM_PX + RACE_ARC_TIMELINE_HEIGHT_PX + 8`
+- Overflow already `hidden` on all containing divs — no scrollbar visible
+- Files changed: `dashboard/app/components/ScrollStage.tsx`
+- **Learnings for future iterations:**
+  - Race arc chapter content is in `ScrollStage.tsx` chapterContent array, chapter index 3 (0-based: index 2 in array after intro=0, severity=1, predictors=2, racearc=3)
+  - Severity legend can reuse `getSeverityHex()` from `lib/severityColors.ts`
+  - RACE_ARC_TIMELINE constants at top of ScrollStage: BOTTOM_PX=64, HEIGHT_PX=18 — legend at `bottom: 64+18+8=90`
+  - SEVERITY_LABELS exported from severityColors.ts but short labels ['Healthy','Mild','Moderate','Critical'] used inline for compactness
+---
