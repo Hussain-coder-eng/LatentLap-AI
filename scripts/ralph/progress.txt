@@ -91,3 +91,15 @@ Started: Sun Jun  7 21:58:25 EDT 2026
   - Cell label is 9px at top of cell — long labels ('Compound degradation multiplier') still fit due to small size
   - verdictZero threshold is 0.05s — renders neutral grey verdict box instead of red/green
 ---
+
+## 2026-06-08 04:00 - US-009
+- Added `backgroundOnly` prop to SilverstoneCircuit — when true, caps corner ring opacity to max 0.15 (formula: `min(0.04 + score * 0.11, 0.15)`) and disables pulse animation
+- Removed fixed-bottom CornerHeatmap panel (was `position:fixed, bottom:48, height:120px`)
+- Swapped left/right callout columns for chapter 2: SHAP bars (CalloutRight) move to left col with `justifySelf:end` wrapper; CornerHeatmap moves to right col with `justifySelf:start` wrapper
+- Passed `backgroundOnly={activeChapter === 2}` to SilverstoneCircuit
+- Files changed: `dashboard/app/components/SilverstoneCircuit.tsx`, `dashboard/app/components/ScrollStage.tsx`
+- **Learnings for future iterations:**
+  - `backgroundOnly` pattern on SilverstoneCircuit is the toggle for decorative vs active corner rings — reuse if future chapters need rings as background
+  - Grid column swap achieved by wrapping CalloutRight in `justifySelf:end` div (left col) and CornerHeatmap in `justifySelf:start` div (right col) — no grid structure change needed
+  - CornerHeatmap renders fine inline (width:100%) — no fixed positioning required
+---
