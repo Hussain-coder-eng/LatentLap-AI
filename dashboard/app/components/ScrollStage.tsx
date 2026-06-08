@@ -139,7 +139,7 @@ function StrategyBars({ currentYear, currentDriver, currentLap }: {
 }
 
 export default function ScrollStage() {
-  const { currentLap, currentYear, currentDriver } = useRaceContext()
+  const { currentLap, currentYear, currentDriver, setSimDrawerOpen } = useRaceContext()
   const stageRef = useRef<HTMLDivElement>(null)
   const pinRef   = useRef<HTMLDivElement>(null)
   const [scrollProgress, setScrollProgress] = useState(0)
@@ -494,6 +494,25 @@ export default function ScrollStage() {
               }}>
                 <LapDeltaChart laps={laps} currentLap={currentLap} />
               </div>
+              <button
+                onClick={() => setSimDrawerOpen(true)}
+                style={{
+                  position: 'absolute', bottom: 12, right: 16,
+                  padding: '6px 14px',
+                  background: '#1a1f24',
+                  border: '1px solid rgba(255,128,0,0.6)',
+                  borderRadius: 6,
+                  color: '#FF8000',
+                  fontSize: 11,
+                  fontFamily: "'Fira Code', monospace",
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  letterSpacing: 0.5,
+                  zIndex: 10,
+                }}
+              >
+                Strategy Simulator
+              </button>
             </>
           )}
 
