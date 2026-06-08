@@ -14,6 +14,7 @@ import CornerHeatmap from './CornerHeatmap'
 import strategyRaw from '../../public/data/strategy_recommendations.json'
 
 const CHAPTER_THRESHOLDS = [0, 0.17, 0.34, 0.51, 0.68, 0.85]
+const CHAPTER_COUNT = CHAPTER_THRESHOLDS.length
 const RACE_ARC_TIMELINE_BOTTOM_PX = 64
 const RACE_ARC_TIMELINE_HEIGHT_PX = 18
 const RACE_ARC_TIMELINE_MIN_SEGMENT_PX = 2
@@ -292,7 +293,7 @@ export default function ScrollStage() {
   // Keyboard chapter navigation
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'PageDown') scrollToChapter(Math.min(4, activeChapter + 1))
+      if (e.key === 'PageDown') scrollToChapter(Math.min(CHAPTER_COUNT - 1, activeChapter + 1))
       if (e.key === 'PageUp')   scrollToChapter(Math.max(0, activeChapter - 1))
     }
     window.addEventListener('keydown', onKey)
@@ -480,31 +481,8 @@ export default function ScrollStage() {
       <div ref={stageRef} style={{ height: '500vh' }}>
         <div
           ref={pinRef}
-          className="scroll-stage-pin"
-          style={isNarrow ? {
-            position: 'relative' as const,
-            width: '100%',
-            minHeight: '100vh',
-            display: 'flex',
-            flexDirection: 'column' as const,
-            padding: '56px 16px 64px',
-            boxSizing: 'border-box' as const,
-            overflow: 'hidden',
-            background: 'var(--bg)',
-          } : {
-            position: 'relative' as const,
-            width: '100%',
-            height: '100vh',
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1fr) minmax(150px, 32vmin) minmax(0, 1fr)',
-            columnGap: 'clamp(10px, 2.5vw, 40px)',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 'clamp(72px, 10vh, 96px) clamp(18px, 5vw, 72px) 72px',
-            boxSizing: 'border-box' as const,
-            overflow: 'hidden',
-            background: 'var(--bg)',
-          }}
+          className={`scroll-stage-pin ${isNarrow ? 'scroll-stage-pin--mobile' : 'scroll-stage-pin--desktop'}`}
+          style={{ background: 'var(--bg)' }}
         >
           {/* Background circuit — faint on mobile (opacity 0.06), full on desktop */}
           <div style={{ opacity: isNarrow ? 0.06 : 1 }}>

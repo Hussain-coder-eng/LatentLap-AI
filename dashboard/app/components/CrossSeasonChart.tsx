@@ -38,7 +38,7 @@ export default function CrossSeasonChart({ driver }: CrossSeasonChartProps) {
   return (
     <svg
       width="100%"
-      height="100%"
+      height={SVG_H}
       viewBox={`0 0 ${SVG_W} ${SVG_H}`}
       style={{ display: 'block', overflow: 'visible' }}
     >

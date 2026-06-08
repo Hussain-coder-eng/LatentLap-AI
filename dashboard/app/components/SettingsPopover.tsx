@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRaceContext } from '../RaceContext'
 import { getDriversForYear } from '../../lib/data'
+import { useNarrowViewport } from '../../lib/useNarrowViewport'
 
 const YEARS = [2021, 2022, 2023, 2024, 2025] as const
 
@@ -10,6 +11,7 @@ export default function SettingsPopover() {
   const [open, setOpen] = useState(false)
   const popoverRef = useRef<HTMLDivElement>(null)
   const pillRef = useRef<HTMLButtonElement>(null)
+  const isNarrow = useNarrowViewport()
 
   useEffect(() => {
     if (!open) return
@@ -40,7 +42,7 @@ export default function SettingsPopover() {
       aria-label="Select year and driver"
       style={{
         position: 'fixed',
-        top: 16,
+        top: isNarrow ? 40 : 16,
         left: 16,
         zIndex: 300,
         background: 'rgba(255,128,0,0.15)',
