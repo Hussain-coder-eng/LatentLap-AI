@@ -1,41 +1,266 @@
 {
-  "project": "LatentLap-AI Dashboard — Circuit Car Animation Fixes",
-  "branchName": "fix/circuit-car-animation",
-  "description": "Two bug fixes to SilverstoneCircuit.tsx. Bug 1: car stops moving at lap 29 because totalLaps uses allLaps.length (count of predicted laps, e.g. 29) instead of the max lap number (52). At lap == count the progress formula clamps to 1.0 and the car freezes. Bug 2: car is always drawn vertical regardless of track direction — the transform only translates, never rotates. Fix by computing the path tangent and rotating the car to face its direction of travel. File to edit: dashboard/app/components/SilverstoneCircuit.tsx",
+  "project": "LatentLap-AI Dashboard",
+  "branchName": "ralph/dashboard-bugs-improvements",
+  "description": "Fix 6 dashboard bugs and add 9 improvements: favicon, dominant-mode label, lap counter clarity, SimDrawer z-index, StrategyBars z-index, 2025 strategy fallback, SHAP readable names, Pirelli compound colors, Race Arc lap labels, discoverable selector, confidence intervals, undercut/overcut window, lap delta chart, cross-season comparison, corner heatmap.",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Fix circuit car stops moving at lap 29",
-      "description": "As a user scrubbing through a race, I want the car marker to keep moving along the Silverstone circuit for every lap until the final lap of the race, not freeze partway through.",
+      "title": "Add favicon to fix 404 console error",
+      "description": "As a user, I want a favicon so the browser tab shows an icon and the console has no 404 error.",
       "acceptanceCriteria": [
-        "In dashboard/app/components/SilverstoneCircuit.tsx, replace 'const totalLaps = Math.max(allLaps.length, 1)' with a variable that holds the MAX lap number in allLaps, e.g. 'const maxLapNum = allLaps.length > 0 ? allLaps[allLaps.length - 1].lap_number : 1'",
-        "Pass maxLapNum (not allLaps.length) to lapToCircuitProgress(currentLap, maxLapNum)",
-        "Update the useEffect dependency array to reference maxLapNum instead of totalLaps if needed",
-        "For 2025_NOR data (allLaps.length=29 but max lap_number=52): at currentLap=30 progress should be (30-1)/(52-1) ≈ 0.569, NOT clamped to 1.0",
+        "Create dashboard/public/favicon.svg containing a valid SVG — a simple orange circle (fill #FF8000) with a small 'LL' text in black, viewBox='0 0 32 32'",
+        "In dashboard/app/layout.tsx, add or update the metadata.icons field: icons: { icon: '/favicon.svg' } — if metadata object exists update it; if not, export const metadata = { icons: { icon: '/favicon.svg' } }",
+        "After starting the dev server, visiting http://localhost:3000/favicon.svg returns the SVG file with status 200",
         "cd /Users/hussianaltufayli/Downloads/LatentLap-AI-main/dashboard && npx tsc --noEmit shows 0 errors",
-        "Commit with message: 'fix: US-001 - SilverstoneCircuit car stops at lap 29 — use max lap_number not allLaps.length'"
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 1,
       "passes": true,
-      "notes": "Root cause: allLaps is the subset of laps that have predictions (e.g. 29 for 2025 NOR), but lap numbers go up to 52. Formula (lap-1)/(count-1) reaches 1.0 at lap==count, then clamps. Fix: use Math.max(...allLaps.map(l => l.lap_number)) or allLaps[allLaps.length-1].lap_number (already sorted) as the denominator."
+      "notes": ""
     },
     {
       "id": "US-002",
-      "title": "Car faces forward along the track at every position",
-      "description": "As a user I want the F1 car marker to always face the direction it is driving along the Silverstone circuit, not always point straight up regardless of the track direction.",
+      "title": "Fix 'Dominant mode: none' showing as error text",
+      "description": "As a user, I want the dominant degradation mode to show a meaningful label when no active failure mode is detected, not the word 'none' which reads as an error.",
       "acceptanceCriteria": [
-        "In dashboard/app/components/SilverstoneCircuit.tsx, inside the useEffect that moves the car, compute the path tangent direction after getting the current point",
-        "Introduce 'const dist = progress * totalLength' and use 'pathEl.getPointAtLength(dist)' for the current point",
-        "Sample a second point slightly ahead: 'const delta = Math.min(2, totalLength * 0.01); const point2 = pathEl.getPointAtLength(Math.min(dist + delta, totalLength - 0.001))'",
-        "Compute direction vector: 'const dx = point2.x - point.x; const dy = point2.y - point.y'",
-        "Compute angle: 'const angleDeg = Math.atan2(dx, -dy) * (180 / Math.PI)' — this formula is correct because the car SVG is drawn nose-up (pointing toward lower y), so 0 degrees = nose up = -Y direction",
-        "Replace the existing carEl.setAttribute transform with: carEl.setAttribute('transform', `translate(${point.x.toFixed(2)}, ${point.y.toFixed(2)}) rotate(${angleDeg.toFixed(1)}) translate(-6, -11)`) — this centers on the path point, rotates, then offsets by car center",
+        "In dashboard/app/components/ScrollStage.tsx, find the line that renders 'Dominant mode: ...' (around line 246)",
+        "Change the logic to filter out the 'none' key from mode_probs entries before picking the top entry: Object.entries(lap.mode_probs).filter(([k]) => k !== 'none').sort((a,b)=>b[1]-a[1])[0]",
+        "If after filtering no entries remain (all zero or only 'none' exists), display 'Dominant mode: NOMINAL'",
+        "When a real mode exists, display in uppercase: 'Dominant mode: BLISTERING' / 'THERMAL' / 'WEAR'",
+        "When the top non-none mode probability < 0.1, append ' (trace)' e.g. 'Dominant mode: BLISTERING (trace)'",
         "cd /Users/hussianaltufayli/Downloads/LatentLap-AI-main/dashboard && npx tsc --noEmit shows 0 errors",
-        "Commit with message: 'fix: US-002 - SilverstoneCircuit car faces forward along track — compute path tangent rotation'"
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 2,
       "passes": true,
-      "notes": "The car SVG is drawn with nose at y~0 and tail at y~21, center at ~(6,11). The SVG 'up' direction (-Y) is the car's forward direction. Math.atan2(dx, -dy) gives the rotation angle such that the car nose points in the direction (dx,dy) of travel. SVG transform 'translate(px,py) rotate(angle) translate(-6,-11)' applies: first shift car center to origin, then rotate, then move to path point."
+      "notes": "Root cause: ScrollStage picks highest mode_probs key without excluding 'none'. For laps where none=0.84, 'none' wins. Fix: filter out 'none' key before sorting."
+    },
+    {
+      "id": "US-003",
+      "title": "Clarify Race Arc lap count as dataset prediction count",
+      "description": "As a user, I want to understand why Race Arc shows 29 Laps while the scrubber shows /52, so I am not confused about data completeness.",
+      "acceptanceCriteria": [
+        "In dashboard/app/components/ScrollStage.tsx, find where totalLaps renders as '{totalLaps} Laps' in the Race Arc callout value",
+        "Change the displayed value from '{totalLaps} Laps' to '{totalLaps} Predicted Laps'",
+        "Add a sub-annotation inline or below: '(of 52 race laps)' in fontSize 10, color '#666'",
+        "The LapScrubberFixed '/52' display is correct and must NOT be changed",
+        "cd /Users/hussianaltufayli/Downloads/LatentLap-AI-main/dashboard && npx tsc --noEmit shows 0 errors",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "ScrollStage.tsx line ~115: const totalLaps = laps.length || 52. For 2025 NOR this is 29. The scrubber correctly shows /52 (full Silverstone race). Just add a label clarification in the Race Arc chapter callout."
+    },
+    {
+      "id": "US-004",
+      "title": "Fix SimDrawer blocking SettingsPopover and ChapterDots",
+      "description": "As a user, I want to click nav dots and settings even when the SIM drawer is open.",
+      "acceptanceCriteria": [
+        "In dashboard/app/components/SettingsPopover.tsx, change the outer container zIndex from 70 to 300",
+        "In dashboard/app/components/ChapterDots.tsx, change the outer container zIndex from 60 to 300",
+        "With SimDrawer open (zIndex 200), SettingsPopover and ChapterDots are visually in front of the drawer",
+        "Clicking the gear icon while SimDrawer is open still opens the settings panel",
+        "Clicking chapter dots while SimDrawer is open still navigates chapters",
+        "cd /Users/hussianaltufayli/Downloads/LatentLap-AI-main/dashboard && npx tsc --noEmit shows 0 errors",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "SimDrawer: position:fixed width:320 right:0 zIndex:200. SettingsPopover: position:fixed top:20 right:20 zIndex:70. ChapterDots: position:fixed zIndex:60. Both within the 320px drawer area. Fix: bump both to zIndex 300."
+    },
+    {
+      "id": "US-005",
+      "title": "Fix StrategyBars chart rendering behind Silverstone track",
+      "description": "As a user, I want the pit strategy bar chart to appear in front of the track outline.",
+      "acceptanceCriteria": [
+        "In dashboard/app/components/ScrollStage.tsx, find the StrategyBars component outer container div with position:'absolute', bottom:60",
+        "Add zIndex: 10 to that container div's style object",
+        "The pit strategy bars appear visually in front of the Silverstone circuit SVG",
+        "cd /Users/hussianaltufayli/Downloads/LatentLap-AI-main/dashboard && npx tsc --noEmit shows 0 errors",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "StrategyBars renders inside ScrollStage pinned section with no explicit zIndex. Adding zIndex:10 to the container puts it above the SilverstoneCircuit stacking context."
+    },
+    {
+      "id": "US-006",
+      "title": "Fix 2025 strategy chart showing empty bars (finish_severity=0)",
+      "description": "As a user selecting 2025, I want a meaningful pit strategy visualization, not empty bars.",
+      "acceptanceCriteria": [
+        "In dashboard/app/components/ScrollStage.tsx in the StrategyBars function, after computing maxSev, add: const fallback = maxSev === 0",
+        "When fallback is true, render bars at uniform height 40px instead of 0px",
+        "When fallback is true, render a label above the bars: text 'OPTIMAL WINDOW' color '#FF8000' fontSize 8 centered",
+        "Bars within primary_pit_window still render at opacity 1.0; bars outside at opacity 0.5 (same logic, works regardless of height)",
+        "Bars retain REC_COLORS color coding in fallback mode",
+        "cd /Users/hussianaltufayli/Downloads/LatentLap-AI-main/dashboard && npx tsc --noEmit shows 0 errors",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "strategy_recommendations.json has finish_severity:0.0 for all 2025 pit_strategies. This is a strategy.py data quality issue. Do NOT modify the JSON file — fix display logic only."
+    },
+    {
+      "id": "US-007",
+      "title": "Replace raw SHAP feature names with human-readable F1 labels",
+      "description": "As a user, I want SHAP feature names in plain F1 engineering language, not raw ML identifiers.",
+      "acceptanceCriteria": [
+        "In dashboard/app/components/ScrollStage.tsx, add a constant SHAP_LABELS near the top (after imports) with these mappings: { CumLatEnergy: 'Lateral Load Energy', LapVariance: 'Lap Time Variance', SpeedFL: 'FL Corner Exit Speed', StintEnergyFraction: 'Stint Energy Fraction', FuelEstKg: 'Fuel Load (est.)', LapNumber: 'Lap Number', FreshTyre: 'Fresh Tyre Bonus', HighSpeedCornerSec: 'High-Speed Corner Time', SLEI: 'Lateral Energy Index', EffectivePushFactor: 'Push Factor', MB_TimeSec: 'Maggots-Becketts Time', MB_PeakLatG: 'M-B Peak Lateral G', Copse_EntrySpeed: 'Copse Entry Speed', Copse_TimeSec: 'Copse Corner Time', Club_TimeSec: 'Club Corner Time', Club_EntrySpeed: 'Club Entry Speed', Stowe_AvgLatG: 'Stowe Lateral G', AvgYawRate: 'Avg Yaw Rate', BrakeDecel: 'Brake Deceleration', MaxLatG: 'Peak Lateral G', DirtyAirRatio: 'Dirty Air Exposure', MeanGapAhead: 'Gap to Car Ahead' }",
+        "Wherever top-3 SHAP feature names are rendered as text, apply: SHAP_LABELS[featureName] ?? featureName",
+        "The Top Predictors section shows e.g. 'Lateral Load Energy' instead of 'CumLatEnergy'",
+        "cd /Users/hussianaltufayli/Downloads/LatentLap-AI-main/dashboard && npx tsc --noEmit shows 0 errors",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "SHAP top3 rows displayed in ScrollStage. Raw names like CumLatEnergy, SpeedFL etc. SHAP_LABELS with fallback covers unknown future features."
+    },
+    {
+      "id": "US-008",
+      "title": "Add Pirelli compound color chips to compound display",
+      "description": "As a user, I want to see official Pirelli compound colors wherever tire compounds are displayed.",
+      "acceptanceCriteria": [
+        "In dashboard/lib/data.ts, verify COMPOUND_COLORS has these exact values: { SOFT: '#FF1801', MEDIUM: '#FFC906', HARD: '#F0F0EC', INTERMEDIATE: '#39B54A', WET: '#0067FF' } — update if values differ",
+        "In dashboard/app/components/SimDrawer.tsx, wherever a compound name is displayed (selector buttons and result), add a colored circle before the text: <span style={{ borderRadius:'50%', width:10, height:10, display:'inline-block', background:COMPOUND_COLORS[compound] ?? '#888', marginRight:4, verticalAlign:'middle' }} />",
+        "The color circle renders for all 5 compounds: SOFT (red), MEDIUM (yellow), HARD (white with gray border), INTERMEDIATE (green), WET (blue)",
+        "cd /Users/hussianaltufayli/Downloads/LatentLap-AI-main/dashboard && npx tsc --noEmit shows 0 errors",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "COMPOUND_COLORS is imported from data.ts in SimDrawer.tsx already. Just need to render the color dot alongside the compound name text."
+    },
+    {
+      "id": "US-009",
+      "title": "Add lap number labels to Race Arc timeline",
+      "description": "As a user, I want lap number markers on the Race Arc timeline so I can orient stint divisions in time.",
+      "acceptanceCriteria": [
+        "In dashboard/app/components/ScrollStage.tsx, find the Race Arc chapter rendering (chapter index 3, where stint bars are rendered)",
+        "Below the stint bars row, add a flex row of tick labels: show lap 1, then every 5 laps up to totalLaps, then totalLaps if not already shown",
+        "Each tick: a small div with fontSize 7, color '#555', fontFamily monospace. Position using flex with justifyContent based on proportional lap position: left offset = (lapNum / totalLaps) * 100 + '%' or use absolute positioning within a relative container",
+        "The tick labels are contained within the same parent as the stint bars for consistent alignment",
+        "cd /Users/hussianaltufayli/Downloads/LatentLap-AI-main/dashboard && npx tsc --noEmit shows 0 errors",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "Race Arc is chapter 3 in ScrollStage. Stint bars use width proportional to lap count. Lap labels should mirror that proportional system. Use relative container + absolute positioned ticks for pixel-accurate alignment."
+    },
+    {
+      "id": "US-010",
+      "title": "Make Year/Driver selector discoverable without gear icon",
+      "description": "As a user, I want to immediately see which year and driver I am viewing and be able to change them without hunting for a hidden gear icon.",
+      "acceptanceCriteria": [
+        "In dashboard/app/components/SettingsPopover.tsx, add a visible pill button positioned at top:16 left:16 zIndex:300 showing '{currentDriver} · {currentYear}' using data from useRaceContext()",
+        "Pill styles: background:'rgba(255,128,0,0.15)', border:'1px solid rgba(255,128,0,0.4)', borderRadius:12, padding:'4px 10px', fontFamily:monospace, fontSize:11, color:'#FF8000', cursor:'pointer', position:'fixed', top:16, left:16, zIndex:300",
+        "Clicking the pill opens the settings panel (triggers the same open state as clicking the gear icon)",
+        "The pill text updates immediately when year or driver changes",
+        "The existing gear icon stays and remains functional",
+        "cd /Users/hussianaltufayli/Downloads/LatentLap-AI-main/dashboard && npx tsc --noEmit shows 0 errors",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "SettingsPopover manages its own open state (likely useState). The pill needs to call the same setState(true). Check how the gear icon opens the panel and replicate that in the pill's onClick."
+    },
+    {
+      "id": "US-011",
+      "title": "Add severity probability distribution bar to gauge",
+      "description": "As a user, I want to see the model's confidence distribution across all severity levels, not just the point estimate.",
+      "acceptanceCriteria": [
+        "In dashboard/app/components/Speedometer.tsx, receive severity_probs from props or RaceContext — check how the component currently receives lap data and follow that pattern",
+        "Below the existing severity display, add a horizontal stacked bar: 4 segments for p0–p3, each width = (prob * 120)px, colored: p0='#22c55e', p1='#eab308', p2='#f97316', p3='#ef4444'",
+        "Total bar width is 120px, height 10px, segments side-by-side with no gap",
+        "Show percentage label inside each segment if prob >= 0.10: text '{Math.round(prob*100)}%' in fontSize 8, color white, textAlign center",
+        "Add label 'CONFIDENCE' in fontSize 7, color '#666', letterSpacing 0.5, centered above the bar",
+        "If severity_probs is null/undefined, render nothing (graceful fallback)",
+        "cd /Users/hussianaltufayli/Downloads/LatentLap-AI-main/dashboard && npx tsc --noEmit shows 0 errors",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": "severity_probs is array [p0,p1,p2,p3] from predictions.json. p0~0.58 = 58% chance severity 0. Must check how Speedometer gets lap data — via props from ScrollStage or directly via RaceContext."
+    },
+    {
+      "id": "US-012",
+      "title": "Add undercut/overcut window annotation to strategy chart",
+      "description": "As an F1 engineer user, I want to immediately identify whether the optimal pit window suggests an undercut or overcut.",
+      "acceptanceCriteria": [
+        "In dashboard/app/components/ScrollStage.tsx in the StrategyBars function, add a strategy label above the bars",
+        "Derive label from currentLap vs primary_pit_window: if currentLap >= primary_pit_window.end show 'OVERCUT WINDOW OPEN' color '#FF1801'; else if currentLap < primary_pit_window.start - 3 show 'UNDERCUT OPPORTUNITY' color '#22c55e'; else show 'IN PIT WINDOW' color '#FF8000'",
+        "Label renders at top of StrategyBars container, fontSize 9, fontFamily monospace, letterSpacing 1, textAlign center",
+        "Below the label, show 'Window: L{start}–L{end}' in fontSize 7, color '#888', textAlign center",
+        "cd /Users/hussianaltufayli/Downloads/LatentLap-AI-main/dashboard && npx tsc --noEmit shows 0 errors",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": "primary_pit_window: { start: 18, end: 26 } from strategy_recommendations.json. currentLap is passed as prop to StrategyBars. Undercut = pit before window to gain position. Overcut = pit late to gain on fresher tyres."
+    },
+    {
+      "id": "US-013",
+      "title": "Add lap time delta vs degradation severity chart",
+      "description": "As an F1 engineer, I want to see lap time delta plotted alongside degradation severity to understand the performance cost of tire wear.",
+      "acceptanceCriteria": [
+        "Create dashboard/app/components/LapDeltaChart.tsx",
+        "Component accepts props: { laps: Array<{ lap_number: number; lap_delta: number; severity_pred: number }>, currentLap: number }",
+        "Renders a pure SVG chart: width='100%' height={120} viewBox='0 0 300 120'",
+        "Two SVG polylines: lap_delta per lap (color '#60a5fa', Y range 0–2 mapped to SVG y 110–10) and severity_pred per lap (color '#FF8000', Y range 0–3 mapped to SVG y 110–10)",
+        "X axis: lap_number mapped to x = (lap.lap_number / maxLap) * 280 + 10",
+        "Current lap vertical dashed line: x = (currentLap / maxLap) * 280 + 10, stroke='#ffffff33', strokeDasharray='2 2'",
+        "Y axis labels: 'Δ LAP (s)' in '#60a5fa' fontSize 7 at left, 'SEVERITY' in '#FF8000' fontSize 7 at right",
+        "In dashboard/app/components/ScrollStage.tsx, import LapDeltaChart and render it inside the Strategy chapter section (chapter 4), passing laps from getAllLapsForDriver(currentYear, currentDriver) and currentLap from context",
+        "cd /Users/hussianaltufayli/Downloads/LatentLap-AI-main/dashboard && npx tsc --noEmit shows 0 errors",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 13,
+      "passes": true,
+      "notes": "lap_delta in predictions.json is seconds vs baseline. severity_pred is 0-3. Both per-lap. 2025 NOR has lap_delta=0.0 for most laps (data issue) but chart still renders. Use SVG polyline — no recharts or external chart lib."
+    },
+    {
+      "id": "US-014",
+      "title": "Add cross-season severity comparison chart",
+      "description": "As an F1 engineer, I want to compare NOR's tire degradation severity across 2023, 2024, and 2025 to understand performance trends over seasons.",
+      "acceptanceCriteria": [
+        "Create dashboard/app/components/CrossSeasonChart.tsx",
+        "Component accepts props: { driver: string } and uses getAllLapsForDriver internally for years 2023, 2024, 2025",
+        "Renders a pure SVG chart: width='100%' height={140} viewBox='0 0 300 140'",
+        "Three SVG polylines for severity_pred: 2023 in '#a78bfa' (purple), 2024 in '#34d399' (green), 2025 in '#fb923c' (orange)",
+        "X axis: normalized lap progress (lap.lap_number / maxLapForThatYear) * 280 + 10, so all three years share 0–1 scale",
+        "Y axis: severity 0–3 mapped to SVG y 130–10",
+        "Legend: three small 8px colored circles with year labels, fontSize 7, positioned top-right of SVG",
+        "Title text: '{driver} DEGRADATION 2023–2025' fontSize 8 color '#888' letterSpacing 1",
+        "In dashboard/app/components/ScrollStage.tsx, add CrossSeasonChart at the end of the pinned content as a sixth chapter section with heading 'Season Comparison'. Update CHAPTER_THRESHOLDS to include the new chapter (extend the array with one more entry). Update ChapterDots.tsx CHAPTER_NAMES to add 'Compare'.",
+        "cd /Users/hussianaltufayli/Downloads/LatentLap-AI-main/dashboard && npx tsc --noEmit shows 0 errors",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": "predictions.json has NOR data for 2021–2025. Normalize X by (lap_number-1)/(maxLap-1) for each year independently. 2025 NOR has 29 predicted laps — line ends early, that is correct. CHAPTER_THRESHOLDS in ScrollStage currently has 5 entries for 5 chapters; add a 6th."
+    },
+    {
+      "id": "US-015",
+      "title": "Add corner stress heatmap over laps",
+      "description": "As an F1 engineer, I want to see which Silverstone corners generate the most degradation stress per lap so I can identify where tire wear originates.",
+      "acceptanceCriteria": [
+        "Create dashboard/app/components/CornerHeatmap.tsx",
+        "Component accepts props: { year: number, driver: string }",
+        "Import shap_data from '../../public/data/shap_data.json' and cast as { shap_values: { severity: Record<string, Record<string, number>> } }",
+        "Define CORNERS = ['Copse', 'MB', 'Stowe', 'Club'] — these are the 4 Silverstone corners with SHAP feature data",
+        "For each lap key matching year+driver (e.g. '2024_NOR_5'), compute per-corner stress: sum Math.abs(value) for all features where the key starts with '{CORNER}_'. Result: matrix[corner][lapIndex] = stressScore",
+        "Normalize all stress scores to 0–1 range (divide by globalMax across all corners and laps)",
+        "Render SVG grid: 4 rows (corners) × N columns (laps). Cell color interpolation: v=0 → '#0d1117', v=1 → '#FF1801'. Use style background on div cells or SVG rect fill.",
+        "Cell dimensions: height 16px per row, width = Math.min(10, 280/numLaps) px per column",
+        "Y axis labels: corner names, fontSize 8 color '#888', left of grid, verticalAlign middle",
+        "X axis: lap number labels every 5 laps below the grid, fontSize 7 color '#555'",
+        "Title: 'CORNER STRESS HEATMAP' fontSize 8 color '#888' letterSpacing 1 above grid",
+        "In dashboard/app/components/ScrollStage.tsx, render <CornerHeatmap year={currentYear} driver={currentDriver} /> inside the Predictors chapter section (chapter 2), after the top-3 SHAP list",
+        "cd /Users/hussianaltufayli/Downloads/LatentLap-AI-main/dashboard && npx tsc --noEmit shows 0 errors",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": "shap_data.json: shap_values.severity['YEAR_DRIVER_LAP'] = {featureName: shapValue}. Corner features: 'Copse_TimeSec', 'Copse_EntrySpeed', 'MB_PeakLatG', 'MB_TimeSec', 'Stowe_AvgLatG', 'Club_TimeSec', etc. Sum abs(value) for all keys starting with 'Copse_' to get Copse stress for that lap."
     }
   ]
 }

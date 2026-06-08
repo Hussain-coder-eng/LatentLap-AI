@@ -8,6 +8,7 @@ export interface CalloutLeftContent {
   label: string
   value: string
   valueColor?: string
+  subAnnotation?: string
   explanation: string
 }
 
@@ -96,6 +97,18 @@ export function CalloutLeft({ content, visible }: CalloutLeftProps) {
         >
           {content.value}
         </div>
+        {content.subAnnotation && (
+          <div
+            style={{
+              fontFamily: "'Fira Code', monospace",
+              fontSize: 10,
+              color: '#666',
+              lineHeight: 1.3,
+            }}
+          >
+            {content.subAnnotation}
+          </div>
+        )}
         <div
           style={{
             fontFamily: "'DM Sans', sans-serif",

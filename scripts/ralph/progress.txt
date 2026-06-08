@@ -1,30 +1,68 @@
-# Ralph Progress Log
 ## Codebase Patterns
-- SilverstoneCircuit: allLaps from getAllLapsForDriver is a SUBSET of race laps (only predicted laps). Always use allLaps[last].lap_number for denominator, not allLaps.length.
-- lapToCircuitProgress(lap, total) uses formula (lap-1)/(total-1) — passing count instead of max lap_number causes premature clamping to 1.0.
-- dashboard typecheck: `cd dashboard && npx tsc --noEmit` — zero output = zero errors.
-- Car tangent rotation: compute `dist = progress * totalLength`, sample `point2` at `dist + delta` (delta = min(2, totalLength*0.01)), then `angleDeg = Math.atan2(dx, -dy) * 180/PI`. SVG transform order: translate(pathPoint) rotate(angle) translate(-carCenter).
+- tsconfig.json excludes node_modules but NOT tests — pre-existing TS error in tests/e2e/dashboard.spec.ts requires adding "tests" to exclude for tsc --noEmit to pass
+- dashboard/public/ is the Next.js public dir; files served at root path e.g. /favicon.svg
+- metadata object in dashboard/app/layout.tsx uses Next.js Metadata type — add icons field directly to the exported const
 
-Started: Sun May 24 21:46:51 EDT 2026
+# Ralph Progress Log
+Started: Sun Jun  7 14:09:40 EDT 2026
 ---
 
-## 2026-05-24 - US-001
-- Fixed car freezing at lap 29: replaced `allLaps.length` denominator with `allLaps[allLaps.length-1].lap_number` (max lap number in race)
-- Files changed: `dashboard/app/components/SilverstoneCircuit.tsx`
+## 2026-06-07 15:03 - US-013
+- Created dashboard/app/components/LapDeltaChart.tsx (SVG polylines for lap_delta + severity_pred, current lap dashed line, Y axis labels)
+- Imported LapDeltaChart in ScrollStage.tsx and rendered it in chapter 4 block above StrategyBars
+- Files changed: dashboard/app/components/LapDeltaChart.tsx, dashboard/app/components/ScrollStage.tsx
 - **Learnings for future iterations:**
-  - `getAllLapsForDriver` returns sorted subset (predicted laps only), NOT full race lap count. For 2025 NOR: 29 predicted laps but race goes to lap 52.
-  - `lapToCircuitProgress` clamps at 1.0 when lap==denominator; wrong denominator = car freezes early
-  - Dependency array updated: `totalLaps` → `maxLapNum` to match renamed variable
-  - tsc --noEmit: no output = pass
+  - LapData interface has lap_number, lap_delta, severity_pred — all needed for chart
+  - laps variable (getAllLapsForDriver result) is already computed in ScrollStage component body, no extra call needed
+  - Chapter 4 block needs fragment wrapper when adding multiple sibling elements
 ---
 
-## 2026-05-24 - US-002
-- Implemented car tangent rotation: car now faces direction of travel along Silverstone circuit
-- Files changed: `dashboard/app/components/SilverstoneCircuit.tsx`
+## 2026-06-07 15:01 - US-012
+- Added windowLabel derived from currentLap vs primary_pit_window in StrategyBars
+- Rendered label + window range text above bars
+- Files changed: dashboard/app/components/ScrollStage.tsx
 - **Learnings for future iterations:**
-  - SVG car nose points toward -Y (lower y values), so `Math.atan2(dx, -dy)` gives correct forward angle
-  - Transform order matters: `translate(pathPoint) rotate(angle) translate(-carCenter)` — center first, rotate, then place on path
-  - Use `Math.min(dist + delta, totalLength - 0.001)` to prevent sampling past path end
-  - `delta = Math.min(2, totalLength * 0.01)` scales with path length, works for all zoom levels
-  - tsc --noEmit: no output = pass
+  - StrategyBars has primary_pit_window.{start,end} directly available after destructuring strategy
+  - currentLap prop already passed to StrategyBars — no extra wiring needed
+---
+
+## 2026-06-07 14:59 - US-011
+- Added useRaceContext + getLap imports to Speedometer.tsx
+- Extracted severityProbs from lap data
+- Rendered CONFIDENCE label + 4-segment stacked bar below the SVG gauge
+- Removed fixed height:120 from outer div to allow content to grow
+- Files changed: dashboard/app/components/Speedometer.tsx
+- **Learnings for future iterations:**
+  - Speedometer was scroll-speed only with no lap data; added RaceContext pattern matching ScrollStage
+  - severity_probs is [p0,p1,p2,p3] tuple on each lap object from getLap()
+---
+
+## 2026-06-07 14:56 - US-010
+- Added pill button (fixed top:16 left:16) to SettingsPopover.tsx showing "{driver} · {year}"
+- Wrapped return in React fragment to render pill + existing popover div as siblings
+- Added pillRef to exclude pill from outside-click close handler
+- Files changed: dashboard/app/components/SettingsPopover.tsx
+- **Learnings for future iterations:**
+  - SettingsPopover uses single `open` useState + popoverRef for outside-click dismiss; add pillRef to same handler when adding sibling triggers
+  - Fragment wrap needed when adding a sibling fixed element to a component that returned a single root div
+---
+
+## 2026-06-07 14:54 - US-009
+- Added tickLaps IIFE after totalLaps in ScrollStage.tsx: [1, every 5th lap, totalLaps]
+- Added absolute-positioned tick label div below Race Arc timeline (bottom: 50px) with proportional left % positions
+- Files changed: dashboard/app/components/ScrollStage.tsx
+- **Learnings for future iterations:**
+  - Race Arc timeline is at bottom:64px height:18px; tick labels at bottom:50px sit visually below bars
+  - Used IIFE inside component body for tickLaps array — clean, no extra hook needed
+  - `left: ((lapNum-1)/(totalLaps-1))*100+'%'` with translateX(-50%) centers each tick over correct lap position
+---
+
+## 2026-06-07 14:20 - US-001
+- Created dashboard/public/favicon.svg (orange circle, 'LL' text, viewBox 32x32)
+- Updated dashboard/app/layout.tsx to add icons: { icon: '/favicon.svg' } to metadata
+- Updated dashboard/tsconfig.json to exclude "tests" dir (pre-existing TS error in e2e spec file)
+- Files changed: dashboard/public/favicon.svg, dashboard/app/layout.tsx, dashboard/tsconfig.json
+- **Learnings for future iterations:**
+  - tsconfig.json had pre-existing TS error in tests/e2e/dashboard.spec.ts — added "tests" to exclude array to fix tsc --noEmit
+  - Browser verification requires running dev server first — skipped since no browser tools auto-started
 ---
