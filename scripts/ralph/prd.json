@@ -32,7 +32,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Root cause: ScrollStage picks highest mode_probs key without excluding 'none'. For laps where none=0.84, 'none' wins. Fix: filter out 'none' key before sorting."
     },
     {
@@ -48,7 +48,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "ScrollStage.tsx line ~115: const totalLaps = laps.length || 52. For 2025 NOR this is 29. The scrubber correctly shows /52 (full Silverstone race). Just add a label clarification in the Race Arc chapter callout."
     },
     {
@@ -65,7 +65,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "SimDrawer: position:fixed width:320 right:0 zIndex:200. SettingsPopover: position:fixed top:20 right:20 zIndex:70. ChapterDots: position:fixed zIndex:60. Both within the 320px drawer area. Fix: bump both to zIndex 300."
     },
     {
@@ -80,7 +80,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "StrategyBars renders inside ScrollStage pinned section with no explicit zIndex. Adding zIndex:10 to the container puts it above the SilverstoneCircuit stacking context."
     },
     {
@@ -97,7 +97,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "strategy_recommendations.json has finish_severity:0.0 for all 2025 pit_strategies. This is a strategy.py data quality issue. Do NOT modify the JSON file — fix display logic only."
     },
     {
@@ -112,7 +112,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "SHAP top3 rows displayed in ScrollStage. Raw names like CumLatEnergy, SpeedFL etc. SHAP_LABELS with fallback covers unknown future features."
     },
     {
@@ -127,7 +127,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": "COMPOUND_COLORS is imported from data.ts in SimDrawer.tsx already. Just need to render the color dot alongside the compound name text."
     },
     {
@@ -143,7 +143,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "notes": "Race Arc is chapter 3 in ScrollStage. Stint bars use width proportional to lap count. Lap labels should mirror that proportional system. Use relative container + absolute positioned ticks for pixel-accurate alignment."
     },
     {
@@ -160,7 +160,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 10,
-      "passes": false,
+      "passes": true,
       "notes": "SettingsPopover manages its own open state (likely useState). The pill needs to call the same setState(true). Check how the gear icon opens the panel and replicate that in the pill's onClick."
     },
     {
@@ -178,7 +178,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 11,
-      "passes": false,
+      "passes": true,
       "notes": "severity_probs is array [p0,p1,p2,p3] from predictions.json. p0~0.58 = 58% chance severity 0. Must check how Speedometer gets lap data — via props from ScrollStage or directly via RaceContext."
     },
     {
@@ -194,7 +194,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 12,
-      "passes": false,
+      "passes": true,
       "notes": "primary_pit_window: { start: 18, end: 26 } from strategy_recommendations.json. currentLap is passed as prop to StrategyBars. Undercut = pit before window to gain position. Overcut = pit late to gain on fresher tyres."
     },
     {
@@ -214,7 +214,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 13,
-      "passes": false,
+      "passes": true,
       "notes": "lap_delta in predictions.json is seconds vs baseline. severity_pred is 0-3. Both per-lap. 2025 NOR has lap_delta=0.0 for most laps (data issue) but chart still renders. Use SVG polyline — no recharts or external chart lib."
     },
     {

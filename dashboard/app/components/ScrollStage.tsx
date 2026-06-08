@@ -9,9 +9,10 @@ import { CalloutLeft, type CalloutLeftContent } from './CalloutLeft'
 import { CalloutRight, type CalloutRightContent, type ShapRow } from './CalloutRight'
 import ChapterDots from './ChapterDots'
 import LapDeltaChart from './LapDeltaChart'
+import CrossSeasonChart from './CrossSeasonChart'
 import strategyRaw from '../../public/data/strategy_recommendations.json'
 
-const CHAPTER_THRESHOLDS = [0, 0.2, 0.4, 0.6, 0.8]
+const CHAPTER_THRESHOLDS = [0, 0.17, 0.34, 0.51, 0.68, 0.85]
 const RACE_ARC_TIMELINE_BOTTOM_PX = 64
 const RACE_ARC_TIMELINE_HEIGHT_PX = 18
 const RACE_ARC_TIMELINE_MIN_SEGMENT_PX = 2
@@ -314,6 +315,24 @@ export default function ScrollStage() {
         technicalDetail: 'strategy.py projects DegSeverity forward from each pit lap using stint-2 degradation rates. Heuristic — not derived from tire physics simulation.',
       },
     },
+    // Chapter 5 — Season Comparison
+    {
+      left: {
+        label: 'Season Comparison',
+        value: '2023 · 2024 · 2025',
+        valueColor: '#a78bfa',
+        explanation: `How has ${currentDriver}'s tire degradation at Silverstone evolved across seasons? Purple = 2023, green = 2024, orange = 2025. X axis is normalized race progress.`,
+      },
+      right: {
+        heading: 'Reading the chart',
+        customLines: [
+          'Higher line = more degradation.',
+          '2025 line ends early (fewer predicted laps).',
+          'Compare slope to see wear rate changes.',
+        ],
+        technicalDetail: 'Each season normalized to 0–1 lap progress. severity_pred from XGBoost model per lap.',
+      },
+    },
   ]
 
   const ch = chapterContent[activeChapter] ?? chapterContent[0]
@@ -421,6 +440,16 @@ export default function ScrollStage() {
                 <LapDeltaChart laps={laps} currentLap={currentLap} />
               </div>
             </>
+          )}
+
+          {/* Chapter 5 (Season Comparison): cross-season severity overlay */}
+          {activeChapter === 5 && (
+            <div style={{
+              position: 'absolute', top: 40, left: '50%', transform: 'translateX(-50%)',
+              width: '60%', pointerEvents: 'none',
+            }}>
+              <CrossSeasonChart driver={currentDriver} />
+            </div>
           )}
 
           {/* Left callout */}

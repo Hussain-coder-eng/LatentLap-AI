@@ -1,6 +1,6 @@
 'use client'
 
-const CHAPTER_NAMES = ['Hero', 'Severity', 'Predictors', 'Race Arc', 'Strategy'] as const
+const CHAPTER_NAMES = ['Hero', 'Severity', 'Predictors', 'Race Arc', 'Strategy', 'Compare'] as const
 
 interface ChapterDotsProps {
   activeChapter: number
@@ -26,7 +26,7 @@ export default function ChapterDots({ activeChapter, onSelect }: ChapterDotsProp
         <button
           key={i}
           onClick={() => onSelect(i)}
-          aria-label={`Chapter ${i + 1} of 5: ${name}`}
+          aria-label={`Chapter ${i + 1} of 6: ${name}`}
           aria-current={activeChapter === i ? 'true' : undefined}
           style={{
             width: activeChapter === i ? 13 : 10,
