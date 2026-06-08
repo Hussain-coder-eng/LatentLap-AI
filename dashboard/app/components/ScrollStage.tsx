@@ -362,7 +362,7 @@ export default function ScrollStage() {
           }}
         >
           {/* Background circuit */}
-          <SilverstoneCircuit activeChapter={activeChapter} />
+          <SilverstoneCircuit activeChapter={activeChapter} backgroundOnly={activeChapter === 2} />
 
           {/* Chapter 3 (Race Arc): compact lap severity timeline */}
           {activeChapter === 3 && (
@@ -467,22 +467,6 @@ export default function ScrollStage() {
             </div>
           )}
 
-          {/* Chapter 2 (Predictors): corner stress heatmap — fixed lower panel above scrubber */}
-          {activeChapter === 2 && (
-            <div style={{
-              position: 'fixed',
-              bottom: 48,
-              left: 0,
-              right: 0,
-              height: 120,
-              background: 'rgba(8,8,8,0.92)',
-              borderTop: '1px solid rgba(255,128,0,0.15)',
-              zIndex: 40,
-              overflow: 'hidden',
-            }}>
-              <CornerHeatmap year={currentYear} driver={currentDriver} />
-            </div>
-          )}
 
           {/* Chapter 4 (Strategy): pit lane bars + lap delta chart */}
           {activeChapter === 4 && (
@@ -526,14 +510,26 @@ export default function ScrollStage() {
             </div>
           )}
 
-          {/* Left callout */}
-          <CalloutLeft content={ch.left} visible={true} />
+          {/* Left callout — chapter 2: SHAP bars; others: chapter metadata */}
+          {activeChapter === 2 ? (
+            <div style={{ justifySelf: 'end', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 280 }}>
+              <CalloutRight content={ch.right} visible={true} />
+            </div>
+          ) : (
+            <CalloutLeft content={ch.left} visible={true} />
+          )}
 
           {/* Center tire */}
           <TireHero scrollProgress={scrollProgress} />
 
-          {/* Right callout */}
-          <CalloutRight content={ch.right} visible={true} />
+          {/* Right callout — chapter 2: corner heatmap; others: SHAP/text */}
+          {activeChapter === 2 ? (
+            <div style={{ justifySelf: 'start', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 280 }}>
+              <CornerHeatmap year={currentYear} driver={currentDriver} />
+            </div>
+          ) : (
+            <CalloutRight content={ch.right} visible={true} />
+          )}
         </div>
       </div>
     </>

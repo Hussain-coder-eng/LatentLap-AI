@@ -8,6 +8,7 @@ import { useReducedMotion } from '../../lib/useReducedMotion'
 
 interface SilverstoneCircuitProps {
   activeChapter: number
+  backgroundOnly?: boolean
 }
 
 // Build path once at module level — stable across renders
@@ -40,7 +41,7 @@ const CORNER_LABELS: Record<string, string> = {
   Club:  'CLUB',
 }
 
-export function SilverstoneCircuit({ activeChapter }: SilverstoneCircuitProps) {
+export function SilverstoneCircuit({ activeChapter, backgroundOnly }: SilverstoneCircuitProps) {
   const circuitRef = useRef<SVGPathElement>(null)
   const carRef = useRef<SVGGElement>(null)
   const reducedMotion = useReducedMotion()
@@ -162,7 +163,7 @@ export function SilverstoneCircuit({ activeChapter }: SilverstoneCircuitProps) {
             if (!bd) return null
 
             const r       = 8 + score * 6
-            const opacity = 0.35 + score * 0.6
+            const opacity = backgroundOnly ? Math.min(0.04 + score * 0.11, 0.15) : 0.35 + score * 0.6
             const color   = score > 0.6 ? '#FF1744' : '#FF8000'
             const isPrimary = score === Math.max(...Object.values(scores))
 
@@ -188,7 +189,7 @@ export function SilverstoneCircuit({ activeChapter }: SilverstoneCircuitProps) {
                   stroke={color}
                   strokeWidth={2}
                   opacity={opacity}
-                  className={score > 0.7 ? 'corner-pulse' : undefined}
+                  className={!backgroundOnly && score > 0.7 ? 'corner-pulse' : undefined}
                 />
                 {arcs.map(arc => (
                   <path
