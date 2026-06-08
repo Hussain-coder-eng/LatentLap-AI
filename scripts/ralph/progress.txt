@@ -42,3 +42,13 @@ Started: Sun Jun  7 21:58:25 EDT 2026
   - `flex: prob` is cleaner than `width: prob * 120` for proportional bars — handles float sums correctly
   - Confidence bar and severity legend are both in `Speedometer.tsx` — single file for all gauge-area UI
 ---
+
+## 2026-06-08 03:39 - US-004
+- Fixed CornerHeatmap: title "Corner Stress by Lap", corner label font bumped to 10px, gradient legend row with "Low stress" / "High stress" labels and proxy note
+- Fixed ScrollStage: replaced `position: absolute, bottom: 20, left: 50%` with `position: fixed, bottom: 48px, left: 0, right: 0, height: 120px` — dark bg, orange top border, zIndex: 40 (below scrubber at 50)
+- Files changed: `dashboard/app/components/CornerHeatmap.tsx`, `dashboard/app/components/ScrollStage.tsx`
+- **Learnings for future iterations:**
+  - CornerHeatmap panel sits at `position: fixed; bottom: 48px; height: 120px; zIndex: 40` — below scrubber (zIndex 50) and above content
+  - Gradient CSS for the legend: `linear-gradient(to right, rgb(13,17,23), rgb(80,10,5), rgb(255,24,1))` matches `interpolateColor()` function range
+  - When moving overlays to fixed panels, ensure zIndex is below scrubber (50) and above main content (30–39)
+---
