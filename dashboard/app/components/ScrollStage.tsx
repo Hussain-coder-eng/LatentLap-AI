@@ -8,7 +8,6 @@ import { SilverstoneCircuit } from './SilverstoneCircuit'
 import { CalloutLeft, type CalloutLeftContent } from './CalloutLeft'
 import { CalloutRight, type CalloutRightContent, type ShapRow } from './CalloutRight'
 import ChapterDots from './ChapterDots'
-import LapDeltaChart from './LapDeltaChart'
 import CrossSeasonChart from './CrossSeasonChart'
 import CornerHeatmap from './CornerHeatmap'
 import strategyRaw from '../../public/data/strategy_recommendations.json'
@@ -80,60 +79,164 @@ const REC_COLORS: Record<string, string> = {
   optimal: '#00E676', acceptable: '#FFD600', late: '#FF6D00', critical: '#FF1744',
 }
 
-function StrategyBars({ currentYear, currentDriver, currentLap }: {
+type StrategyData = {
+  pit_strategies: Array<{ pit_lap: number; finish_severity: number; recommendation: string }>;
+  primary_pit_window: { start: number; end: number };
+}
+
+function getStrategy(currentYear: number, currentDriver: string): StrategyData | null {
+  return (strategyRaw as Record<string, Record<string, StrategyData>>)[String(currentYear)]?.[currentDriver] ?? null
+}
+
+function getWindowLabel(currentLap: number, window: { start: number; end: number }) {
+  if (currentLap >= window.end) return { text: 'OVERCUT WINDOW OPEN', color: '#FF1744' }
+  if (currentLap < window.start - 3) return { text: 'UNDERCUT OPPORTUNITY', color: '#22c55e' }
+  return { text: 'IN PIT WINDOW', color: '#FF8000' }
+}
+
+function StrategyLeft({ currentYear, currentDriver, currentLap }: {
   currentYear: number; currentDriver: string; currentLap: number
 }) {
-  const strategy = (strategyRaw as Record<string, Record<string, {
-    pit_strategies: Array<{ pit_lap: number; finish_severity: number; recommendation: string }>;
-    primary_pit_window: { start: number; end: number };
-  }>>)[String(currentYear)]?.[currentDriver]
+  const strategy = getStrategy(currentYear, currentDriver)
   if (!strategy) return null
   const { pit_strategies, primary_pit_window } = strategy
-  const maxSev = Math.max(...pit_strategies.map(s => s.finish_severity))
-  const fallback = maxSev === 0
-
-  const windowLabel = currentLap >= primary_pit_window.end
-    ? { text: 'OVERCUT WINDOW OPEN', color: '#FF1801' }
-    : currentLap < primary_pit_window.start - 3
-      ? { text: 'UNDERCUT OPPORTUNITY', color: '#22c55e' }
-      : { text: 'IN PIT WINDOW', color: '#FF8000' }
+  const windowLabel = getWindowLabel(currentLap, primary_pit_window)
+  const best = pit_strategies.reduce((a, b) => a.finish_severity <= b.finish_severity ? a : b)
+  const resultSentence = `Best window: L${primary_pit_window.start}–L${primary_pit_window.end} — projected finish severity lowest at L${best.pit_lap} (${best.finish_severity.toFixed(2)}).`
 
   return (
-    <div style={{
-      position: 'absolute', bottom: 60, left: '50%', transform: 'translateX(-50%)',
-      width: '60%', pointerEvents: 'none', zIndex: 10,
-    }}>
-      <div style={{ fontSize: 9, fontFamily: 'monospace', letterSpacing: 1, textAlign: 'center', color: windowLabel.color, marginBottom: 2 }}>
-        {windowLabel.text}
-      </div>
-      <div style={{ fontSize: 7, color: '#888', textAlign: 'center', fontFamily: 'monospace', marginBottom: 4 }}>
-        Window: L{primary_pit_window.start}–L{primary_pit_window.end}
-      </div>
-      {fallback && (
-        <div style={{ textAlign: 'center', color: '#FF8000', fontSize: 8, fontFamily: 'monospace', marginBottom: 4 }}>
-          OPTIMAL WINDOW
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 280 }}>
+      <div>
+        <div style={{
+          fontSize: 'clamp(14px, 2vw, 20px)', fontFamily: "'Fira Code', monospace",
+          fontWeight: 700, color: windowLabel.color, letterSpacing: 1,
+          textTransform: 'uppercase', lineHeight: 1.2, marginBottom: 6,
+        }}>
+          {windowLabel.text}
         </div>
-      )}
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 80 }}>
-        {pit_strategies.map(s => {
-          const inWindow = s.pit_lap >= primary_pit_window.start && s.pit_lap <= primary_pit_window.end
-          const barH = fallback ? 40 : (s.finish_severity / maxSev) * 70
-          return (
-            <div key={s.pit_lap} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <div style={{
-                width: '100%', height: barH,
-                background: REC_COLORS[s.recommendation] ?? '#666',
-                borderRadius: '2px 2px 0 0',
-                opacity: inWindow ? 1 : 0.5,
-                outline: s.pit_lap === currentLap ? '1px solid white' : undefined,
-              }} />
-              <span style={{ fontSize: 7, color: '#555', fontFamily: 'monospace', marginTop: 2 }}>
-                L{s.pit_lap}
-              </span>
-            </div>
-          )
-        })}
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', fontFamily: "'Fira Code', monospace" }}>
+          Pit window: L{primary_pit_window.start}–L{primary_pit_window.end}
+        </div>
       </div>
+      <div style={{
+        fontSize: 11, color: 'rgba(255,255,255,0.7)', fontFamily: 'sans-serif',
+        lineHeight: 1.55, borderLeft: `2px solid ${windowLabel.color}`, paddingLeft: 10,
+      }}>
+        {resultSentence}
+      </div>
+      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontFamily: "'Fira Code', monospace" }}>
+        Current lap: {currentLap}
+      </div>
+    </div>
+  )
+}
+
+const CHART_H = 130
+const SEV_MAX = 3
+
+function StrategyPitChart({ currentYear, currentDriver, currentLap }: {
+  currentYear: number; currentDriver: string; currentLap: number
+}) {
+  const strategy = getStrategy(currentYear, currentDriver)
+  if (!strategy) return null
+  const { pit_strategies, primary_pit_window } = strategy
+
+  return (
+    <div style={{ width: '100%', position: 'relative', paddingLeft: 24 }}>
+      {/* Y-axis labels */}
+      <div style={{
+        position: 'absolute', left: 0, top: 0, height: CHART_H,
+        display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+        pointerEvents: 'none',
+      }}>
+        {[3, 2, 1, 0].map(v => (
+          <span key={v} style={{ fontSize: 8, color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace', lineHeight: 1 }}>{v}</span>
+        ))}
+      </div>
+
+      {/* Chart area with gridlines */}
+      <div style={{ position: 'relative', height: CHART_H }}>
+        {[0, 1, 2, 3].map(v => (
+          <div key={v} style={{
+            position: 'absolute', left: 0, right: 0,
+            bottom: (v / SEV_MAX) * CHART_H,
+            height: 1,
+            background: v === 0 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)',
+          }} />
+        ))}
+        <div style={{ display: 'flex', alignItems: 'flex-end', height: '100%', gap: 4 }}>
+          {pit_strategies.map(s => {
+            const inWindow = s.pit_lap >= primary_pit_window.start && s.pit_lap <= primary_pit_window.end
+            const barH = Math.max(3, (s.finish_severity / SEV_MAX) * CHART_H)
+            return (
+              <div key={s.pit_lap} style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                <div style={{
+                  width: '100%', height: barH,
+                  background: REC_COLORS[s.recommendation] ?? '#666',
+                  borderRadius: '3px 3px 0 0',
+                  opacity: inWindow ? 1 : 0.3,
+                  outline: s.pit_lap === currentLap ? '1.5px solid white' : undefined,
+                  outlineOffset: -1,
+                }} />
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* X-axis labels */}
+      <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+        {pit_strategies.map(s => (
+          <div key={s.pit_lap} style={{ flex: 1, textAlign: 'center' }}>
+            <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>L{s.pit_lap}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Axis title */}
+      <div style={{ marginTop: 6, fontSize: 8, color: 'rgba(255,255,255,0.2)', fontFamily: 'monospace' }}>
+        finish severity (0–3)
+      </div>
+    </div>
+  )
+}
+
+function StrategyRight({ currentYear, currentDriver, setSimDrawerOpen }: {
+  currentYear: number; currentDriver: string; setSimDrawerOpen: (v: boolean) => void
+}) {
+  void currentYear; void currentDriver
+  const legend = [
+    { color: REC_COLORS.optimal,    label: 'Optimal — pit in window' },
+    { color: REC_COLORS.acceptable, label: 'Acceptable — slight risk' },
+    { color: REC_COLORS.late,       label: 'Late — high finish severity' },
+    { color: REC_COLORS.critical,   label: 'Critical — must pit now' },
+  ]
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 280 }}>
+      <div style={{ fontSize: 9, fontFamily: "'Fira Code', monospace", letterSpacing: 1, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>
+        MODEL RECOMMENDATION
+      </div>
+      {legend.map(({ color, label }) => (
+        <div key={color} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ width: 10, height: 10, background: color, borderRadius: 2, flexShrink: 0 }} />
+          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', fontFamily: 'sans-serif' }}>{label}</span>
+        </div>
+      ))}
+      <div style={{ marginTop: 6, fontSize: 9, color: 'rgba(255,255,255,0.25)', fontFamily: "'Fira Code', monospace", lineHeight: 1.5 }}>
+        strategy.py projects DegSeverity forward from each pit lap using stint-2 degradation rates. Heuristic — not physical simulation.
+      </div>
+      <button
+        onClick={() => setSimDrawerOpen(true)}
+        style={{
+          marginTop: 8, padding: '6px 14px', alignSelf: 'flex-start',
+          background: '#1a1f24', border: '1px solid rgba(255,128,0,0.6)',
+          borderRadius: 6, color: '#FF8000', fontSize: 11,
+          fontFamily: "'Fira Code', monospace", fontWeight: 700,
+          cursor: 'pointer', letterSpacing: 0.5,
+        }}
+      >
+        Strategy Simulator
+      </button>
     </div>
   )
 }
@@ -468,37 +571,6 @@ export default function ScrollStage() {
           )}
 
 
-          {/* Chapter 4 (Strategy): pit lane bars + lap delta chart */}
-          {activeChapter === 4 && (
-            <>
-              <StrategyBars currentYear={currentYear} currentDriver={currentDriver} currentLap={currentLap} />
-              <div style={{
-                position: 'absolute', top: 40, left: '50%', transform: 'translateX(-50%)',
-                width: '60%', pointerEvents: 'none',
-              }}>
-                <LapDeltaChart laps={laps} currentLap={currentLap} />
-              </div>
-              <button
-                onClick={() => setSimDrawerOpen(true)}
-                style={{
-                  position: 'absolute', bottom: 12, right: 16,
-                  padding: '6px 14px',
-                  background: '#1a1f24',
-                  border: '1px solid rgba(255,128,0,0.6)',
-                  borderRadius: 6,
-                  color: '#FF8000',
-                  fontSize: 11,
-                  fontFamily: "'Fira Code', monospace",
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  letterSpacing: 0.5,
-                  zIndex: 10,
-                }}
-              >
-                Strategy Simulator
-              </button>
-            </>
-          )}
 
           {/* Chapter 5 (Season Comparison): cross-season severity overlay */}
           {activeChapter === 5 && (
@@ -510,22 +582,34 @@ export default function ScrollStage() {
             </div>
           )}
 
-          {/* Left callout — chapter 2: SHAP bars; others: chapter metadata */}
+          {/* Left callout — chapter 2: SHAP bars; chapter 4: strategy rec; others: chapter metadata */}
           {activeChapter === 2 ? (
             <div style={{ justifySelf: 'end', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 280 }}>
               <CalloutRight content={ch.right} visible={true} />
+            </div>
+          ) : activeChapter === 4 ? (
+            <div style={{ justifySelf: 'end', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 280 }}>
+              <StrategyLeft currentYear={currentYear} currentDriver={currentDriver} currentLap={currentLap} />
             </div>
           ) : (
             <CalloutLeft content={ch.left} visible={true} />
           )}
 
-          {/* Center tire */}
-          <TireHero scrollProgress={scrollProgress} />
+          {/* Center — chapter 4: pit-window chart; others: tire */}
+          {activeChapter === 4 ? (
+            <StrategyPitChart currentYear={currentYear} currentDriver={currentDriver} currentLap={currentLap} />
+          ) : (
+            <TireHero scrollProgress={scrollProgress} />
+          )}
 
-          {/* Right callout — chapter 2: corner heatmap; others: SHAP/text */}
+          {/* Right callout — chapter 2: corner heatmap; chapter 4: strategy outcome; others: SHAP/text */}
           {activeChapter === 2 ? (
             <div style={{ justifySelf: 'start', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 280 }}>
               <CornerHeatmap year={currentYear} driver={currentDriver} />
+            </div>
+          ) : activeChapter === 4 ? (
+            <div style={{ justifySelf: 'start', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 280 }}>
+              <StrategyRight currentYear={currentYear} currentDriver={currentDriver} setSimDrawerOpen={setSimDrawerOpen} />
             </div>
           ) : (
             <CalloutRight content={ch.right} visible={true} />
