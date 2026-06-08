@@ -190,15 +190,18 @@ export function Speedometer() {
       {severityProbs && (
         <>
           <div style={{ fontSize: 7, color: '#666', letterSpacing: 0.5, textAlign: 'center', marginBottom: 2, fontFamily: "'Fira Code', monospace" }}>
-            CONFIDENCE
+            Severity probability
           </div>
-          <div style={{ display: 'flex', width: 120, height: 10 }}>
+          <div style={{ display: 'flex', width: 120, height: 18, borderRadius: 2, overflow: 'hidden' }}>
             {severityProbs.map((prob, i) => (
               <div
                 key={i}
+                title={`${SEVERITY_LEGEND[i].label}: ${Math.round(prob * 100)}%`}
+                aria-label={`${SEVERITY_LEGEND[i].label}: ${Math.round(prob * 100)}%`}
                 style={{
-                  width: prob * 120,
-                  height: 10,
+                  flex: prob,
+                  minWidth: 0,
+                  height: 18,
                   background: SEVERITY_PROB_COLORS[i],
                   display: 'flex',
                   alignItems: 'center',
@@ -206,9 +209,9 @@ export function Speedometer() {
                   overflow: 'hidden',
                 }}
               >
-                {prob >= 0.10 && (
-                  <span style={{ fontSize: 8, color: 'white', textAlign: 'center', lineHeight: 1 }}>
-                    {Math.round(prob * 100)}%
+                {prob >= 0.12 && (
+                  <span style={{ fontSize: 7, color: 'white', textAlign: 'center', lineHeight: 1, whiteSpace: 'nowrap', padding: '0 2px' }}>
+                    {SEVERITY_LEGEND[i].label} {Math.round(prob * 100)}%
                   </span>
                 )}
               </div>
