@@ -117,3 +117,15 @@ Started: Sun Jun  7 21:58:25 EDT 2026
   - For bar charts with fixed 0–3 severity scale: use `SEV_MAX=3` as denominator, not `Math.max(...severities)` — gives consistent visual scale across years
   - `void param` pattern used in StrategyRight to satisfy lint when params passed but not used inside
 ---
+
+## 2026-06-08 04:08 - US-011
+- Removed absolute-positioned CrossSeasonChart overlay from chapter 5 (was `position:absolute, top:40, left:50%, width:60%`)
+- Rebuilt CrossSeasonChart.tsx: SVG_W=420, SVG_H=220, PAD_L=42/PAD_B=42 for axis labels; horizontal gridlines at each severity; X-axis ticks at 0/25/50/75/100%; Y-axis tick labels (Healthy/Mild/Moderate/Critical); "Race progress %" X-axis label; rotated "Degradation severity" Y-axis label; year legend with colored lines (not circles); polylines at strokeWidth=2
+- In ScrollStage.tsx: added `activeChapter === 5` branch to center column — renders CrossSeasonChart in a div with `gridColumn: '2 / 4'` (spans center+right columns); suppressed right callout for chapter 5 (`activeChapter === 5 ? null`)
+- Files changed: `dashboard/app/components/CrossSeasonChart.tsx`, `dashboard/app/components/ScrollStage.tsx`
+- **Learnings for future iterations:**
+  - Chapter 5 left column still shows `CalloutLeft` (default else branch) — explanation + value text rendered automatically
+  - `gridColumn: '2 / 4'` on center grid item (column 2) expands it into column 3 — right callout must be suppressed with `null` or it auto-places to next row
+  - Y-axis categorical labels (Healthy/Mild/Moderate/Critical) at gridline positions are more readable than numeric 0–3 for severity scale
+  - Rotated SVG text for Y-axis: `transform="rotate(-90, cx, cy)"` with `textAnchor="middle"` — cx=10, cy=PAD_T+plotH/2
+---
