@@ -572,15 +572,6 @@ export default function ScrollStage() {
 
 
 
-          {/* Chapter 5 (Season Comparison): cross-season severity overlay */}
-          {activeChapter === 5 && (
-            <div style={{
-              position: 'absolute', top: 40, left: '50%', transform: 'translateX(-50%)',
-              width: '60%', pointerEvents: 'none',
-            }}>
-              <CrossSeasonChart driver={currentDriver} />
-            </div>
-          )}
 
           {/* Left callout — chapter 2: SHAP bars; chapter 4: strategy rec; others: chapter metadata */}
           {activeChapter === 2 ? (
@@ -595,14 +586,18 @@ export default function ScrollStage() {
             <CalloutLeft content={ch.left} visible={true} />
           )}
 
-          {/* Center — chapter 4: pit-window chart; others: tire */}
+          {/* Center — chapter 4: pit-window chart; chapter 5: cross-season chart (spans cols 2–3); others: tire */}
           {activeChapter === 4 ? (
             <StrategyPitChart currentYear={currentYear} currentDriver={currentDriver} currentLap={currentLap} />
+          ) : activeChapter === 5 ? (
+            <div style={{ gridColumn: '2 / 4', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <CrossSeasonChart driver={currentDriver} />
+            </div>
           ) : (
             <TireHero scrollProgress={scrollProgress} />
           )}
 
-          {/* Right callout — chapter 2: corner heatmap; chapter 4: strategy outcome; others: SHAP/text */}
+          {/* Right callout — chapter 2: corner heatmap; chapter 4: strategy outcome; chapter 5: suppressed (chart spans cols 2–3); others: SHAP/text */}
           {activeChapter === 2 ? (
             <div style={{ justifySelf: 'start', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 280 }}>
               <CornerHeatmap year={currentYear} driver={currentDriver} />
@@ -611,7 +606,7 @@ export default function ScrollStage() {
             <div style={{ justifySelf: 'start', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 280 }}>
               <StrategyRight currentYear={currentYear} currentDriver={currentDriver} setSimDrawerOpen={setSimDrawerOpen} />
             </div>
-          ) : (
+          ) : activeChapter === 5 ? null : (
             <CalloutRight content={ch.right} visible={true} />
           )}
         </div>
