@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { useRaceContext } from '../RaceContext'
+import { useNarrowViewport } from '../../lib/useNarrowViewport'
 import { getLap, getSHAP, getAllLapsForDriver } from '../../lib/data'
 import { getSeverityHex, getSeverityLabel, SEVERITY_LABELS } from '../../lib/severityColors'
 import TireHero from './TireHero'
@@ -247,6 +248,7 @@ export default function ScrollStage() {
   const pinRef   = useRef<HTMLDivElement>(null)
   const [scrollProgress, setScrollProgress] = useState(0)
   const [activeChapter, setActiveChapter]   = useState(0)
+  const isNarrow = useNarrowViewport()
 
   const lap      = getLap(currentYear, currentDriver, currentLap)
   const shapData = getSHAP(currentYear, currentDriver, currentLap)
@@ -465,7 +467,7 @@ export default function ScrollStage() {
           }}
         >
           {/* Background circuit */}
-          <SilverstoneCircuit activeChapter={activeChapter} backgroundOnly={activeChapter === 2} />
+          <SilverstoneCircuit activeChapter={activeChapter} backgroundOnly={activeChapter === 2} hideRings={isNarrow} />
 
           {/* Chapter 3 (Race Arc): compact lap severity timeline */}
           {activeChapter === 3 && (
@@ -573,8 +575,21 @@ export default function ScrollStage() {
 
 
 
-          {/* Left callout — chapter 2: SHAP bars; chapter 4: strategy rec; others: chapter metadata */}
-          {activeChapter === 2 ? (
+          {/* Left callout — mobile ch2: full-width stacked; desktop ch2: SHAP bars; ch4: strategy rec; others: chapter metadata */}
+          {isNarrow && activeChapter === 2 ? (
+            <div style={{
+              gridColumn: '1 / 4',
+              display: 'flex', flexDirection: 'column', gap: 16,
+              padding: '0 16px 120px',
+              overflowY: 'auto',
+              maxHeight: 'calc(100vh - 120px)',
+              width: '100%',
+            }}>
+              <CalloutLeft content={ch.left} visible={true} />
+              <CalloutRight content={ch.right} visible={true} />
+              <CornerHeatmap year={currentYear} driver={currentDriver} />
+            </div>
+          ) : activeChapter === 2 ? (
             <div style={{ justifySelf: 'end', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 280 }}>
               <CalloutRight content={ch.right} visible={true} />
             </div>
@@ -586,8 +601,8 @@ export default function ScrollStage() {
             <CalloutLeft content={ch.left} visible={true} />
           )}
 
-          {/* Center — chapter 4: pit-window chart; chapter 5: cross-season chart (spans cols 2–3); others: tire */}
-          {activeChapter === 4 ? (
+          {/* Center — mobile ch2: suppressed (stacked layout in left col spans all 3); ch4: pit chart; ch5: season chart; others: tire */}
+          {isNarrow && activeChapter === 2 ? null : activeChapter === 4 ? (
             <StrategyPitChart currentYear={currentYear} currentDriver={currentDriver} currentLap={currentLap} />
           ) : activeChapter === 5 ? (
             <div style={{ gridColumn: '2 / 4', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -597,8 +612,8 @@ export default function ScrollStage() {
             <TireHero scrollProgress={scrollProgress} />
           )}
 
-          {/* Right callout — chapter 2: corner heatmap; chapter 4: strategy outcome; chapter 5: suppressed (chart spans cols 2–3); others: SHAP/text */}
-          {activeChapter === 2 ? (
+          {/* Right callout — mobile ch2: suppressed; desktop ch2: corner heatmap; ch4: strategy outcome; ch5: suppressed; others: SHAP/text */}
+          {isNarrow && activeChapter === 2 ? null : activeChapter === 2 ? (
             <div style={{ justifySelf: 'start', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 280 }}>
               <CornerHeatmap year={currentYear} driver={currentDriver} />
             </div>

@@ -9,6 +9,7 @@ import { useReducedMotion } from '../../lib/useReducedMotion'
 interface SilverstoneCircuitProps {
   activeChapter: number
   backgroundOnly?: boolean
+  hideRings?: boolean
 }
 
 // Build path once at module level — stable across renders
@@ -41,7 +42,7 @@ const CORNER_LABELS: Record<string, string> = {
   Club:  'CLUB',
 }
 
-export function SilverstoneCircuit({ activeChapter, backgroundOnly }: SilverstoneCircuitProps) {
+export function SilverstoneCircuit({ activeChapter, backgroundOnly, hideRings }: SilverstoneCircuitProps) {
   const circuitRef = useRef<SVGPathElement>(null)
   const carRef = useRef<SVGGElement>(null)
   const reducedMotion = useReducedMotion()
@@ -141,8 +142,8 @@ export function SilverstoneCircuit({ activeChapter, backgroundOnly }: Silverston
         filter="url(#silverstoneTrackGlow)"
       />
 
-      {/* Corner glow circles — Chapter 2 (Predictors) only */}
-      {showCornerGlow && breakdowns && scores && (
+      {/* Corner glow circles — Chapter 2 (Predictors) only; hidden on mobile via hideRings */}
+      {showCornerGlow && breakdowns && scores && !hideRings && (
         <g data-testid="corner-glow-group">
           <defs>
             <style>{`
