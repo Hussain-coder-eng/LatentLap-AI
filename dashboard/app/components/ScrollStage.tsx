@@ -10,6 +10,7 @@ import { CalloutRight, type CalloutRightContent, type ShapRow } from './CalloutR
 import ChapterDots from './ChapterDots'
 import LapDeltaChart from './LapDeltaChart'
 import CrossSeasonChart from './CrossSeasonChart'
+import CornerHeatmap from './CornerHeatmap'
 import strategyRaw from '../../public/data/strategy_recommendations.json'
 
 const CHAPTER_THRESHOLDS = [0, 0.17, 0.34, 0.51, 0.68, 0.85]
@@ -426,6 +427,13 @@ export default function ScrollStage() {
                   {lapNum}
                 </span>
               ))}
+            </div>
+          )}
+
+          {/* Chapter 2 (Predictors): corner stress heatmap */}
+          {activeChapter === 2 && (
+            <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', width: '80%', pointerEvents: 'none' }}>
+              <CornerHeatmap year={currentYear} driver={currentDriver} />
             </div>
           )}
 
