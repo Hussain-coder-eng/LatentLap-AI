@@ -20,3 +20,13 @@ Started: Sun Jun  7 21:58:25 EDT 2026
   - `useNarrowViewport` is the correct hook for mobile branching — returns false on SSR (avoids hydration flash)
   - Short names array needed separately from full names for mobile segmented control
 ---
+
+## 2026-06-07 22:10 - US-002
+- Pushed Speedometer container from `top: 24` to `top: 52` so driver/year chip (SettingsPopover pill at top:16, height ~21px) no longer overlaps the gauge
+- Added `SEVERITY_LEGEND` constant and rendered a compact swatch+label column below the confidence bar — always visible, not data-gated
+- Files changed: `dashboard/app/components/Speedometer.tsx`
+- **Learnings for future iterations:**
+  - Driver/year chip lives in `SettingsPopover.tsx` at `position: fixed, top:16, left:16, zIndex:300` — it's the pill button that also opens the popover
+  - Speedometer sits at `position: fixed, top:52, left:24, zIndex:60` after this fix — below chip's bottom edge (~37px)
+  - `SEVERITY_PROB_COLORS` in Speedometer.tsx already had the 4 severity colors; legend reuses same array
+---
