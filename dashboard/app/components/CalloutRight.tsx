@@ -161,7 +161,7 @@ export function CalloutRight({ content, visible }: CalloutRightProps) {
           </div>
         ))}
 
-        {/* Technical toggle */}
+        {/* Technical details disclosure */}
         <button
           onClick={handleToggle}
           aria-expanded={expanded}
@@ -178,25 +178,29 @@ export function CalloutRight({ content, visible }: CalloutRightProps) {
             marginTop: 4,
           }}
         >
-          {expanded ? '- Technical' : '+ Technical'}
+          Technical details {expanded ? '▴' : '▸'}
         </button>
 
-        {/* Technical detail — shown when expanded */}
+        {/* Technical detail — formatted bullet points */}
         {expanded && (
-          <div
+          <ul
             style={{
               fontFamily: "'Fira Code', monospace",
               fontSize: 10,
               color: '#888',
               lineHeight: 1.6,
               borderLeft: '2px solid #333',
-              paddingLeft: 8,
+              paddingLeft: 16,
               marginTop: 2,
+              marginBottom: 0,
               overflowWrap: 'anywhere',
+              listStyle: 'disc',
             }}
           >
-            {content.technicalDetail}
-          </div>
+            {content.technicalDetail.split('\n').filter(Boolean).map((line, i) => (
+              <li key={i}>{line}</li>
+            ))}
+          </ul>
         )}
       </div>
     </div>
