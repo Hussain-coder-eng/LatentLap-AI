@@ -1,32 +1,219 @@
 {
   "project": "LatentLap-AI Dashboard",
-  "branchName": "ralph/corner-heatmap",
-  "description": "Add CornerHeatmap component showing per-corner degradation stress across laps using shap_data.json. Renders as a grid of 4 Silverstone corners x N laps with color gradient from near-black (low stress) to red (high stress).",
+  "branchName": "ralph/dashboard-ux-fixes",
+  "description": "Fix 15 dashboard UX issues: collision fixes (layout zones, chapter nav, controls), explanation fixes (labels, legends, text), chapter redesigns (predictor, strategy, compare), and mobile layout overhaul.",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Add corner stress heatmap over laps",
-      "description": "As an F1 engineer, I want to see which Silverstone corners generate the most degradation stress per lap so I can identify where tire wear originates.",
+      "title": "Move chapter nav dots to bottom rail with hover labels",
+      "description": "As a user, I want chapter navigation that doesn't overlap charts so I can use the dashboard without UI collisions.",
       "acceptanceCriteria": [
-        "Create dashboard/app/components/CornerHeatmap.tsx as a 'use client' component",
-        "Component accepts props: { year: number, driver: string }",
-        "Import shap_data from '../../../public/data/shap_data.json' (or adjust relative path based on component location) and cast as { shap_values: { severity: Record<string, Record<string, number>> } }",
-        "Define CORNERS = ['Copse', 'MB', 'Stowe', 'Club'] as const — these 4 corners have SHAP feature data in shap_data.json",
-        "For each lap key matching year+driver (format: '{year}_{driver}_{lapNum}', e.g. '2024_NOR_5'), compute per-corner stress: sum Math.abs(value) for all features in shap_values.severity[key] whose name starts with '{CORNER}_'. Result: stress[cornerIndex][lapIndex] = number",
-        "Normalize all stress values: find globalMax across all corners and laps, divide each by globalMax to get 0–1 range. If globalMax === 0 render a placeholder 'No data' text.",
-        "Render a div-based grid (not SVG): each row is a corner, each column is a lap sorted by lap_number ascending",
-        "Cell style: { width: Math.max(6, Math.min(10, 280 / numLaps)), height: 16, background: interpolateColor(v) } where interpolateColor(v) returns rgb string interpolating from rgb(13,17,23) at v=0 to rgb(255,24,1) at v=1 using linear lerp on each channel",
-        "Corner name labels on the left of each row: fontSize 8, color '#888', fontFamily monospace, width 36px, textAlign right, marginRight 4, lineHeight '16px'",
-        "X-axis lap number labels below the grid: show lap number every 5 laps, fontSize 7, color '#555', fontFamily monospace, positioned proportionally using the same cell width",
-        "Title above the grid: 'CORNER STRESS HEATMAP', fontSize 8, color '#888', letterSpacing 1, fontFamily monospace, marginBottom 4",
-        "Wrap everything in a div with style={{ overflowX: 'auto', maxWidth: '100%' }} to handle many laps",
-        "In dashboard/app/components/ScrollStage.tsx, import CornerHeatmap and render it inside the Predictors chapter section (chapter 2, activeChapter === 2), after the existing top-3 SHAP callout area. Add: <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', width: '80%', pointerEvents: 'none' }}><CornerHeatmap year={currentYear} driver={currentDriver} /></div>",
-        "cd /Users/hussianaltufayli/Downloads/LatentLap-AI-main/dashboard && npx tsc --noEmit shows 0 errors",
+        "ChapterDots component moved from absolute right-side position to a fixed bottom nav rail (above scrubber, below main content)",
+        "Each dot shows chapter name label on hover/focus using title attribute or CSS tooltip",
+        "Nav rail has z-index above content, pointer-events contained to rail only",
+        "No dot overlaps any chart or content area on desktop or mobile",
+        "On mobile (< 640px), chapter nav renders as a horizontal segmented control at top of viewport with short chapter labels visible",
+        "Typecheck passes",
         "Verify in browser using dev-browser skill"
       ],
       "priority": 1,
       "passes": true,
-      "notes": "shap_data.json structure: { shap_values: { severity: { '2024_NOR_5': { featureName: shapValue, ... } } } }. Corner prefixes in feature names: 'Copse_' (e.g. Copse_TimeSec, Copse_EntrySpeed, Copse_PeakLatG), 'MB_' (e.g. MB_PeakLatG, MB_TimeSec), 'Stowe_' (e.g. Stowe_AvgLatG), 'Club_' (e.g. Club_TimeSec, Club_EntrySpeed). Sum abs(value) for all features starting with the corner prefix. Data exists for years 2021-2025, drivers NOR/RIC/PIA depending on year. The file is at dashboard/public/data/shap_data.json. Import path from dashboard/app/components/ is '../../public/data/shap_data.json'."
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Fix top-left controls \u2014 driver chip above gauge + severity legend",
+      "description": "As a user, I want the driver/year chip and severity legend positioned so they don't overlap the speedometer.",
+      "acceptanceCriteria": [
+        "Driver/year chip (e.g. NOR \u00b7 2025) moved above or beside the speedometer gauge, not overlapping it",
+        "A severity probability legend added near the gauge: four labeled swatches \u2014 Severity 0 (Healthy), 1 (Mild), 2 (Moderate), 3 (Critical) \u2014 using the existing color scale",
+        "Legend is compact (row of small color chips with text labels), placed below driver chip or beside gauge",
+        "Controls zone is protected: nothing else overlays the top-left quadrant",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Fix confidence bar \u2014 labeled mini legend, hide labels below 12%",
+      "description": "As a user, I want the confidence/probability bar to show all four severity classes with human-readable labels.",
+      "acceptanceCriteria": [
+        "Confidence bar shows all four probability segments: Healthy, Mild, Moderate, Critical (currently missing one class)",
+        "Each segment has a text label showing the class name and percent, e.g. 'Healthy 54%'",
+        "Labels with value < 12% are hidden visually but still accessible via tooltip or aria-label on the segment",
+        "A mini legend title reads 'Severity probability' above or beside the bar",
+        "Bar total always sums to 100% (verify data normalization)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Fix corner heatmap \u2014 title, legend, dedicated lower panel",
+      "description": "As a user, I want the corner heatmap in a fixed dedicated zone with clear legend so I understand what red intensity means.",
+      "acceptanceCriteria": [
+        "CornerHeatmap component renders in a dedicated lower panel with fixed height (e.g. 120px) above the lap scrubber, not randomly positioned",
+        "Panel has a title: 'Corner Stress by Lap'",
+        "A legend row below the heatmap shows: a gradient bar from dark (low) to red (high) with labels 'Low stress' and 'High stress' and note 'Darker red = higher corner stress proxy'",
+        "Corner labels (Copse, MB, Stowe, Club) are legible \u2014 minimum font size 10px",
+        "Panel does not overlap scrubber or any other content",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Fix race arc \u2014 rename modeled laps, add severity scale legend",
+      "description": "As a user, I want the race arc text and legend to be clear so I understand what '29 laps' means.",
+      "acceptanceCriteria": [
+        "Change '29 Predicted Laps (of 52)' to '29 modeled laps from telemetry \u00b7 52 race laps total'",
+        "Add a severity scale legend to the race arc view: small colored row showing which color = which severity (Healthy/Mild/Moderate/Critical)",
+        "Remove any visible scrollbar from the race arc area (overflow hidden or auto where appropriate)",
+        "Legend is placed within the race arc chapter zone, not floating outside",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Rename SIM button to Strategy Simulator, move to strategy section",
+      "description": "As a user, I want the simulator button clearly labeled and located near the strategy content so it feels related.",
+      "acceptanceCriteria": [
+        "SIM button text changed to 'Strategy Simulator' (or 'Open Simulator' if space-constrained)",
+        "Button moved to within or directly adjacent to the strategy chapter section, not floating near timeline/bars",
+        "Button position does not overlap any chart or timeline element",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Expand SIM drawer labels \u2014 full compound names, descriptions, 0.0s message",
+      "description": "As a user, I want the simulator drawer to use plain language so I understand all options and results without jargon.",
+      "acceptanceCriteria": [
+        "Compound abbreviations expanded: S \u2192 Soft, M \u2192 Medium, H \u2192 Hard, INT \u2192 Intermediate, W \u2192 Wet",
+        "'Finish Sev' label changed to 'Projected finish severity'",
+        "'Multiplier' label changed to 'Compound degradation multiplier'",
+        "When delta time is 0.0s, display 'No meaningful gain/loss' instead of 'LOST 0.0s' or similar zero-value text",
+        "Drawer layout is readable with no truncated or overflowing text",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Fix technical toggle \u2014 two-layer plain explanation + expandable technical details",
+      "description": "As a user, I want to see a plain-language explanation always visible, with optional technical details expandable below.",
+      "acceptanceCriteria": [
+        "Every instance of the technical toggle renders a plain-language explanation visible by default (not behind toggle)",
+        "Technical details are in an expandable section below, triggered by a 'Technical details \u25b8' button/disclosure",
+        "Technical details render as formatted bullet points, not raw inline strings",
+        "Consistent pattern applied across all chapters that have a technical toggle",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Predictor chapter \u2014 two-column panel, corner rings as background-only",
+      "description": "As a user, I want the predictor chapter to show SHAP bars clearly without the circuit ring overlapping them.",
+      "acceptanceCriteria": [
+        "Predictor chapter renders in a two-column layout: left column = 'Why this lap?' label + SHAP bars; right column = corner stress heatmap or secondary info",
+        "Corner ring visuals (MB ring, Copse ring) moved behind content with reduced opacity (\u2264 0.15) as decorative background, not competing with bar chart",
+        "'Top predictors' heading positioned above SHAP bars, not overlapping circuit imagery",
+        "SHAP bars are fully readable with no content crossing over them",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Strategy chapter \u2014 three-zone dashboard layout + result sentence",
+      "description": "As a user, I want the strategy chapter to look like a decision dashboard with clear recommendation and pit-window chart.",
+      "acceptanceCriteria": [
+        "Strategy chapter uses a three-zone layout: left = recommendation summary (UNDERCUT OPPORTUNITY text, large and readable), center = pit-window bars with labeled Y-axis and X-axis (lap numbers), right = outcome explanation panel",
+        "Pit-window bars have axis labels and gridlines so severity scale is clear",
+        "A one-sentence result summary shown: e.g. 'Best window: L18\u2013L26 \u2014 projected finish severity stays lowest.' using actual computed values from data",
+        "Strategy content does not compete with or overlap the speedometer",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Season compare chapter \u2014 chart-focused layout, remove center tire, add legend/axes",
+      "description": "As a user, I want the season comparison to be a proper chart view without the unrelated center tire visual.",
+      "acceptanceCriteria": [
+        "Center tire animation/visual removed from season compare chapter (unrelated to cross-season data)",
+        "CrossSeasonChart is the primary and dominant visual, taking 60%+ of the available content area",
+        "Chart has labeled X-axis (Race progress %) and Y-axis (Degradation severity), with gridlines",
+        "Chart legend shows each year as a colored line with year label (e.g. 2021, 2024) \u2014 labels not compressed",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Mobile predictor \u2014 stacked layout, hide circuit overlays",
+      "description": "As a mobile user, I want the predictor chapter content stacked vertically so SHAP bars and heatmap don't collide with circuit visuals.",
+      "acceptanceCriteria": [
+        "On mobile (< 640px), predictor chapter stacks vertically: explanation text \u2192 SHAP bars \u2192 corner heatmap",
+        "Circuit ring overlays (Copse, MB) hidden on mobile (display:none or opacity:0) \u2014 decorative background on desktop only",
+        "SHAP bars do not overflow or overlap chapter dot nav on mobile",
+        "Corner heatmap on mobile has safe bottom padding to not collide with scrubber",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Mobile overall \u2014 stacked narrative cards, circuit as faint background",
+      "description": "As a mobile user, I want all dashboard chapters to render as stacked readable sections with no absolute-positioned overlays covering content.",
+      "acceptanceCriteria": [
+        "On mobile (< 640px), all chapters render as vertically stacked content sections \u2014 no absolute-positioned overlays on top of readable content",
+        "Circuit/track image used as a faint CSS background (opacity \u2264 0.08) on mobile \u2014 no large circuit SVG/PNG overlaid on content",
+        "Each section has min 16px horizontal padding so content does not touch screen edges",
+        "Lap scrubber stays fixed at bottom with safe-area-inset-bottom padding",
+        "All charts and text readable without horizontal scroll",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 13,
+      "passes": true,
+      "notes": ""
     }
   ]
 }

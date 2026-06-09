@@ -1,21 +1,150 @@
 # Ralph Progress Log
-## Codebase Patterns
-- shap_data.json import from dashboard/app/components/: use '../../public/data/shap_data.json'
-- New components go in dashboard/app/components/ as 'use client' with named export default
-- Chapter-specific UI rendered via {activeChapter === N && (...)} blocks inside ScrollStage pinRef div
-- TypeScript check: cd dashboard && npx tsc --noEmit
+Started: Sun Jun  7 21:58:25 EDT 2026
 
-Started: Sun Jun  7 21:18:15 EDT 2026
+## Codebase Patterns
+- `useNarrowViewport()` hook in `dashboard/lib/useNarrowViewport.ts` — returns boolean for < 640px, use for mobile branches in components
+- Scrubber (`LapScrubberFixed`) is `position: fixed; bottom: 0; height: 48px; zIndex: 50` — chapter nav rail must sit at `bottom: 56px` minimum to clear it
+- All dashboard components are `'use client'` and live in `dashboard/app/components/`
+- McLaren orange accent: `#FF8000`; dark bg: `rgba(8,8,8,0.x)`; code font: `'Fira Code', monospace`
+- Typecheck: `cd dashboard && npx tsc --noEmit`
+
 ---
 
-## 2026-06-07 21:30 - US-001
-- Implemented CornerHeatmap.tsx: div-based grid showing per-corner SHAP stress across laps
-- Component: 4 corners (Copse, MB, Stowe, Club) x N laps, color lerp from near-black to red
-- Integrated into ScrollStage.tsx chapter 2 (Predictors), positioned bottom-center
-- Files changed: dashboard/app/components/CornerHeatmap.tsx (new), dashboard/app/components/ScrollStage.tsx (import + chapter 2 block)
+## 2026-06-07 22:00 - US-001
+- Rewrote ChapterDots.tsx: desktop → horizontal dot rail at `bottom: 56px` centered, inside a pill-shaped backdrop container; mobile → full-width segmented control at `top: 0` with abbreviated labels and orange underline indicator
+- Added `title` attribute to each dot button for native hover tooltip
+- Added `role="tablist"` / `role="tab"` / `aria-selected` for accessibility
+- Files changed: `dashboard/app/components/ChapterDots.tsx`
 - **Learnings for future iterations:**
-  - shap_data.json already loaded via lib/data.ts for getSHAP(); importing it directly in a component also works fine
-  - Corner prefix filtering: features like 'Copse_EntrySpeed' match 'Copse_' prefix; all 4 corners present for all year/driver combos
-  - x-axis label positioning uses position:absolute inside a flex container with a 40px spacer matching corner label width (36px + 4px margin)
-  - tsc --noEmit passes with no args needed beyond cd dashboard
+  - Scrubber height is 48px at bottom: 0; rail goes at bottom: 56px to avoid overlap
+  - `useNarrowViewport` is the correct hook for mobile branching — returns false on SSR (avoids hydration flash)
+  - Short names array needed separately from full names for mobile segmented control
+---
+
+## 2026-06-07 22:10 - US-002
+- Pushed Speedometer container from `top: 24` to `top: 52` so driver/year chip (SettingsPopover pill at top:16, height ~21px) no longer overlaps the gauge
+- Added `SEVERITY_LEGEND` constant and rendered a compact swatch+label column below the confidence bar — always visible, not data-gated
+- Files changed: `dashboard/app/components/Speedometer.tsx`
+- **Learnings for future iterations:**
+  - Driver/year chip lives in `SettingsPopover.tsx` at `position: fixed, top:16, left:16, zIndex:300` — it's the pill button that also opens the popover
+  - Speedometer sits at `position: fixed, top:52, left:24, zIndex:60` after this fix — below chip's bottom edge (~37px)
+  - `SEVERITY_PROB_COLORS` in Speedometer.tsx already had the 4 severity colors; legend reuses same array
+---
+
+## 2026-06-07 22:15 - US-003
+- Changed confidence bar title from "CONFIDENCE" to "Severity probability"
+- Increased bar height from 10px to 18px to fit label text
+- Switched from fixed `width: prob * 120` to `flex: prob` layout so all 4 segments always render proportionally
+- Added `title` and `aria-label` on each segment for accessibility when label is hidden
+- Show "LabelName XX%" text when prob >= 0.12; hide visually (but keep aria) below threshold
+- Files changed: `dashboard/app/components/Speedometer.tsx`
+- **Learnings for future iterations:**
+  - `flex: prob` is cleaner than `width: prob * 120` for proportional bars — handles float sums correctly
+  - Confidence bar and severity legend are both in `Speedometer.tsx` — single file for all gauge-area UI
+---
+
+## 2026-06-08 03:39 - US-004
+- Fixed CornerHeatmap: title "Corner Stress by Lap", corner label font bumped to 10px, gradient legend row with "Low stress" / "High stress" labels and proxy note
+- Fixed ScrollStage: replaced `position: absolute, bottom: 20, left: 50%` with `position: fixed, bottom: 48px, left: 0, right: 0, height: 120px` — dark bg, orange top border, zIndex: 40 (below scrubber at 50)
+- Files changed: `dashboard/app/components/CornerHeatmap.tsx`, `dashboard/app/components/ScrollStage.tsx`
+- **Learnings for future iterations:**
+  - CornerHeatmap panel sits at `position: fixed; bottom: 48px; height: 120px; zIndex: 40` — below scrubber (zIndex 50) and above content
+  - Gradient CSS for the legend: `linear-gradient(to right, rgb(13,17,23), rgb(80,10,5), rgb(255,24,1))` matches `interpolateColor()` function range
+  - When moving overlays to fixed panels, ensure zIndex is below scrubber (50) and above main content (30–39)
+---
+
+## 2026-06-08 03:51 - US-005
+- Changed `value` from `${totalLaps} Predicted Laps` to `${totalLaps} modeled laps from telemetry`
+- Changed `subAnnotation` from `(of 52 race laps)` to `· 52 race laps total`
+- Added severity scale legend row above race arc timeline bar: 4 colored swatches (Healthy/Mild/Moderate/Critical) positioned at `bottom: RACE_ARC_TIMELINE_BOTTOM_PX + RACE_ARC_TIMELINE_HEIGHT_PX + 8`
+- Overflow already `hidden` on all containing divs — no scrollbar visible
+- Files changed: `dashboard/app/components/ScrollStage.tsx`
+- **Learnings for future iterations:**
+  - Race arc chapter content is in `ScrollStage.tsx` chapterContent array, chapter index 3 (0-based: index 2 in array after intro=0, severity=1, predictors=2, racearc=3)
+  - Severity legend can reuse `getSeverityHex()` from `lib/severityColors.ts`
+  - RACE_ARC_TIMELINE constants at top of ScrollStage: BOTTOM_PX=64, HEIGHT_PX=18 — legend at `bottom: 64+18+8=90`
+  - SEVERITY_LABELS exported from severityColors.ts but short labels ['Healthy','Mild','Moderate','Critical'] used inline for compactness
+---
+
+## 2026-06-08 04:00 - US-006
+- Removed floating SimFAB ("SIM" circle button at fixed bottom:88 right:16) from page.tsx entirely
+- Added "Strategy Simulator" button inside Chapter 4 block in ScrollStage.tsx — positioned absolute bottom:12 right:16 within pinned stage div
+- Added `setSimDrawerOpen` to useRaceContext() destructure in ScrollStage
+- Removed unused `useRaceContext` import from page.tsx
+- Files changed: `dashboard/app/page.tsx`, `dashboard/app/components/ScrollStage.tsx`
+- **Learnings for future iterations:**
+  - SimDrawer trigger now in ScrollStage Chapter 4 block — button only visible when user is on Strategy chapter
+  - `setSimDrawerOpen` exported from RaceContext — no interface changes needed
+  - Pinned stage div uses `position: relative` so `position: absolute` children within Chapter 4 block are valid
+---
+
+## 2026-06-08 04:05 - US-007
+- Added COMPOUND_FULL_NAME map (Soft/Medium/Hard/Intermediate/Wet) — replaces all abbreviation ternary chains
+- Changed compound button labels from single-letter (S/M/H/INT/W) to full names
+- Changed compound Cell display values to full names
+- Changed 'Finish Sev' cell label to 'Projected finish severity'
+- Changed 'Multiplier' cell label to 'Compound degradation multiplier'
+- Added verdictZero (|timeSaved| < 0.05) branch: shows '— No meaningful gain/loss' with neutral grey styling
+- Files changed: `dashboard/app/components/SimDrawer.tsx`
+- **Learnings for future iterations:**
+  - COMPOUND_FULL_NAME map is the single source of truth for display names — avoids scattered ternary chains
+  - Cell label is 9px at top of cell — long labels ('Compound degradation multiplier') still fit due to small size
+  - verdictZero threshold is 0.05s — renders neutral grey verdict box instead of red/green
+---
+
+## 2026-06-08 04:00 - US-009
+- Added `backgroundOnly` prop to SilverstoneCircuit — when true, caps corner ring opacity to max 0.15 (formula: `min(0.04 + score * 0.11, 0.15)`) and disables pulse animation
+- Removed fixed-bottom CornerHeatmap panel (was `position:fixed, bottom:48, height:120px`)
+- Swapped left/right callout columns for chapter 2: SHAP bars (CalloutRight) move to left col with `justifySelf:end` wrapper; CornerHeatmap moves to right col with `justifySelf:start` wrapper
+- Passed `backgroundOnly={activeChapter === 2}` to SilverstoneCircuit
+- Files changed: `dashboard/app/components/SilverstoneCircuit.tsx`, `dashboard/app/components/ScrollStage.tsx`
+- **Learnings for future iterations:**
+  - `backgroundOnly` pattern on SilverstoneCircuit is the toggle for decorative vs active corner rings — reuse if future chapters need rings as background
+  - Grid column swap achieved by wrapping CalloutRight in `justifySelf:end` div (left col) and CornerHeatmap in `justifySelf:start` div (right col) — no grid structure change needed
+  - CornerHeatmap renders fine inline (width:100%) — no fixed positioning required
+---
+
+## 2026-06-08 04:06 - US-010
+- Replaced absolute-positioned `StrategyBars` overlay with three-zone grid layout for strategy chapter
+- Added `StrategyLeft`: large window-status label (UNDERCUT OPPORTUNITY / IN PIT WINDOW / OVERCUT), pit window range, one-sentence result summary with actual best pit lap + finish severity
+- Added `StrategyPitChart`: proper bar chart with Y-axis labels (0–3), Y-axis gridlines at each integer, X-axis lap number labels, bars colored by recommendation, in-window bars at full opacity vs 0.3 for out-of-window
+- Added `StrategyRight`: color legend (optimal/acceptable/late/critical), technical note, Strategy Simulator button
+- Removed `LapDeltaChart` from strategy chapter (competed with chart; no longer used in chapter 4)
+- Files changed: `dashboard/app/components/ScrollStage.tsx`
+- **Learnings for future iterations:**
+  - Chapter 4 now uses activeChapter === 4 checks in all three column slots (left/center/right), same pattern as chapter 2 override
+  - `getStrategy()` and `getWindowLabel()` are shared helper functions — reuse for any strategy-aware component
+  - For bar charts with fixed 0–3 severity scale: use `SEV_MAX=3` as denominator, not `Math.max(...severities)` — gives consistent visual scale across years
+  - `void param` pattern used in StrategyRight to satisfy lint when params passed but not used inside
+---
+
+## 2026-06-08 04:08 - US-011
+- Removed absolute-positioned CrossSeasonChart overlay from chapter 5 (was `position:absolute, top:40, left:50%, width:60%`)
+- Rebuilt CrossSeasonChart.tsx: SVG_W=420, SVG_H=220, PAD_L=42/PAD_B=42 for axis labels; horizontal gridlines at each severity; X-axis ticks at 0/25/50/75/100%; Y-axis tick labels (Healthy/Mild/Moderate/Critical); "Race progress %" X-axis label; rotated "Degradation severity" Y-axis label; year legend with colored lines (not circles); polylines at strokeWidth=2
+- In ScrollStage.tsx: added `activeChapter === 5` branch to center column — renders CrossSeasonChart in a div with `gridColumn: '2 / 4'` (spans center+right columns); suppressed right callout for chapter 5 (`activeChapter === 5 ? null`)
+- Files changed: `dashboard/app/components/CrossSeasonChart.tsx`, `dashboard/app/components/ScrollStage.tsx`
+- **Learnings for future iterations:**
+  - Chapter 5 left column still shows `CalloutLeft` (default else branch) — explanation + value text rendered automatically
+  - `gridColumn: '2 / 4'` on center grid item (column 2) expands it into column 3 — right callout must be suppressed with `null` or it auto-places to next row
+  - Y-axis categorical labels (Healthy/Mild/Moderate/Critical) at gridline positions are more readable than numeric 0–3 for severity scale
+  - Rotated SVG text for Y-axis: `transform="rotate(-90, cx, cy)"` with `textAnchor="middle"` — cx=10, cy=PAD_T+plotH/2
+---
+
+## 2026-06-08 18:30 - US-012
+- Added hideRings prop to SilverstoneCircuit — suppresses corner glow on mobile (isNarrow)
+- Mobile chapter 2 stacked layout: gridColumn 1/4 full-width flex-col with CalloutLeft + CalloutRight + CornerHeatmap, 16px padding, 120px bottom pad to clear scrubber
+- Center and right columns suppressed (null) when isNarrow && activeChapter === 2
+- Files changed: dashboard/app/components/SilverstoneCircuit.tsx, dashboard/app/components/ScrollStage.tsx
+- Learnings: hideRings pattern on SilverstoneCircuit is clean toggle for mobile — no opacity hack needed
+---
+
+## 2026-06-08 18:35 - US-013
+- Refactored ScrollStage return into two top-level branches: isNarrow (mobile) and desktop — eliminates double-render risk from scattered isNarrow guards
+- Mobile branch: flex-column pinRef (minHeight:100vh, padding 56px top / 16px sides / 64px bottom), SilverstoneCircuit wrapped in opacity:0.06 div as faint background, single stacked content div per chapter
+- Per-chapter mobile content: ch0/ch1 → CalloutLeft+TireHero+CalloutRight; ch2 → CalloutLeft+CalloutRight+CornerHeatmap; ch3 → CalloutLeft+inline severity legend+inline race arc bar+CalloutRight; ch4 → CalloutLeft+StrategyLeft+StrategyPitChart+StrategyRight; ch5 → CalloutLeft+CrossSeasonChart (overflowX:auto)
+- Race arc timeline extracted as raceArcTimelineBar JSX variable — reused in mobile inline path; desktop still uses the absolute-positioned version
+- LapScrubberFixed: height changed to calc(48px + env(safe-area-inset-bottom, 0px)), padding-bottom env(safe-area-inset-bottom, 0px) — safe on desktop (env resolves to 0)
+- Desktop branch: all three absolute ch3 timeline/tick/legend divs remain, three-column grid logic unchanged, US-009/010/011 chapter overrides preserved
+- Files changed: dashboard/app/components/ScrollStage.tsx, dashboard/app/components/LapScrubberFixed.tsx
+- Learnings: mobile must be ONE top-level isNarrow branch — sibling conditionals cause double renders on mobile; all absolute overlays must live exclusively in the desktop branch
 ---
