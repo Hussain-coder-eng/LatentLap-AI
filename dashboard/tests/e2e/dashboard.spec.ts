@@ -54,9 +54,9 @@ test.describe('Scrollytelling dashboard shell', () => {
   })
 
   test('chapter dots navigate to severity chapter', async ({ page }) => {
-    const severityDot = page.getByRole('button', { name: 'Chapter 2 of 5: Severity' })
+    const severityDot = page.getByRole('tab', { name: /Chapter 2.*Severity/ })
     await severityDot.click()
-    await expect(severityDot).toHaveAttribute('aria-current', 'true')
+    await expect(severityDot).toHaveAttribute('aria-selected', 'true')
     await expect(page.getByText('Tire Severity')).toBeVisible()
     await expect(page.getByText(/Scale: 0 = healthy/)).toBeVisible()
   })
@@ -98,11 +98,12 @@ test.describe('Scrollytelling dashboard shell', () => {
 
 test.describe('SIM drawer', () => {
   test('opens, exposes pit slider, and closes', async ({ page }) => {
-    await page.getByTestId('sim-fab').click()
+    await page.getByRole('tab', { name: /Chapter 5.*Strategy/ }).click()
+    await page.getByRole('button', { name: 'Strategy Simulator' }).click()
 
     const drawer = page.getByTestId('sim-drawer')
     await expect(drawer).toBeVisible()
-    await expect(drawer).toContainText('LATENTLAP SIM')
+    await expect(drawer).toContainText('LATENTLAP STRATEGY SIM')
     await expect(page.getByLabel('Sim pit lap')).toBeVisible()
 
     await page.getByRole('button', { name: 'Close simulator' }).click()
@@ -155,7 +156,7 @@ test.describe('Mobile layout', () => {
     expect(rightCalloutBox?.width ?? 0).toBeGreaterThan(240)
 
     await expect(page.getByRole('button', { name: 'Open settings' })).toBeVisible()
-    await expect(page.getByTestId('sim-fab')).toBeVisible()
+    await expect(page.getByRole('tablist', { name: 'Chapter navigation' })).toBeVisible()
     await expect(page.locator('[aria-label="Lap scrubber"]')).toBeVisible()
   })
 

@@ -12,7 +12,7 @@ import {
 
 const ALL_COMPOUNDS: CompoundKey[] = ['SOFT', 'MEDIUM', 'HARD', 'INTERMEDIATE', 'WET']
 const COMPOUND_FULL_NAME: Record<CompoundKey, string> = {
-  SOFT: 'Soft', MEDIUM: 'Medium', HARD: 'Hard', INTERMEDIATE: 'Intermediate', WET: 'Wet',
+  SOFT: 'Pirelli Soft', MEDIUM: 'Pirelli Medium', HARD: 'Pirelli Hard', INTERMEDIATE: 'Pirelli Intermediate', WET: 'Pirelli Wet',
 }
 
 function CompoundChip({ compound }: { compound: string }) {
@@ -57,6 +57,7 @@ export default function SimDrawer() {
     <div
       data-testid="sim-drawer"
       aria-label="Strategy simulator"
+      role="complementary"
       style={{
         position: 'fixed',
         top: 0,
@@ -66,7 +67,7 @@ export default function SimDrawer() {
         background: '#0d1117',
         borderLeft: '1px solid rgba(255,255,255,0.12)',
         boxShadow: '-8px 0 32px rgba(0,0,0,0.5)',
-        zIndex: 200,
+        zIndex: 500,
         display: 'flex',
         flexDirection: 'column',
         fontFamily: 'monospace',
@@ -81,7 +82,7 @@ export default function SimDrawer() {
         borderBottom: '1px solid rgba(255,255,255,0.08)',
       }}>
         <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: 1, color: '#FF8000' }}>
-          LATENTLAP SIM
+          LATENTLAP STRATEGY SIM
         </span>
         <button
           aria-label="Close simulator"
@@ -95,7 +96,10 @@ export default function SimDrawer() {
       {/* Controls */}
       <div style={{ padding: '16px 16px 0' }}>
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 10, color: '#888', marginBottom: 8, letterSpacing: 1 }}>COMPOUND</div>
+          <div style={{ fontSize: 10, color: '#888', marginBottom: 8, letterSpacing: 1 }}>NEXT-STINT COMPOUND</div>
+          <div style={{ fontSize: 10, color: '#666', lineHeight: 1.4, marginBottom: 8 }}>
+            Select the hypothetical tire compound McLaren would fit at the simulated stop.
+          </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {ALL_COMPOUNDS.map(c => (
               <button
@@ -127,7 +131,7 @@ export default function SimDrawer() {
 
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span style={{ fontSize: 10, color: '#888', letterSpacing: 1 }}>PIT LAP</span>
+            <span style={{ fontSize: 10, color: '#888', letterSpacing: 1 }}>HYPOTHETICAL PIT LAP</span>
             <span style={{ fontSize: 12, color: '#FF8000', fontWeight: 700 }}>L{simPitLap}</span>
           </div>
           <input
@@ -142,6 +146,9 @@ export default function SimDrawer() {
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
             <span style={{ fontSize: 9, color: '#555' }}>L{minLap}</span>
             <span style={{ fontSize: 9, color: '#555' }}>L{maxLap}</span>
+          </div>
+          <div style={{ fontSize: 10, color: '#666', lineHeight: 1.4, marginTop: 8 }}>
+            Moving the lap changes remaining laps on the new compound and the projected end-of-race severity.
           </div>
         </div>
       </div>
@@ -169,18 +176,29 @@ export default function SimDrawer() {
           <Cell label="Compound" value={<><CompoundChip compound={simCompound} />{COMPOUND_FULL_NAME[simCompound]}</>} />
           <Cell label="Pit Lap" value={`L${result.actualPitLap}`} isLeft />
           <Cell label="Pit Lap" value={`L${simPitLap}`} />
-          <Cell label="Projected finish severity" value={result.actualFinishSeverity.toFixed(2)} isLeft />
+          <Cell
+            label="Projected finish severity"
+            value={result.actualFinishSeverity.toFixed(2)}
+            helper="Estimated DegSeverity at race finish, 0 healthy to 3 critical."
+            isLeft
+          />
           <Cell
             label="Projected finish severity"
             value={result.simFinishSeverity.toFixed(2)}
+            helper="Lower value means the simulated choice preserves the tire better."
             highlight={result.simFinishSeverity < result.actualFinishSeverity ? '#00E676' : '#FF1744'}
           />
           <Cell
             label="Compound degradation multiplier"
             value={`×${(COMPOUND_MULTIPLIERS[result.actualCompound as CompoundKey] ?? 1.0).toFixed(2)}`}
+            helper="Relative wear-rate factor; higher multiplier means faster projected degradation."
             isLeft
           />
-          <Cell label="Compound degradation multiplier" value={`×${COMPOUND_MULTIPLIERS[simCompound].toFixed(2)}`} />
+          <Cell
+            label="Compound degradation multiplier"
+            value={`×${COMPOUND_MULTIPLIERS[simCompound].toFixed(2)}`}
+            helper="Applied to the simulated compound for remaining race laps."
+          />
         </div>
       </div>
 
@@ -199,6 +217,9 @@ export default function SimDrawer() {
           <div style={{ fontSize: 10, color: '#555', marginTop: 4 }}>
             vs actual strategy · {result.remainingLaps} laps projected
           </div>
+          <div style={{ fontSize: 10, color: '#666', lineHeight: 1.45, marginTop: 8 }}>
+            Saved means the simulated choice is quicker than the actual strategy estimate. Lost means it costs time versus actual.
+          </div>
         </div>
       </div>
     </div>
@@ -206,10 +227,11 @@ export default function SimDrawer() {
 }
 
 function Cell({
-  label, value, isLeft = false, highlight,
+  label, value, helper, isLeft = false, highlight,
 }: {
   label: string
   value: React.ReactNode
+  helper?: string
   isLeft?: boolean
   highlight?: string
 }) {
@@ -222,6 +244,9 @@ function Cell({
     }}>
       <div style={{ fontSize: 9, color: '#555', marginBottom: 2, letterSpacing: 0.5 }}>{label}</div>
       <div style={{ fontSize: 13, fontWeight: 700, color: highlight ?? '#e0e0e0' }}>{value}</div>
+      {helper && (
+        <div style={{ fontSize: 9, color: '#666', lineHeight: 1.35, marginTop: 4 }}>{helper}</div>
+      )}
     </div>
   )
 }

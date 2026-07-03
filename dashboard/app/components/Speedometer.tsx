@@ -40,10 +40,10 @@ const TICK_DEFS = [
 const SEVERITY_PROB_COLORS = ['#22c55e', '#eab308', '#f97316', '#ef4444'] as const
 
 const SEVERITY_LEGEND = [
-  { label: 'Healthy',  color: '#22c55e' },
-  { label: 'Mild',     color: '#eab308' },
-  { label: 'Moderate', color: '#f97316' },
-  { label: 'Critical', color: '#ef4444' },
+  { label: 'Class 0 · Healthy',  color: '#22c55e' },
+  { label: 'Class 1 · Mild',     color: '#eab308' },
+  { label: 'Class 2 · Moderate', color: '#f97316' },
+  { label: 'Class 3 · Critical', color: '#ef4444' },
 ] as const
 
 export function Speedometer() {
@@ -113,6 +113,7 @@ export function Speedometer() {
 
   return (
     <div
+      className="speedometer-shell"
       style={{ position: 'fixed', top: 52, left: 24, zIndex: 60, width: 120 }}
       aria-label="Scroll speed gauge"
     >
@@ -190,14 +191,14 @@ export function Speedometer() {
       {severityProbs && (
         <>
           <div style={{ fontSize: 7, color: '#666', letterSpacing: 0.5, textAlign: 'center', marginBottom: 2, fontFamily: "'Fira Code', monospace" }}>
-            Severity probability
+            Confidence by class
           </div>
           <div style={{ display: 'flex', width: 120, height: 18, borderRadius: 2, overflow: 'hidden' }}>
             {severityProbs.map((prob, i) => (
               <div
                 key={i}
-                title={`${SEVERITY_LEGEND[i].label}: ${Math.round(prob * 100)}%`}
-                aria-label={`${SEVERITY_LEGEND[i].label}: ${Math.round(prob * 100)}%`}
+                title={`${SEVERITY_LEGEND[i].label}: ${Math.round(prob * 100)}% probability`}
+                aria-label={`${SEVERITY_LEGEND[i].label}: ${Math.round(prob * 100)}% probability`}
                 style={{
                   flex: prob,
                   minWidth: 0,
@@ -211,7 +212,7 @@ export function Speedometer() {
               >
                 {prob >= 0.12 && (
                   <span style={{ fontSize: 7, color: 'white', textAlign: 'center', lineHeight: 1, whiteSpace: 'nowrap', padding: '0 2px' }}>
-                    {SEVERITY_LEGEND[i].label} {Math.round(prob * 100)}%
+                    {i}: {Math.round(prob * 100)}%
                   </span>
                 )}
               </div>
@@ -221,16 +222,19 @@ export function Speedometer() {
       )}
       <div style={{ marginTop: 8 }}>
         <div style={{ fontSize: 7, color: '#555', letterSpacing: 0.5, textAlign: 'center', marginBottom: 4, fontFamily: "'Fira Code', monospace" }}>
-          SEVERITY
+          CLASSES
         </div>
         {SEVERITY_LEGEND.map((item, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
             <div style={{ width: 8, height: 8, borderRadius: 2, background: item.color, flexShrink: 0 }} />
             <span style={{ fontSize: 8, color: '#aaa', fontFamily: "'Fira Code', monospace" }}>
-              {i} · {item.label}
+              {item.label}
             </span>
           </div>
         ))}
+        <div style={{ fontSize: 7, color: '#666', lineHeight: 1.35, marginTop: 4, fontFamily: "'Fira Code', monospace" }}>
+          Wider segment = higher model confidence for that severity class.
+        </div>
       </div>
     </div>
   )

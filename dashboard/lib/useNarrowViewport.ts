@@ -2,7 +2,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 
-export const NARROW_VIEWPORT_QUERY = '(max-width: 640px)'
+export const NARROW_VIEWPORT_QUERY = '(max-width: 980px)'
 
 export function useNarrowViewport(): boolean {
   const [isNarrow, setIsNarrow] = useState(false)
