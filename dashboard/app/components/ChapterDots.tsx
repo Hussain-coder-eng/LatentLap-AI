@@ -13,13 +13,13 @@ interface ChapterDotsProps {
 export default function ChapterDots({ activeChapter, onSelect }: ChapterDotsProps) {
   const isMobile = useNarrowViewport()
 
-  // Mobile: horizontal segmented control at top of viewport
+  // Mobile: horizontal rail above the scrubber, outside the top control zone.
   if (isMobile) {
     return (
       <div
+        className="chapter-dots chapter-dots--mobile"
         style={{
           position: 'fixed',
-          top: 0,
           left: 0,
           right: 0,
           zIndex: 300,
@@ -27,7 +27,7 @@ export default function ChapterDots({ activeChapter, onSelect }: ChapterDotsProp
           flexDirection: 'row',
           background: 'rgba(8,8,8,0.92)',
           backdropFilter: 'blur(8px)',
-          borderBottom: '1px solid #222',
+          borderTop: '1px solid #222',
           pointerEvents: 'auto',
         }}
         aria-label="Chapter navigation"
@@ -66,6 +66,7 @@ export default function ChapterDots({ activeChapter, onSelect }: ChapterDotsProp
   // Desktop: horizontal dot rail above scrubber (scrubber is 48px, rail sits at bottom: 56px)
   return (
     <div
+      className="chapter-dots chapter-dots--desktop"
       style={{
         position: 'fixed',
         bottom: 56,
@@ -93,6 +94,7 @@ export default function ChapterDots({ activeChapter, onSelect }: ChapterDotsProp
           title={name}
           onClick={() => onSelect(i)}
           aria-label={`Chapter ${i + 1} of 6: ${name}`}
+          aria-selected={activeChapter === i}
           aria-current={activeChapter === i ? 'true' : undefined}
           style={{
             width: activeChapter === i ? 13 : 10,

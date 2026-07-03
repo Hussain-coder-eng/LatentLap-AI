@@ -15,10 +15,11 @@ import strategyRaw from '../../public/data/strategy_recommendations.json'
 
 const CHAPTER_THRESHOLDS = [0, 0.17, 0.34, 0.51, 0.68, 0.85]
 const CHAPTER_COUNT = CHAPTER_THRESHOLDS.length
+const CHAPTER_NAMES_FOR_STAGE = ['hero', 'severity', 'predictors', 'race-arc', 'strategy', 'compare'] as const
 const RACE_ARC_TIMELINE_BOTTOM_PX = 64
 const RACE_ARC_TIMELINE_HEIGHT_PX = 18
 const RACE_ARC_TIMELINE_MIN_SEGMENT_PX = 2
-const RACE_ARC_TIMELINE_SIDE_INSET = 'clamp(16px, 12vw, 180px)'
+const RACE_ARC_TIMELINE_SIDE_INSET = 'clamp(184px, 18vw, 240px)'
 
 const SILVERSTONE_RACE_META: Record<number, { name: string; date: string }> = {
   2021: { name: '2021 British Grand Prix', date: 'July 18, 2021' },
@@ -247,6 +248,7 @@ export default function ScrollStage() {
   const { currentLap, currentYear, currentDriver, setSimDrawerOpen } = useRaceContext()
   const stageRef = useRef<HTMLDivElement>(null)
   const pinRef   = useRef<HTMLDivElement>(null)
+  const programmaticChapterRef = useRef<number | null>(null)
   const [scrollProgress, setScrollProgress] = useState(0)
   const [activeChapter, setActiveChapter]   = useState(0)
   const isNarrow = useNarrowViewport()
@@ -267,46 +269,68 @@ export default function ScrollStage() {
   const sevColor  = getSeverityHex(severity)
   const sevLabel  = getSeverityLabel(severity)
 
-  // GSAP ScrollTrigger pin
+  // CSS sticky owns pinning; this listener only derives story progress.
+  // Avoids stale ScrollTrigger transforms after browser scroll restoration.
   useEffect(() => {
-    let st: { kill: () => void } | undefined
-    import('gsap').then(({ default: gsap }) => {
-      import('gsap/ScrollTrigger').then(({ ScrollTrigger }) => {
-        gsap.registerPlugin(ScrollTrigger)
-        st = ScrollTrigger.create({
-          trigger: stageRef.current,
-          pin: pinRef.current,
-          start: 'top top',
-          end: '+=400%',
-          scrub: true,
-          onUpdate: (self: { progress: number }) => {
-            const p = self.progress
-            setScrollProgress(p)
-            setActiveChapter(progressToChapter(p))
-          },
-        })
-      })
-    })
-    return () => st?.kill()
-  }, [])
+    if (isNarrow) return
+
+    const updateProgress = () => {
+      const el = stageRef.current
+      if (!el) return
+      const rect = el.getBoundingClientRect()
+      const scrollable = Math.max(el.offsetHeight - window.innerHeight, 1)
+      const p = Math.min(Math.max(-rect.top / scrollable, 0), 1)
+      setScrollProgress(p)
+
+      const targetChapter = programmaticChapterRef.current
+      if (targetChapter !== null) {
+        const targetProgress = CHAPTER_THRESHOLDS[targetChapter] ?? 0
+        setActiveChapter(targetChapter)
+        if (Math.abs(p - targetProgress) < 0.015) {
+          programmaticChapterRef.current = null
+        }
+        return
+      }
+
+      setActiveChapter(progressToChapter(p))
+    }
+
+    updateProgress()
+    window.addEventListener('scroll', updateProgress, { passive: true })
+    window.addEventListener('resize', updateProgress)
+    return () => {
+      window.removeEventListener('scroll', updateProgress)
+      window.removeEventListener('resize', updateProgress)
+    }
+  }, [isNarrow])
 
   // Keyboard chapter navigation
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'PageDown') scrollToChapter(Math.min(CHAPTER_COUNT - 1, activeChapter + 1))
-      if (e.key === 'PageUp')   scrollToChapter(Math.max(0, activeChapter - 1))
+      if (e.key === 'PageDown') {
+        e.preventDefault()
+        scrollToChapter(Math.min(CHAPTER_COUNT - 1, activeChapter + 1))
+      }
+      if (e.key === 'PageUp') {
+        e.preventDefault()
+        scrollToChapter(Math.max(0, activeChapter - 1))
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [activeChapter])
+  }, [activeChapter, isNarrow])
 
   const scrollToChapter = (ch: number) => {
     setActiveChapter(ch)
+    setScrollProgress(CHAPTER_THRESHOLDS[ch] ?? 0)
+    if (isNarrow) return
+
     const el = stageRef.current
     if (!el) return
+    programmaticChapterRef.current = ch
     const stageTop = el.getBoundingClientRect().top + window.scrollY
-    const stageH   = el.scrollHeight - window.innerHeight
-    window.scrollTo({ top: stageTop + CHAPTER_THRESHOLDS[ch] * stageH, behavior: 'smooth' })
+    const stageH = Math.max(el.scrollHeight - window.innerHeight, 1)
+    window.scrollTo({ top: stageTop + (CHAPTER_THRESHOLDS[ch] ?? 0) * stageH, behavior: 'smooth' })
   }
 
   // Build SHAP rows for chapter 2
@@ -339,7 +363,7 @@ export default function ScrollStage() {
       },
       right: {
         heading: 'What is this?',
-        customLines: ['XGBoost model trained on FastF1 telemetry.', 'Silverstone 2021–2025.', 'Outputs tire degradation severity 0–3 per lap.'],
+        customLines: ['XGBoost model trained on FastF1 telemetry.', 'Silverstone 2021–2025.', 'Outputs tire degradation severity 0–3 per lap. Confidence shows how probability is split across those four classes.'],
         technicalDetail: 'Model: XGBoost classifier. Labels: weak supervision heuristics (not physical sensors). Features: sector times, lateral G, tyre age, air/track temp, aggression index.',
       },
     },
@@ -349,7 +373,7 @@ export default function ScrollStage() {
         label: 'Tire Severity',
         value: sevLabel,
         valueColor: sevColor,
-        explanation: `Our model rates this lap at ${severity}/3 using probabilistic telemetry proxies. Scale: 0 = healthy, 1 = mild degradation, 2 = moderate degradation, 3 = critical degradation.`,
+        explanation: `Our model rates this lap at ${severity}/3 using probabilistic telemetry proxies. Scale: 0 = healthy, 1 = mild degradation, 2 = moderate degradation, 3 = critical degradation. Confidence is strongest when one class dominates the probability bar.`,
       },
       right: {
         heading: 'Failure Mode',
@@ -358,7 +382,7 @@ export default function ScrollStage() {
               .sort((a, b) => b[1] - a[1])
               .map(([mode, prob]) => `${mode.charAt(0).toUpperCase() + mode.slice(1)}: ${(prob * 100).toFixed(1)}%`)
           : ['No mode data'],
-        technicalDetail: `DegSeverity: ${severity} (heuristic proxy — not a physical sensor)\nmode_probs: ${JSON.stringify(lap?.mode_probs ?? {}, null, 0)}`,
+        technicalDetail: `DegSeverity: ${severity} (heuristic proxy — not a physical sensor)\nConfidence: severity_probs distribute probability across classes 0, 1, 2, and 3\nmode_probs: ${JSON.stringify(lap?.mode_probs ?? {}, null, 0)}`,
       },
     },
     // Chapter 2 — Predictors
@@ -368,14 +392,14 @@ export default function ScrollStage() {
         value: `Lap ${currentLap}`,
         valueColor: '#FF8000',
         explanation: top3Shap[0]
-          ? `${SHAP_LABELS[topFeatureKey ?? ''] ?? FEATURE_LABELS[topFeatureKey ?? ''] ?? topFeatureKey} is the primary driver of this lap's prediction. Positive values push severity up; negative pull it down.`
+          ? `${SHAP_LABELS[topFeatureKey ?? ''] ?? FEATURE_LABELS[topFeatureKey ?? ''] ?? topFeatureKey} is the primary driver of this lap's prediction. SHAP bars explain direction: orange pushes severity up, blue pulls it down.`
           : 'No SHAP data for this lap.',
       },
       right: {
         heading: 'Why this lap?',
         rows: top3Shap,
         customLines: top3Shap[0]
-          ? [FEATURE_PLAIN[topFeatureKey ?? '']?.(top3Shap[0].value) ?? '']
+          ? ['SHAP compares this lap against the model baseline; longer bars have more influence.', FEATURE_PLAIN[topFeatureKey ?? '']?.(top3Shap[0].value) ?? '']
           : [],
         technicalDetail: `SHAP (TreeExplainer): ${top3Shap.map(r => `${r.label}: ${r.value > 0 ? '+' : ''}${r.value.toFixed(3)}`).join(' | ')}\nBaseline expected value: ~1.12`,
       },
@@ -387,7 +411,7 @@ export default function ScrollStage() {
         value: `${totalLaps} modeled laps from telemetry`,
         valueColor: '#4a7a4a',
         subAnnotation: '· 52 race laps total',
-        explanation: 'This is the full tire story across the race. Scroll down to drive through each lap. Green = fresh, red = critical. The pit stop divides the two stints.',
+        explanation: 'This is the full tire story across the race. Scroll down to drive through each lap. Green = healthy, red = critical. The orange divider marks the stint change after the pit stop.',
       },
       right: {
         heading: 'Reading the arc',
@@ -399,7 +423,7 @@ export default function ScrollStage() {
             if (!top) return 'NOMINAL'
             return top[0].toUpperCase() + (top[1] < 0.1 ? ' (trace)' : '')
           })()}`,
-          'Drag the scrubber below to move through the race.',
+          'Race arc bars are laps, colored by predicted severity. Drag the scrubber below to inspect a lap.',
         ],
         technicalDetail: `lapDelta and severity per lap from features_${currentYear}_${currentDriver}.json. Stint boundaries inferred from stint_id column.`,
       },
@@ -410,16 +434,17 @@ export default function ScrollStage() {
         label: 'Pit Strategy',
         value: 'When to pit?',
         valueColor: '#00E676',
-        explanation: 'Each scenario shows the projected tire severity at race end depending on when McLaren pits. Green = optimal timing. The sweet spot minimises finish severity.',
+        explanation: 'Each strategy bar is one possible pit lap. Bar height is projected finish severity on the 0–3 scale; lower is better. Green marks lowest-risk timing.',
       },
       right: {
         heading: 'Model recommendation',
         customLines: [
           'Green bars = optimal pit window.',
           'Yellow = acceptable but not ideal.',
-          'Red = too late — high finish severity.',
+          'Red = too late — high projected finish severity.',
+          'The SIM drawer compares this historical strategy with a hypothetical pit lap and compound.',
         ],
-        technicalDetail: 'strategy.py projects DegSeverity forward from each pit lap using stint-2 degradation rates. Heuristic — not derived from tire physics simulation.',
+        technicalDetail: 'Projected finish severity: estimated end-of-race DegSeverity after choosing a pit lap.\nCompound degradation multiplier: relative wear-rate factor applied to the selected compound.\nstrategy.py projects DegSeverity forward from each pit lap using stint-2 degradation rates. Heuristic — not derived from tire physics simulation.',
       },
     },
     // Chapter 5 — Season Comparison
@@ -428,14 +453,14 @@ export default function ScrollStage() {
         label: 'Season Comparison',
         value: '2023 · 2024 · 2025',
         valueColor: '#a78bfa',
-        explanation: `How has ${currentDriver}'s tire degradation at Silverstone evolved across seasons? Purple = 2023, green = 2024, orange = 2025. X axis is normalized race progress.`,
+        explanation: `How has ${currentDriver}'s tire degradation at Silverstone evolved across seasons? Purple = 2023, green = 2024, orange = 2025. X axis is normalized race progress, so unequal race lengths still compare by percentage complete.`,
       },
       right: {
         heading: 'Reading the chart',
         customLines: [
           'Higher line = more degradation.',
           '2025 line ends early (fewer predicted laps).',
-          'Compare slope to see wear rate changes.',
+          'Compare slope to see wear-rate changes.',
         ],
         technicalDetail: 'Each season normalized to 0–1 lap progress. severity_pred from XGBoost model per lap.',
       },
@@ -478,26 +503,29 @@ export default function ScrollStage() {
     <>
       <ChapterDots activeChapter={activeChapter} onSelect={scrollToChapter} />
 
-      <div ref={stageRef} style={{ height: '500vh' }}>
+      <div ref={stageRef} style={{ height: isNarrow ? 'auto' : '500vh', minHeight: '100vh' }}>
         <div
           ref={pinRef}
           className={`scroll-stage-pin ${isNarrow ? 'scroll-stage-pin--mobile' : 'scroll-stage-pin--desktop'}`}
+          data-chapter={activeChapter}
+          data-chapter-name={CHAPTER_NAMES_FOR_STAGE[activeChapter]}
           style={{ background: 'var(--bg)' }}
         >
           {/* Background circuit — faint on mobile (opacity 0.06), full on desktop */}
           <div style={{ opacity: isNarrow ? 0.06 : 1 }}>
-            <SilverstoneCircuit activeChapter={activeChapter} backgroundOnly={activeChapter === 2} hideRings={isNarrow} />
+            <SilverstoneCircuit activeChapter={activeChapter} backgroundOnly={activeChapter === 2} hideRings={isNarrow || activeChapter === 2} />
           </div>
 
           {isNarrow ? (
             /* ── MOBILE: single-column stacked layout for all chapters ── */
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24, width: '100%', paddingBottom: 64 }}>
+            <div className="scroll-stage-mobile-stack">
               <CalloutLeft content={ch.left} visible={true} />
 
               {/* Chapter-specific center content */}
               {activeChapter === 2 && (
                 <>
                   <CalloutRight content={ch.right} visible={true} />
+                  <div className="stage-helper-text">Corner heatmap shows where Silverstone load concentrates. Brighter corners contribute more tire stress in the current feature set.</div>
                   <CornerHeatmap year={currentYear} driver={currentDriver} />
                 </>
               )}
@@ -545,6 +573,7 @@ export default function ScrollStage() {
               {/* Chapter 3 (Race Arc): compact lap severity timeline — absolute desktop only */}
               {activeChapter === 3 && (
                 <div
+                  className="race-arc-timeline-shell"
                   aria-hidden="true"
                   style={{
                     position: 'absolute',
@@ -579,6 +608,7 @@ export default function ScrollStage() {
               {/* Chapter 3 (Race Arc): lap number tick labels below timeline */}
               {activeChapter === 3 && (
                 <div
+                  className="race-arc-tick-shell"
                   style={{
                     position: 'absolute',
                     left: RACE_ARC_TIMELINE_SIDE_INSET,
@@ -610,6 +640,7 @@ export default function ScrollStage() {
               {/* Chapter 3 (Race Arc): severity scale legend above timeline */}
               {activeChapter === 3 && (
                 <div
+                  className="race-arc-legend-shell"
                   style={{
                     position: 'absolute',
                     left: RACE_ARC_TIMELINE_SIDE_INSET,
@@ -646,11 +677,11 @@ export default function ScrollStage() {
 
               {/* Left callout — ch2: SHAP bars right-aligned; ch4: strategy rec; others: chapter metadata */}
               {activeChapter === 2 ? (
-                <div style={{ justifySelf: 'end', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 280 }}>
+                <div className="stage-template-panel stage-template-panel--left">
                   <CalloutRight content={ch.right} visible={true} />
                 </div>
               ) : activeChapter === 4 ? (
-                <div style={{ justifySelf: 'end', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 280 }}>
+                <div className="stage-template-panel stage-template-panel--left">
                   <StrategyLeft currentYear={currentYear} currentDriver={currentDriver} currentLap={currentLap} />
                 </div>
               ) : (
@@ -659,9 +690,11 @@ export default function ScrollStage() {
 
               {/* Center — ch4: pit chart; ch5: season chart; others: tire */}
               {activeChapter === 4 ? (
-                <StrategyPitChart currentYear={currentYear} currentDriver={currentDriver} currentLap={currentLap} />
+                <div className="stage-template-center stage-template-center--strategy">
+                  <StrategyPitChart currentYear={currentYear} currentDriver={currentDriver} currentLap={currentLap} />
+                </div>
               ) : activeChapter === 5 ? (
-                <div style={{ gridColumn: '2 / 4', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div className="stage-template-center stage-template-center--comparison">
                   <CrossSeasonChart driver={currentDriver} />
                 </div>
               ) : (
@@ -670,11 +703,12 @@ export default function ScrollStage() {
 
               {/* Right callout — ch2: corner heatmap; ch4: strategy outcome; ch5: suppressed; others: SHAP/text */}
               {activeChapter === 2 ? (
-                <div style={{ justifySelf: 'start', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 280 }}>
+                <div className="stage-template-panel stage-template-panel--right">
+                  <div className="stage-helper-text">Heatmap = corner stress proxy, not measured tire temperature. It keeps chart content out of the speedometer zone.</div>
                   <CornerHeatmap year={currentYear} driver={currentDriver} />
                 </div>
               ) : activeChapter === 4 ? (
-                <div style={{ justifySelf: 'start', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 280 }}>
+                <div className="stage-template-panel stage-template-panel--right">
                   <StrategyRight currentYear={currentYear} currentDriver={currentDriver} setSimDrawerOpen={setSimDrawerOpen} />
                 </div>
               ) : activeChapter === 5 ? null : (
